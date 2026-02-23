@@ -106,8 +106,8 @@ const fetchWithAuth = partial(fetchWithHeaders, {
   'Content-Type': 'application/json'
 });
 
-console.log(fetchWithAuth('https://api.example.com/users'));
-console.log(fetchWithAuth('https://api.example.com/posts'));
+console.log(fetchWithAuth('https://jsonplaceholder.typicode.com/users'));
+console.log(fetchWithAuth('https://jsonplaceholder.typicode.com/posts'));
 
 console.log('\n=== 4. Once Function ===');
 

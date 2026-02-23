@@ -24,7 +24,7 @@ setTimeout(() => {
 ### Promises
 
 ```javascript
-fetch('https://api.example.com/data')
+fetch('https://jsonplaceholder.typicode.com/posts')
   .then(response => response.json())
   .then(data => console.log(data))
   .catch(error => console.error(error));
@@ -37,7 +37,7 @@ fetch('https://api.example.com/data')
 ```javascript
 async function fetchData() {
   try {
-    const response = await fetch('https://api.example.com/data');
+    const response = await fetch('https://jsonplaceholder.typicode.com/posts');
     const data = await response.json();
     console.log(data);
   } catch (error) {

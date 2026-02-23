@@ -53,7 +53,7 @@ console.log('\n=== 6. When to use let vs const ===');
 
 // Use const by default
 const MAX_USERS = 100;
-const API_URL = 'https://api.example.com';
+const API_URL = 'https://jsonplaceholder.typicode.com';
 
 // Use let when you need to reassign
 let count = 0;

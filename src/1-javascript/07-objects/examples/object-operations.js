@@ -68,7 +68,7 @@ console.log('Multiple sources:', result);
 console.log('\n=== 5. Object.freeze() ===');
 
 const config = {
-  apiUrl: 'https://api.example.com',
+  apiUrl: 'https://jsonplaceholder.typicode.com',
   timeout: 5000
 };
 

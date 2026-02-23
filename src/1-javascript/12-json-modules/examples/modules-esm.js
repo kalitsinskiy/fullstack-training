@@ -49,7 +49,7 @@ console.log(`
 // api.js
 export default class ApiClient { ... }  // default
 
-export const BASE_URL = 'https://api.example.com';  // named
+export const BASE_URL = 'https://jsonplaceholder.typicode.com';  // named
 export function buildUrl(path) { ... }               // named
 `);
 

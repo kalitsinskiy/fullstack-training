@@ -127,7 +127,7 @@ function createError(field, value, expected) {
 console.log(createError('age', 'twenty', 'a number'));
 
 // URL building
-const baseUrl = 'https://api.example.com';
+const baseUrl = 'https://jsonplaceholder.typicode.com';
 const endpoint = 'users';
 const id = 42;
 const url = `${baseUrl}/${endpoint}/${id}`;
