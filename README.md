@@ -5,7 +5,7 @@ Welcome to hands-on fullstack development training! Learn JavaScript, TypeScript
 ## 🎯 What You'll Learn
 
 - **JavaScript Basics** - Variables, data types, functions, arrays, objects, control flow, async, strings, error handling, classes, closures, JSON & modules
-- **TypeScript** - Coming soon
+- **TypeScript** - Types, interfaces, functions, classes, generics, utility types
 - **Tests** - Coming soon
 - **Backend Projects** - Coming soon
 - **Frontend Projects** - Coming soon
@@ -28,7 +28,12 @@ Welcome to hands-on fullstack development training! Learn JavaScript, TypeScript
 - **JSON & Modules** (`12-json-modules`) - `JSON.parse/stringify`, `import/export`, CommonJS vs ESM
 
 ### 2. TypeScript Basics
-_Coming soon - folders created but content pending_
+- **Types** (`01-types`) - Primitives, unions, literals, type narrowing, enums, tuples, `any`/`unknown`/`never`
+- **Interfaces** (`02-interfaces`) - Interfaces, `type` vs `interface`, declaration merging, extending, index signatures
+- **Functions** (`03-functions`) - Typed params/returns, optional/default/rest, overloads, function type aliases, `void`/`never`
+- **Classes** (`04-classes`) - Access modifiers, parameter properties, abstract classes, `implements`, getters/setters, static
+- **Generics** (`05-generics`) - Generic functions/classes, constraints, `keyof`, `infer`, conditional types, distributive types
+- **Utility Types** (`06-utility-types`) - `Partial`, `Required`, `Readonly`, `Pick`, `Omit`, `Record`, `Exclude`, `ReturnType`, `Awaited`
 
 ### 3. Tests
 _Coming soon - separate section for testing concepts_
@@ -190,10 +195,16 @@ git commit -m "Completed block 1: Variables"
 
 ## 🛠 Quick Command Reference
 
-**Running Examples:**
+**Running JavaScript Examples:**
 ```bash
 node src/01-javascript/01-variables/examples/let-const.js
 node src/01-javascript/03-control-flow/examples/conditionals.js
+```
+
+**Running TypeScript Examples:**
+```bash
+npx ts-node src/02-typescript/01-types/examples/basic-types.ts
+npx ts-node src/02-typescript/05-generics/examples/generics.ts
 ```
 
 **Code Quality:**
