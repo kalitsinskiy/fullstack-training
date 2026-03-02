@@ -115,4 +115,4 @@ const { add, PI } = require('./math.js');
 
 1. **Study examples**: Run `node examples/json-basics.js`
 2. **Complete exercises**: Open `exercises/json-modules.js` and write code
-3. **Prepare for evaluation**: Review `QUESTIONS.md`
+

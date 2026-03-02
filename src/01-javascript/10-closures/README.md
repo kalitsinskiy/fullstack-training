@@ -78,4 +78,4 @@ console.log(wallet.getBalance()); // 150
 
 1. **Study examples**: Run `node src/1-javascript/11-closures/examples/<file>.js`
 2. **Complete exercises**: Open `exercises/closures.js` and write code
-3. **Prepare for evaluation**: Review `QUESTIONS.md`
+

@@ -84,4 +84,4 @@ async function load() {
 
 1. **Study examples**: Run `node src/1-javascript/09-error-handling/examples/<file>.js`
 2. **Complete exercises**: Open `exercises/error-handling.js` and write code
-3. **Prepare for evaluation**: Review `QUESTIONS.md`
+

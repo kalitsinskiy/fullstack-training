@@ -90,4 +90,4 @@ processData(5, (result) => console.log(result)); // 10
 
 1. **Study examples**: Run `node src/1-javascript/03-functions/examples/<file>.js`
 2. **Complete exercises**: Open `exercises/functions.js` and write code
-3. **Prepare for evaluation**: Review `QUESTIONS.md`
+

@@ -87,4 +87,4 @@ str = 'Hello'; // Create new string instead
 
 1. **Study examples**: Run `node src/1-javascript/08-strings/examples/<file>.js`
 2. **Complete exercises**: Open `exercises/strings.js` and write code
-3. **Prepare for evaluation**: Review `QUESTIONS.md`
+

@@ -97,4 +97,4 @@ const [result1, result2] = await Promise.all([
 
 1. **Study examples**: Run `node src/1-javascript/07-async/examples/<file>.js`
 2. **Complete exercises**: Open `exercises/async.js` and write code
-3. **Prepare for evaluation**: Review `QUESTIONS.md`
+

@@ -116,4 +116,4 @@ Object.entries(obj)  // [['a', 1], ['b', 2], ['c', 3]]
 
 1. **Study examples**: Run `node src/1-javascript/05-objects/examples/<file>.js`
 2. **Complete exercises**: Open `exercises/objects.js` and write code
-3. **Prepare for evaluation**: Review `QUESTIONS.md`
+

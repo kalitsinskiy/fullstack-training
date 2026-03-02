@@ -62,5 +62,3 @@ let b = 2;
    ```
 
 2. **Complete exercises**: Open `exercises/variables.js` and solve TODOs
-
-3. **Prepare for evaluation**: Review `QUESTIONS.md` - know all 10 questions!

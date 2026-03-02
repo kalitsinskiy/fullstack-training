@@ -100,4 +100,3 @@ for (const key in object) {
 
 1. **Study examples**: Run `node src/1-javascript/06-control-flow/examples/<file>.js`
 2. **Complete exercises**: Open `exercises/control-flow.js` and write code
-3. **Prepare for evaluation**: Review `QUESTIONS.md`

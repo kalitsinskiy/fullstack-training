@@ -73,4 +73,3 @@ typeof []          // "object"
 
 1. **Study examples**: Run `node src/1-javascript/02-data-types/examples/<file>.js`
 2. **Complete exercises**: Open `exercises/data-types.js` and write code
-3. **Prepare for evaluation**: Review `QUESTIONS.md`
