@@ -5,7 +5,7 @@
 // This file shows how CommonJS works and how it
 // compares to modern ESM.
 //
-// Run with: node src/1-javascript/12-json-modules/examples/commonjs.js
+// Run with: node src/01-javascript/12-json-modules/examples/commonjs.js
 
 console.log('=== 1. CommonJS: require / module.exports ===\n');
 

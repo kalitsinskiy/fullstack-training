@@ -2,7 +2,7 @@
 // ARRAYS Exercises
 // ============================================
 // Complete the TODO exercises below
-// Run this file with: node src/1-javascript/04-arrays/exercises/arrays.js
+// Run this file with: node src/01-javascript/06-arrays/exercises/arrays.js
 
 console.log('=== Exercise 1: Array basics ===');
 // TODO: Create an array of 5 colors

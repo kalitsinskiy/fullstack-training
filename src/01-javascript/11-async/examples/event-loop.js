@@ -2,7 +2,7 @@
 // EVENT LOOP Examples
 // ============================================
 // Understanding HOW JavaScript executes code
-// Run with: node src/1-javascript/11-async/examples/event-loop.js
+// Run with: node src/01-javascript/11-async/examples/event-loop.js
 
 console.log('=== 1. JavaScript is single-threaded ===\n');
 

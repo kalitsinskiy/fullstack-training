@@ -6,13 +6,12 @@ A detailed guide on running JavaScript/TypeScript code, tests, and debugging.
 
 ```
 js-training/
-├── modules/
-│   └── 01-javascript-basics/
+├── src/
+│   └── 01-javascript/
 │       └── 01-variables/
 │           ├── examples/       # Examples to run
 │           ├── exercises/      # Your code
 │           └── __tests__/      # Tests
-├── scripts/                    # Helper scripts
 └── package.json               # npm scripts
 ```
 
@@ -27,7 +26,7 @@ js-training/
 node path/to/file.js
 
 # Example from our project
-node modules/01-javascript-basics/01-variables/examples/let-const.js
+node src/01-javascript/01-variables/examples/let-const.js
 ```
 
 ### Running with Arguments
@@ -77,7 +76,7 @@ node
 npx ts-node path/to/file.ts
 
 # Example
-npx ts-node modules/02-typescript-basics/01-types/examples/basic-types.ts
+npx ts-node src/02-typescript/01-types/examples/basic-types.ts
 ```
 
 ### Compile and Run
@@ -119,7 +118,7 @@ npm test -- functions
 npm test -- arrays
 
 # Run specific test file
-npm test -- modules/01-javascript-basics/01-variables/__tests__/variables.test.js
+npm test -- src/01-javascript/01-variables/__tests__/variables.test.js
 ```
 
 ### Watch Mode
@@ -307,7 +306,7 @@ NODE_ENV=test npm test
 
 ```bash
 # 1. Navigate to module
-cd modules/01-javascript-basics/01-variables
+cd src/01-javascript/01-variables
 
 # 2. Read README
 cat README.md
@@ -428,7 +427,7 @@ bash scripts/setup.sh
 No tests found
 
 # Check
-ls modules/*/__tests__/*.test.js
+ls src/01-javascript/*/__tests__/*.test.js
 
 # Run from project root
 pwd  # Should be js-training/
@@ -510,10 +509,10 @@ tail -f logs/app.log
 find . -name "*.test.js"
 
 # Find in file contents
-grep -r "function greet" modules/
+grep -r "function greet" src/
 
 # Find and show line numbers
-grep -rn "TODO" modules/
+grep -rn "TODO" src/
 ```
 
 ---
@@ -528,7 +527,7 @@ cd ~/projects/js-training
 npm test
 
 # ✗ Incorrect
-cd ~/projects/js-training/modules/01-javascript-basics
+cd ~/projects/js-training/src/01-javascript
 npm test  # package.json won't be found
 ```
 

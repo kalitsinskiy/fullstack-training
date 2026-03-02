@@ -11,7 +11,6 @@
     "moduleResolution": "node",
     "baseUrl": "..",
     "paths": {
-      "@modules/*": ["modules/*"],
       "@config/*": ["config/*"]
     },
     "resolveJsonModule": true,
@@ -49,12 +48,10 @@
     "skipLibCheck": true
   },
   "include": [
-    "../modules/**/*",
-    "../scripts/**/*",
-    "../src/2-typescript/**/*",
-    "../src/3-tests/**/*",
-    "../src/4-backend/**/*",
-    "../src/5-frontend/**/*"
+    "../src/02-typescript/**/*",
+    "../src/03-tests/**/*",
+    "../src/04-backend/**/*",
+    "../src/05-frontend/**/*"
   ],
   "exclude": [
     "../node_modules",

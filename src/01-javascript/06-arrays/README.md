@@ -83,6 +83,6 @@ const arr2 = [...arr1, 4, 5];  // [1, 2, 3, 4, 5]
 
 ## How to Work
 
-1. **Study examples**: Run `node src/1-javascript/04-arrays/examples/<file>.js`
+1. **Study examples**: Run `node src/01-javascript/06-arrays/examples/<file>.js`
 2. **Complete exercises**: Open `exercises/arrays.js` and write code
 

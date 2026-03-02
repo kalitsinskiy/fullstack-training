@@ -39,10 +39,13 @@ module.exports = {
       displayName: 'node',
       testEnvironment: 'node',
       testMatch: [
-        '<rootDir>/src/1-javascript/**/__tests__/**/*.test.{js,ts}',
-        '<rootDir>/src/2-typescript/**/__tests__/**/*.test.{js,ts}',
-        '<rootDir>/src/3-tests/**/__tests__/**/*.test.{js,ts}',
-        '<rootDir>/src/4-backend/**/__tests__/**/*.test.{js,ts}',
+        '<rootDir>/src/01-javascript/**/__tests__/**/*.test.{js,ts}',
+        '<rootDir>/src/02-typescript/**/__tests__/**/*.test.{js,ts}',
+        '<rootDir>/src/03-tests/**/__tests__/**/*.test.{js,ts}',
+        '<rootDir>/src/04-backend/**/__tests__/**/*.test.{js,ts}',
+        '<rootDir>/src/06-algorithms/**/__tests__/**/*.test.{js,ts}',
+        '<rootDir>/src/07-patterns/**/__tests__/**/*.test.{js,ts}',
+        '<rootDir>/src/08-architecture/**/__tests__/**/*.test.{js,ts}',
       ],
       transform: {
         '^.+\\.(js|jsx)$': ['babel-jest', { configFile: './config/.babelrc' }],
@@ -55,7 +58,7 @@ module.exports = {
       displayName: 'jsdom',
       testEnvironment: 'jsdom',
       testMatch: [
-        '<rootDir>/src/5-frontend/**/__tests__/**/*.test.{js,jsx,ts,tsx}',
+        '<rootDir>/src/05-frontend/**/__tests__/**/*.test.{js,jsx,ts,tsx}',
       ],
       transform: {
         '^.+\\.(js|jsx)$': ['babel-jest', { configFile: './config/.babelrc' }],

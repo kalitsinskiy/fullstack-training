@@ -1,10 +1,11 @@
-# 📦 Variables in JavaScript
+# Frontend Projects
 
-## 🎯 Learning Goals
+## 🎯 What You'll Learn
 
-After completing this module, you will be able to:
-- HTML&CSS
-- SASS, styles preprocesors
-- React.js
-- Advanced React
+- HTML & CSS fundamentals
+- SASS and CSS preprocessors
+- React.js basics
+- Advanced React patterns
 - State management
+
+_Coming soon — content is being prepared._

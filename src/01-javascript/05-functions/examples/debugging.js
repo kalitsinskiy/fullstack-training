@@ -2,7 +2,7 @@
 // DEBUGGING Examples
 // ============================================
 // Practical techniques for finding and fixing bugs
-// Run with: node src/1-javascript/05-functions/examples/debugging.js
+// Run with: node src/01-javascript/05-functions/examples/debugging.js
 
 console.log('=== 1. console methods ===');
 

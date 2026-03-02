@@ -2,7 +2,7 @@
 // DATA TYPES Exercises
 // ============================================
 // Complete the TODO exercises below
-// Run this file with: node src/1-javascript/02-data-types/exercises/data-types.js
+// Run this file with: node src/01-javascript/02-data-types/exercises/data-types.js
 
 console.log('=== Exercise 1: Identify types ===');
 // TODO: Use typeof to identify the type of each variable

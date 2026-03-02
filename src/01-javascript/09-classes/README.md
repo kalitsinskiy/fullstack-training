@@ -84,6 +84,6 @@ class Employee extends Person {
 
 ## How to Work
 
-1. **Study examples**: Run `node src/1-javascript/10-classes/examples/<file>.js`
+1. **Study examples**: Run `node src/01-javascript/09-classes/examples/<file>.js`
 2. **Complete exercises**: Open `exercises/classes.js` and write code
 

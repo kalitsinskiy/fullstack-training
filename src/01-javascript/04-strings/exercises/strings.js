@@ -2,7 +2,7 @@
 // STRINGS Exercises
 // ============================================
 // Complete the TODO exercises below
-// Run with: node src/1-javascript/08-strings/exercises/strings.js
+// Run with: node src/01-javascript/04-strings/exercises/strings.js
 
 console.log('=== Exercise 1: Basic methods ===');
 // TODO: Given the string below, log:

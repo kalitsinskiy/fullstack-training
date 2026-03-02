@@ -2,7 +2,7 @@
 // OBJECTS Exercises
 // ============================================
 // Complete the TODO exercises below
-// Run this file with: node src/1-javascript/05-objects/exercises/objects.js
+// Run this file with: node src/01-javascript/07-objects/exercises/objects.js
 
 console.log('=== Exercise 1: Create and access ===');
 // TODO: Create an object 'car' with brand, model, and year properties

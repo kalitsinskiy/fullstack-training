@@ -2,7 +2,7 @@
 // JSON & MODULES Exercises
 // ============================================
 // Complete the TODO exercises below
-// Run with: node src/1-javascript/12-json-modules/exercises/json-modules.js
+// Run with: node src/01-javascript/12-json-modules/exercises/json-modules.js
 
 console.log('=== Exercise 1: JSON.stringify basics ===');
 // TODO: Serialize the object below to a JSON string

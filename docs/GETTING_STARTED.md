@@ -239,7 +239,7 @@ git branch -a
 #### 1. Navigate to the Module
 
 ```bash
-cd modules/01-javascript-basics/01-variables
+cd src/01-javascript/01-variables
 ```
 
 #### 2. Read the README
@@ -386,7 +386,7 @@ npm run test:coverage
 ### Understanding Test Output
 
 ```
-PASS  modules/01-javascript-basics/01-variables/__tests__/variables.test.js
+PASS  src/01-javascript/01-variables/__tests__/variables.test.js
   Variables Exercises
     greet function
       ✓ should return greeting with name (3 ms)
@@ -541,7 +541,6 @@ git config --global user.email "your@email.com"
 - [ ] Git installed and configured
 - [ ] Code editor installed
 - [ ] `npm install` completed successfully
-- [ ] `npm run setup` completed without errors
 - [ ] Personal branch created
 - [ ] Read this guide completely
 
@@ -550,7 +549,7 @@ git config --global user.email "your@email.com"
 **Ready to start? Navigate to the first module:**
 
 ```bash
-cd modules/01-javascript-basics/01-variables
+cd src/01-javascript/01-variables
 cat README.md
 ```
 

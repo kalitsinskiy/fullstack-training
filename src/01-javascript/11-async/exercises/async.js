@@ -2,7 +2,7 @@
 // ASYNC Exercises
 // ============================================
 // Complete the TODO exercises below
-// Run this file with: node src/1-javascript/07-async/exercises/async.js
+// Run this file with: node src/01-javascript/11-async/exercises/async.js
 
 console.log('=== Exercise 1: setTimeout callback ===');
 // TODO: Use setTimeout to log "Hello" after 1 second

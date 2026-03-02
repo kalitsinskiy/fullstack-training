@@ -2,7 +2,7 @@
 // FUNCTIONS Exercises
 // ============================================
 // Complete the TODO exercises below
-// Run this file with: node src/1-javascript/03-functions/exercises/functions.js
+// Run this file with: node src/01-javascript/05-functions/exercises/functions.js
 
 console.log('=== Exercise 1: Function types ===');
 // TODO: Create three versions of a function that squares a number

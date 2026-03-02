@@ -134,7 +134,7 @@ This is your step-by-step process for each block topic:
 Navigate to a topic and read its README:
 
 ```bash
-cd src/1-javascript/01-variables
+cd src/01-javascript/01-variables
 cat README.md
 ```
 
@@ -192,8 +192,8 @@ git commit -m "Completed block 1: Variables"
 
 **Running Examples:**
 ```bash
-node src/1-javascript/01-variables/examples/let-const.js
-node src/1-javascript/03-control-flow/examples/conditionals.js
+node src/01-javascript/01-variables/examples/let-const.js
+node src/01-javascript/03-control-flow/examples/conditionals.js
 ```
 
 **Code Quality:**

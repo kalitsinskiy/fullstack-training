@@ -68,12 +68,12 @@ npx ts-node hello.ts
 
 ```bash
 # Run TypeScript example
-npx ts-node modules/02-typescript-basics/01-types/examples/basic-types.ts
+npx ts-node src/02-typescript/01-types/examples/basic-types.ts
 
 # Run TypeScript exercise for testing
-npx ts-node modules/02-typescript-basics/01-types/exercises/types.ts
+npx ts-node src/02-typescript/01-types/exercises/types.ts
 ```
 
 ---
 
-**When to add this:** When creating the TypeScript Basics modules (modules/02-typescript-basics/)
+**When to add this:** When creating the TypeScript Basics module (src/02-typescript/)

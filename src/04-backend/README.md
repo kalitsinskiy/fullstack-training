@@ -1,9 +1,11 @@
-# 📦 Variables in JavaScript
+# Backend Projects
 
-## 🎯 Learning Goals
+## 🎯 What You'll Learn
 
-After completing this module, you will be able to:
-- server
-- endpoints
-- db
-- testing, mocks
+- Building REST APIs with Node.js and Express
+- Working with databases
+- Environment variables and configuration
+- Authentication and middleware
+- Testing backend services
+
+_Coming soon — content is being prepared._

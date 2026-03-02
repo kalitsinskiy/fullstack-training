@@ -2,7 +2,7 @@
 // VARIABLES Exercises
 // ============================================
 // Complete the TODO exercises below
-// Run this file with: node src/1-javascript/01-variables/exercises/variables.js
+// Run this file with: node src/01-javascript/01-variables/exercises/variables.js
 
 console.log('=== Exercise 1: Choose the right declaration ===');
 // TODO: Declare a variable for a user's age that can change

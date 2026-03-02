@@ -85,18 +85,6 @@
       "internalConsoleOptions": "neverOpen",
       "skipFiles": ["<node_internals>/**"]
     },
-    {
-      "name": "Debug Express Server",
-      "type": "node",
-      "request": "launch",
-      "program": "${workspaceFolder}/modules/03-nodejs-backend/03-express-basics/examples/server.js",
-      "skipFiles": ["<node_internals>/**"],
-      "console": "integratedTerminal",
-      "internalConsoleOptions": "neverOpen",
-      "env": {
-        "NODE_ENV": "development"
-      }
-    }
   ],
   "inputs": [
     {

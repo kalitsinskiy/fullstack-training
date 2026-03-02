@@ -88,6 +88,6 @@ processData(5, (result) => console.log(result)); // 10
 
 ## How to Work
 
-1. **Study examples**: Run `node src/1-javascript/03-functions/examples/<file>.js`
+1. **Study examples**: Run `node src/01-javascript/05-functions/examples/<file>.js`
 2. **Complete exercises**: Open `exercises/functions.js` and write code
 

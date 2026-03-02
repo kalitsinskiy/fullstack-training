@@ -2,7 +2,7 @@
 // CONTROL FLOW Exercises
 // ============================================
 // Complete the TODO exercises below
-// Run this file with: node src/1-javascript/06-control-flow/exercises/control-flow.js
+// Run this file with: node src/01-javascript/03-control-flow/exercises/control-flow.js
 
 console.log('=== Exercise 1: if/else ===');
 // TODO: Write an if/else that checks if age >= 18

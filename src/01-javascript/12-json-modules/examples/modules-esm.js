@@ -7,7 +7,7 @@
 //   - .mjs file extension
 //
 // Run this file to see the explanations:
-// node src/1-javascript/12-json-modules/examples/modules-esm.js
+// node src/01-javascript/12-json-modules/examples/modules-esm.js
 
 console.log('=== ESM Module System Overview ===\n');
 

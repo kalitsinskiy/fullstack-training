@@ -98,5 +98,5 @@ for (const key in object) {
 
 ## How to Work
 
-1. **Study examples**: Run `node src/1-javascript/06-control-flow/examples/<file>.js`
+1. **Study examples**: Run `node src/01-javascript/03-control-flow/examples/<file>.js`
 2. **Complete exercises**: Open `exercises/control-flow.js` and write code

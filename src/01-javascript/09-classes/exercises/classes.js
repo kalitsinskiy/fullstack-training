@@ -2,7 +2,7 @@
 // CLASSES Exercises
 // ============================================
 // Complete the TODO exercises below
-// Run with: node src/1-javascript/10-classes/exercises/classes.js
+// Run with: node src/01-javascript/09-classes/exercises/classes.js
 
 console.log('=== Exercise 1: Create a class ===');
 // TODO: Create a class 'Rectangle' with width and height properties

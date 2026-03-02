@@ -2,7 +2,7 @@
 // ERROR HANDLING Exercises
 // ============================================
 // Complete the TODO exercises below
-// Run with: node src/1-javascript/09-error-handling/exercises/error-handling.js
+// Run with: node src/01-javascript/08-error-handling/exercises/error-handling.js
 
 console.log('=== Exercise 1: Basic try...catch ===');
 // TODO: Wrap this code in try...catch and log the error message

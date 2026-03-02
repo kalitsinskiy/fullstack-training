@@ -2,7 +2,7 @@
 // CLOSURES Exercises
 // ============================================
 // Complete the TODO exercises below
-// Run with: node src/1-javascript/11-closures/exercises/closures.js
+// Run with: node src/01-javascript/10-closures/exercises/closures.js
 
 console.log('=== Exercise 1: Basic closure ===');
 // TODO: Create a function makeGreeter(name) that returns a function
