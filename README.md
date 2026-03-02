@@ -48,8 +48,6 @@ Each block includes:
 - **Evaluation**: Control questions per topic
 - **Requirement**: Must complete previous block before starting next
 
-**Important:** Prepare answers for ALL 10 questions - you won't know which 2 you'll get!
-
 ## 🚀 Getting Started
 
 ### What You're Learning
@@ -171,13 +169,6 @@ Exercises have TODOs for you to complete. Run them to test your solutions.
 
 ### Step 4: Prepare for Evaluation
 
-Read the `QUESTIONS.md` file:
-
-```bash
-cat QUESTIONS.md
-```
-
-- Study ALL 10 questions
 - Prepare answers with code examples
 - You'll get 2 random questions during evaluation
 
@@ -234,7 +225,7 @@ npm run type-check          # TypeScript validation
 ## 💡 Learning Tips
 
 1. **One block, one topic** - Complete topics in order, each builds on the last
-2. **Study ALL 10 questions** - You'll get 2 random questions in evaluation
+2. **Questions** - You'll get 2 random questions in evaluation
 3. **Run examples** - Don't just read, execute and modify code
 4. **Complete exercises** - Practice makes perfect
 5. **Prepare code examples** - Be ready to write code during evaluation
