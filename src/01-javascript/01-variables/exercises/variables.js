@@ -7,12 +7,17 @@
 console.log('=== Exercise 1: Choose the right declaration ===');
 // TODO: Declare a variable for a user's age that can change
 // Your code here:
+let userAge = 'user1';
 
 // TODO: Declare a variable for PI that should never change
 // Your code here:
+const PI = Math.PI;
 
 // TODO: Declare a variable for a counter in a loop
 // Your code here:
+for (let i = 0; i < 3; i++) {
+  console.log(`It's a ${i + 1} iteration.`);
+}
 
 console.log('\n=== Exercise 2: Fix the scope issue ===');
 // TODO: Fix this code so 'result' is accessible outside the if block
@@ -24,6 +29,13 @@ if (true) {
 console.log(result); // Should work after your fix
 */
 // Your fixed code here:
+let result = 'Error';
+
+if (true) {
+  result = 'Success';
+}
+
+console.log(result);
 
 console.log('\n=== Exercise 3: Prevent reassignment ===');
 // TODO: Change this code to prevent 'username' from being reassigned
@@ -32,10 +44,18 @@ let username = 'Alice';
 username = 'Bob'; // This should cause an error
 */
 // Your code here:
+const username = 'Alice';
+
+try {
+  username = 'Bob';
+} catch (error) {
+  console.log('Reassign error:', error);
+}
+
+console.log(username);
 
 console.log('\n=== Exercise 4: Block scope practice ===');
 // TODO: Predict the output, then uncomment and run
-/*
 const x = 1;
 
 if (true) {
@@ -44,9 +64,9 @@ if (true) {
 }
 
 console.log('Outside block:', x);
-*/
 // Question: What will be printed? Why?
 // Your answer:
+console.log('Will be printed: 2 then 1');
 
 console.log('\n=== Exercise 5: Loop scope ===');
 // TODO: Fix this loop so each timeout prints the correct number (0, 1, 2)
@@ -59,12 +79,36 @@ for (var i = 0; i < 3; i++) {
 }
 */
 // Your fixed code here:
+for (let i = 0; i < 3; i++) {
+  setTimeout(() => {
+    console.log(i); // Currently prints 3, 3, 3
+  }, 100);
+}
 
 console.log('\n=== Exercise 6: Const with objects ===');
 // TODO: Create a const object 'user' with name and age
 // Then change the age (this should work!)
 // Then try to reassign the entire object (this should fail!)
 // Your code here:
+const user = {
+  name: 'Yurii',
+  age: 31,
+};
+
+user.age = 32;
+
+console.log('User: ', user);
+
+try {
+  user = {
+    name: 'John',
+    age: 25,
+  };
+
+  console.log('Reassigned User: ', user);
+} catch (error) {
+  console.log('Reassigned User Error: ', error);
+}
 
 console.log('\n=== Exercise 7: Hoisting understanding ===');
 // TODO: Explain what happens when you run this code (don't actually run it):
@@ -76,8 +120,8 @@ console.log(b); // ?
 let b = 10;
 */
 // Your explanation:
-// a will be:
-// b will be:
+// a will be: undefined
+// b will be: ReferenceError
 
 console.log('\n=== Exercise 8: Function scope ===');
 // TODO: Complete this function so 'secret' is private
@@ -85,11 +129,22 @@ console.log('\n=== Exercise 8: Function scope ===');
 function createSecret() {
   // Your code here
   // Hint: declare a variable inside the function
+  let secret = 'Hello, World!';
+
+  return {
+    getSecret() {
+      return secret;
+    },
+  };
 }
 
-// const mySecret = createSecret();
-// console.log(mySecret.getSecret()); // Should work
-// console.log(secret); // Should fail
+const mySecret = createSecret();
+console.log(mySecret.getSecret()); // Should work
+try {
+  console.log(secret); // Should fail
+} catch (error) {
+  console.log('ERROR because variable is private.');
+}
 
 console.log('\n=== Exercise 9: Temporal Dead Zone ===');
 // TODO: Explain why this code throws an error:
@@ -100,6 +155,8 @@ function test() {
 }
 */
 // Your explanation:
+// This code throws an erro because the initialization of 'x'
+// Initialization was done after calling 'x' inide console.log
 
 console.log('\n=== Exercise 10: Best practices ===');
 // TODO: Refactor this code following best practices
@@ -123,6 +180,22 @@ for (var i = 0; i < 5; i++) {
 }
 */
 // Your refactored code here:
+const userData = {
+  name: 'John',
+  age: 25,
+};
+
+let message = 'Minor';
+
+userData.age > 18 && (message = 'Adult');
+
+let counter = 0;
+for (let i = 0; i < 5; i++) {
+  counter++;
+}
+
+console.log('User Data:', userData);
+console.log('Counter:', counter);
 
 console.log('\n=== 🎯 Challenge: Create a counter with closure ===');
 // TODO: Create a function that returns an object with increment and getValue methods
@@ -135,5 +208,23 @@ console.log('\n=== 🎯 Challenge: Create a counter with closure ===');
 // console.log(counter.count); // undefined (private!)
 
 // Your code here:
+function counterWithClosure() {
+  let count = 0;
+
+  return {
+    getValue() {
+      return count;
+    },
+    increment() {
+      count++;
+    },
+  };
+}
+
+const myCounter = counterWithClosure();
+myCounter.increment();
+myCounter.increment();
+console.log(myCounter.getValue());
+console.log(myCounter.count); // undefined (private!)
 
 console.log('\n✅ Exercises completed! Check your answers with a mentor.');
