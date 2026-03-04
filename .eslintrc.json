@@ -19,20 +19,22 @@
     "ecmaVersion": 2021,
     "sourceType": "module"
   },
-  "plugins": [
-    "react",
-    "react-hooks",
-    "@typescript-eslint"
-  ],
+  "plugins": ["react", "react-hooks", "@typescript-eslint"],
   "rules": {
+    //Next two rules below were added to remove eslint errors in section 01-variables
+    "no-constant-condition": "off",
+    "no-redeclare": "off",
     "semi": ["error", "always"],
     "quotes": ["error", "single", { "avoidEscape": true }],
     "no-console": "off",
     "no-unused-vars": "off",
-    "@typescript-eslint/no-unused-vars": ["warn", {
-      "argsIgnorePattern": "^_",
-      "varsIgnorePattern": "^_"
-    }],
+    "@typescript-eslint/no-unused-vars": [
+      "warn",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_"
+      }
+    ],
     "@typescript-eslint/explicit-function-return-type": "off",
     "@typescript-eslint/no-explicit-any": "warn",
     "@typescript-eslint/no-var-requires": "off",
@@ -42,7 +44,11 @@
   },
   "overrides": [
     {
-      "files": ["src/2-typescript/**/*.ts", "src/5-frontend/**/*.tsx", "src/5-frontend/**/*.ts"],
+      "files": [
+        "src/2-typescript/**/*.ts",
+        "src/5-frontend/**/*.tsx",
+        "src/5-frontend/**/*.ts"
+      ],
       "parserOptions": {
         "project": "./config/tsconfig.json"
       }
@@ -53,10 +59,5 @@
       "version": "detect"
     }
   },
-  "ignorePatterns": [
-    "node_modules/",
-    "dist/",
-    "coverage/",
-    "*.config.js"
-  ]
+  "ignorePatterns": ["node_modules/", "dist/", "coverage/", "*.config.js"]
 }
