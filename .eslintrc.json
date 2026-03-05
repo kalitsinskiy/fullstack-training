@@ -21,11 +21,11 @@
   },
   "plugins": ["react", "react-hooks", "@typescript-eslint"],
   "rules": {
-    //Next two rules below were added to remove eslint errors in section 01-variables
     "no-constant-condition": "off",
     "no-redeclare": "off",
     "semi": ["error", "always"],
-    "quotes": ["error", "single", { "avoidEscape": true }],
+    //"quotes": ["error", "single", { "avoidEscape": true }],
+    "quotes": "off",
     "no-console": "off",
     "no-unused-vars": "off",
     "@typescript-eslint/no-unused-vars": [
