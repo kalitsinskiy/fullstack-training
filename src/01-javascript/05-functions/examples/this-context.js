@@ -272,9 +272,9 @@ console.log('bind(thisArg)           — returns new function, does not call');
 console.log('Arrow function          — inherits this, cannot be changed');
 
 console.log('\n=== Best Practices ===');
-console.log("1. Use arrow functions for callbacks inside class methods");
-console.log("2. Use bind() when passing methods as callbacks (event listeners)");
-console.log("3. call/apply are mainly used to borrow methods from other objects");
-console.log("4. Prefer arrow class fields (handleClick = () => {}) over bind in constructor");
-console.log("5. Know that context loss is one of the most common JS bugs");
-console.log("6. Use arrow functions for array callbacks (map, filter, forEach)");
+console.log('1. Use arrow functions for callbacks inside class methods');
+console.log('2. Use bind() when passing methods as callbacks (event listeners)');
+console.log('3. call/apply are mainly used to borrow methods from other objects');
+console.log('4. Prefer arrow class fields (handleClick = () => {}) over bind in constructor');
+console.log('5. Know that context loss is one of the most common JS bugs');
+console.log('6. Use arrow functions for array callbacks (map, filter, forEach)');

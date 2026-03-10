@@ -68,7 +68,7 @@ class LoggingDecorator {
   async fetch(url) {
     console.log(`[LOG] Request to: ${url}`);
     const result = await this.#service.fetch(url);
-    console.log(`[LOG] Response received`);
+    console.log('[LOG] Response received');
     return result;
   }
 }

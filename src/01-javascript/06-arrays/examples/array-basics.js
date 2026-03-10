@@ -9,7 +9,7 @@ const fruits = ['apple', 'banana', 'orange'];
 console.log('Fruits:', fruits);
 
 // Array constructor
-const numbers = new Array(1, 2, 3, 4, 5);
+const numbers = [1, 2, 3, 4, 5];
 console.log('Numbers:', numbers);
 
 // Create empty array of specific length
