@@ -37,3 +37,4 @@ next-env.d.ts
 
 # teacher-only files (answers/questions)
 QUESTIONS.md
+CANDIDATES.md

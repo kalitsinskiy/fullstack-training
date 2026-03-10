@@ -91,7 +91,7 @@ console.log('\n=== Array constructor trap ===');
 
 console.log(Array(3));       // [ <3 empty items> ] — sparse array, NOT [3]
 console.log(Array(3).length); // 3
-console.log(Array(1, 2, 3)); // [1, 2, 3] — 2+ args = elements
+console.log([1, 2, 3]); // [1, 2, 3] — 2+ args = elements
 
 console.log(Array.of(3));    // [3]        ✅ always creates array with these elements
 console.log(Array.of(1, 2, 3)); // [1, 2, 3]

@@ -1,39 +1,42 @@
-module.exports = {
-  // Root directory for Jest
-  rootDir: '..',
+const path = require('node:path');
 
-  // Test match patterns - look for test files in __tests__ directories
+module.exports = {
+  rootDir: __dirname,
+
+  // Prettier 3 is not supported by jest inline snapshots — disable it
+  prettierPath: null,
+
+  // Test match patterns
   testMatch: [
     '<rootDir>/src/**/__tests__/**/*.test.{js,ts,jsx,tsx}',
+    '<rootDir>/src/03-tests/**/*.test.{js,ts}',
   ],
 
-  // Transform files with babel-jest and ts-jest
   transform: {
-    '^.+\\.(js|jsx)$': ['babel-jest', { configFile: './config/.babelrc' }],
+    '^.+\\.(js|jsx)$': ['babel-jest', { configFile: path.join(__dirname, 'config/.babelrc') }],
     '^.+\\.(ts|tsx)$': ['ts-jest', {
       tsconfig: {
-        jsx: 'react',
+        target: 'ES2020',
+        module: 'commonjs',
         esModuleInterop: true,
         allowSyntheticDefaultImports: true,
+        strict: true,
+        skipLibCheck: true,
       },
+      diagnostics: false,
     }],
   },
 
-  // Module file extensions
   moduleFileExtensions: ['js', 'jsx', 'ts', 'tsx', 'json', 'node'],
 
-  // Setup files after environment
-  setupFilesAfterEnv: ['<rootDir>/config/jest.setup.js'],
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
 
-  // Test environment - default to node, but can be overridden per test file
   testEnvironment: 'node',
 
-  // Test environment options for jsdom (React tests)
   testEnvironmentOptions: {
     customExportConditions: ['node', 'node-addons'],
   },
 
-  // Projects for different test environments
   projects: [
     {
       displayName: 'node',
@@ -46,11 +49,20 @@ module.exports = {
         '<rootDir>/src/06-algorithms/**/__tests__/**/*.test.{js,ts}',
         '<rootDir>/src/07-patterns/**/__tests__/**/*.test.{js,ts}',
         '<rootDir>/src/08-architecture/**/__tests__/**/*.test.{js,ts}',
+        '<rootDir>/src/03-tests/**/*.test.{js,ts}',
       ],
       transform: {
-        '^.+\\.(js|jsx)$': ['babel-jest', { configFile: './config/.babelrc' }],
+        '^.+\\.(js|jsx)$': ['babel-jest', { configFile: path.join(__dirname, 'config/.babelrc') }],
         '^.+\\.(ts|tsx)$': ['ts-jest', {
-          tsconfig: './config/tsconfig.json',
+          tsconfig: {
+            target: 'ES2020',
+            module: 'commonjs',
+            esModuleInterop: true,
+            allowSyntheticDefaultImports: true,
+            strict: true,
+            skipLibCheck: true,
+          },
+          diagnostics: false,
         }],
       },
     },
@@ -61,43 +73,42 @@ module.exports = {
         '<rootDir>/src/05-frontend/**/__tests__/**/*.test.{js,jsx,ts,tsx}',
       ],
       transform: {
-        '^.+\\.(js|jsx)$': ['babel-jest', { configFile: './config/.babelrc' }],
+        '^.+\\.(js|jsx)$': ['babel-jest', { configFile: path.join(__dirname, 'config/.babelrc') }],
         '^.+\\.(ts|tsx)$': ['ts-jest', {
           tsconfig: {
+            target: 'ES2020',
+            module: 'commonjs',
             jsx: 'react',
             esModuleInterop: true,
             allowSyntheticDefaultImports: true,
+            skipLibCheck: true,
           },
+          diagnostics: false,
         }],
       },
-      setupFilesAfterEnv: ['<rootDir>/config/jest.setup.js'],
+      setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
     },
   ],
 
-  // Coverage configuration
   collectCoverageFrom: [
     'src/**/exercises/**/*.{js,ts,jsx,tsx}',
+    'src/03-tests/**/*.ts',
+    '!src/03-tests/**/*.test.ts',
     '!src/**/examples/**',
     '!src/**/__tests__/**',
     '!**/node_modules/**',
   ],
 
   coverageDirectory: '<rootDir>/coverage',
-
   coverageReporters: ['text', 'lcov', 'html'],
 
-  // Ignore patterns
   testPathIgnorePatterns: [
     '/node_modules/',
     '/examples/',
   ],
 
-  // Module paths
   modulePaths: ['<rootDir>'],
 
-  // Clear mocks automatically between every test
   clearMocks: true,
-
-  // Verbose output
   verbose: true,
 };
