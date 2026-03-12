@@ -4,13 +4,31 @@
 // Complete the TODO exercises below
 // Run this file with: node src/01-javascript/05-functions/exercises/functions.js
 
+const console = require("node:console");
+
 console.log('=== Exercise 1: Function types ===');
 // TODO: Create three versions of a function that squares a number
 // 1. Function declaration
 // 2. Function expression
 // 3. Arrow function
 // Your code here:
+function SquareDecaration(num) {
+  console.log(`[Square declaration]: ${num}^2=${num*num}`);
+  return num*num;
+}
 
+squareExpression = function(num) {
+  console.log(`[Square expression]: ${num}^2=${num*num}`);
+  return num*num;
+}
+
+squareArrow = (num) => {
+  console.log(`[Square arrow]: ${num}^2=${num*num}`);
+  return num*num;
+}
+SquareDecaration(5);
+squareExpression(6);
+squareArrow(9);
 
 console.log('\n=== Exercise 2: Default parameters ===');
 // TODO: Create a function 'greet' that takes name and greeting
@@ -18,14 +36,22 @@ console.log('\n=== Exercise 2: Default parameters ===');
 // greet("Alice") should return "Hello, Alice!"
 // greet("Bob", "Hi") should return "Hi, Bob!"
 // Your code here:
-
+function greet(name, greeting = 'Hello') {
+  return `${greeting}, ${name}`;
+}
+console.log(greet('Alice'));
+console.log(greet('Bob', 'Hi'));
 
 console.log('\n=== Exercise 3: Rest parameters ===');
 // TODO: Create a function that calculates average of any number of arguments
 // average(1, 2, 3) should return 2
 // average(10, 20, 30, 40) should return 25
 // Your code here:
-
+function average(...numbers) {
+  return [...numbers].reduce((prev, curr) => prev+curr) / numbers.length;
+}
+console.log(`average(1,2,3): ${average(1,2,3)}`);
+console.log(`average(10,20,30,40): ${average(10,20,30,40)}`);
 
 console.log('\n=== Exercise 4: Arrow function this ===');
 // TODO: Fix this code so the arrow function can access the name property
@@ -39,14 +65,25 @@ const person = {
 person.greet(); // Should print "Hello, I'm Alice"
 */
 // Your fixed code here:
-
+const person = {
+  name: 'Alice',
+  greet: function() {
+    console.log(`Hello, I'm ${this.name}`);
+  }
+};
+person.greet(); // Should print "Hello, I'm Alice"
 
 console.log('\n=== Exercise 5: Higher-order function ===');
 // TODO: Create a function 'repeat' that takes a function and a number
 // It should call the function n times
 // Example: repeat(() => console.log('Hi'), 3) prints "Hi" three times
 // Your code here:
-
+function repeat(fn, n){
+  for(let i = 0; i < n; i++){
+    fn();
+  }
+}
+repeat(() => console.log('Hi'), 3);
 
 console.log('\n=== Exercise 6: Function that returns function ===');
 // TODO: Create a function 'createAdder' that returns a function
@@ -54,7 +91,15 @@ console.log('\n=== Exercise 6: Function that returns function ===');
 // add5(10) should return 15
 // add5(20) should return 25
 // Your code here:
-
+function createAdder(count) {
+  this.count = count;
+  return function(n) {
+    return this.count + n;
+  }
+}
+const add5 = createAdder(5);
+console.log(add5(10));//should return 15
+console.log(add5(20)); //should return 25
 
 console.log('\n=== Exercise 7: Array methods with callbacks ===');
 // TODO: Use map, filter, and reduce to:
@@ -63,14 +108,23 @@ console.log('\n=== Exercise 7: Array methods with callbacks ===');
 // 3. Sum the remaining numbers
 const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 // Your code here:
+const res = numbers
+  .map(n => n*2)
+  .filter(n => n>5)
+  .reduce((prev, curr) => prev+curr);
 
+console.log(res);
 
 console.log('\n=== Exercise 8: Callback pattern ===');
 // TODO: Create a function 'processArray' that takes an array and a callback
 // It should apply the callback to each element and return new array
 // processArray([1,2,3], x => x * 2) should return [2, 4, 6]
 // Your code here:
+function processArray(arr, callback) {
+  return arr.map(callback);
+}
 
+console.log(processArray([1,2,3], x => x * 2));
 
 console.log('\n=== Exercise 9: Closure ===');
 // TODO: Create a function 'createCounter' that returns an object with:
@@ -80,6 +134,35 @@ console.log('\n=== Exercise 9: Closure ===');
 // - getValue(): returns current value
 // The counter should be private (not accessible from outside)
 // Your code here:
+function createCounter() {
+  let count = 0;
+
+  return {
+    increment: function() {
+      count++;
+      return count;
+    },
+    decrement: function() {
+      count--;
+      return count;
+    },
+    reset: function() {
+      count = 0;
+    },
+    getValue: function() {
+      return count;
+    }
+  };
+}
+
+const counter = createCounter();
+console.log(counter.increment());
+console.log(counter.increment());
+console.log(counter.increment());
+console.log(counter.decrement());
+counter.reset();
+console.log(counter.decrement());
+console.log(counter.getValue());
 
 
 console.log('\n=== Exercise 10: Pure function ===');
@@ -91,7 +174,13 @@ function calculatePrice(price) {
 }
 */
 // Your pure version here (hint: pass discount as parameter):
+const price = 100;
+let discount = 0.1;
+function calculatePrice(price, discount) {
+  return price - (price * discount);
+}
 
+console.log(`${price} with ${discount} discount: ${calculatePrice(price, discount)}`);
 
 console.log('\n=== 🎯 Challenge: Function composition ===');
 // TODO: Create a compose function that takes multiple functions
