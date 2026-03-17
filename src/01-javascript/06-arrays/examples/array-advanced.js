@@ -8,7 +8,7 @@ const numbers = [1, 2, 3, 4, 5];
 
 // Extract first elements
 const [first, second] = numbers;
-console.log('first:', first);   // 1
+console.log('first:', first); // 1
 console.log('second:', second); // 2
 
 // Skip elements
@@ -49,8 +49,8 @@ const coords = [10];
 
 // With defaults
 const [lat = 0, lng = 0] = coords;
-console.log('lat:', lat);  // 10
-console.log('lng:', lng);  // 0 (default)
+console.log('lat:', lat); // 10
+console.log('lng:', lng); // 0 (default)
 
 // Works with undefined, not null
 const [val1 = 5] = [undefined];
@@ -109,7 +109,7 @@ const copy = [...original];
 copy.push(4);
 
 console.log('Original:', original); // [1, 2, 3]
-console.log('Copy:', copy);         // [1, 2, 3, 4]
+console.log('Copy:', copy); // [1, 2, 3, 4]
 
 // Alternative ways to copy
 const copy2 = original.slice();
@@ -167,7 +167,7 @@ const arr = Array.from(arrayLike);
 console.log('From array-like:', arr); // ['a', 'b', 'c']
 
 // With mapping function
-const nums2 = Array.from([1, 2, 3], n => n * 2);
+const nums2 = Array.from([1, 2, 3], (n) => n * 2);
 console.log('With map:', nums2); // [2, 4, 6]
 
 // Create range
@@ -184,25 +184,25 @@ const arr3 = Array.of(1, 2, 3);
 console.log('Array.of(1, 2, 3):', arr3); // [1, 2, 3]
 
 // Difference from Array constructor
-console.log('Array(5):', Array(5));        // [ <5 empty items> ]
-console.log('Array.of(5):', Array.of(5));  // [5]
+console.log('Array(5):', Array(5)); // [ <5 empty items> ]
+console.log('Array.of(5):', Array.of(5)); // [5]
 
 console.log('\n=== 12. Flattening Arrays ===');
 
 // flat() - flatten nested arrays
 const nested2 = [1, [2, 3], [4, [5, 6]]];
 
-console.log('flat():', nested2.flat());        // [1, 2, 3, 4, [5, 6]]
-console.log('flat(2):', nested2.flat(2));      // [1, 2, 3, 4, 5, 6]
+console.log('flat():', nested2.flat()); // [1, 2, 3, 4, [5, 6]]
+console.log('flat(2):', nested2.flat(2)); // [1, 2, 3, 4, 5, 6]
 console.log('flat(Infinity):', nested2.flat(Infinity)); // Fully flattened
 
 // flatMap() - map then flatten
 const words = ['Hello World', 'How are you'];
-const allWords = words.flatMap(phrase => phrase.split(' '));
+const allWords = words.flatMap((phrase) => phrase.split(' '));
 console.log('flatMap:', allWords); // ['Hello', 'World', 'How', 'are', 'you']
 
 // Same as:
-const allWords2 = words.map(phrase => phrase.split(' ')).flat();
+const allWords2 = words.map((phrase) => phrase.split(' ')).flat();
 console.log('map + flat:', allWords2);
 
 console.log('\n=== 13. Array Copying - Shallow vs Deep ===');
@@ -214,16 +214,16 @@ const shallow = [...original2];
 shallow[2][0] = 99; // Modifies nested array
 
 console.log('Original:', original2); // [1, 2, [99, 4]] - changed!
-console.log('Shallow:', shallow);    // [1, 2, [99, 4]]
+console.log('Shallow:', shallow); // [1, 2, [99, 4]]
 
 // Deep copy - use JSON (works for simple data)
 const original3 = [1, 2, [3, 4]];
-const deep = JSON.parse(JSON.stringify(original3));
+const deepp = JSON.parse(JSON.stringify(original3));
 
-deep[2][0] = 99;
+deepp[2][0] = 99;
 
 console.log('Original3:', original3); // [1, 2, [3, 4]] - unchanged
-console.log('Deep:', deep);           // [1, 2, [99, 4]]
+console.log('Deep:', deepp); // [1, 2, [99, 4]]
 
 // Deep copy with structuredClone (modern)
 const original4 = [1, 2, [3, 4]];
@@ -232,7 +232,7 @@ const deep2 = structuredClone(original4);
 deep2[2][0] = 99;
 
 console.log('Original4:', original4); // [1, 2, [3, 4]] - unchanged
-console.log('Deep2:', deep2);         // [1, 2, [99, 4]]
+console.log('Deep2:', deep2); // [1, 2, [99, 4]]
 
 console.log('\n=== 14. Immutable Operations ===');
 
@@ -259,7 +259,7 @@ const withUpdated = [...items.slice(0, 2), 99, ...items.slice(3)];
 console.log('With updated:', withUpdated); // [1, 2, 99, 4, 5]
 
 // Or using map
-const withUpdated2 = items.map((n, i) => i === 2 ? 99 : n);
+const withUpdated2 = items.map((n, i) => (i === 2 ? 99 : n));
 console.log('With updated (map):', withUpdated2);
 
 console.log('\n=== 15. Advanced Patterns ===');
@@ -272,7 +272,7 @@ console.log('Unique:', unique); // [1, 2, 3, 4, 5]
 // Intersection (common elements)
 const set1 = [1, 2, 3, 4, 5];
 const set2 = [3, 4, 5, 6, 7];
-const intersection = set1.filter(n => set2.includes(n));
+const intersection = set1.filter((n) => set2.includes(n));
 console.log('Intersection:', intersection); // [3, 4, 5]
 
 // Union (all unique elements)
@@ -280,7 +280,7 @@ const union = [...new Set([...set1, ...set2])];
 console.log('Union:', union); // [1, 2, 3, 4, 5, 6, 7]
 
 // Difference (in set1 but not in set2)
-const difference = set1.filter(n => !set2.includes(n));
+const difference = set1.filter((n) => !set2.includes(n));
 console.log('Difference:', difference); // [1, 2]
 
 // Zip two arrays
@@ -290,14 +290,18 @@ const zipped = names.map((name, i) => [name, ages[i]]);
 console.log('Zipped:', zipped); // [['Alice', 25], ['Bob', 30], ['Charlie', 35]]
 
 // Transpose (flip rows and columns)
-const matrix = [[1, 2, 3], [4, 5, 6]];
-const transposed = matrix[0].map((_, i) => matrix.map(row => row[i]));
+const matrix = [
+  [1, 2, 3],
+  [4, 5, 6],
+];
+const transposed = matrix[0].map((_, i) => matrix.map((row) => row[i]));
 console.log('Transposed:', transposed); // [[1, 4], [2, 5], [3, 6]]
 
 // Partition array
 const mixed = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 const [evens, odds] = mixed.reduce(
-  ([evens, odds], n) => n % 2 === 0 ? [[...evens, n], odds] : [evens, [...odds, n]],
+  ([evens, odds], n) =>
+    n % 2 === 0 ? [[...evens, n], odds] : [evens, [...odds, n]],
   [[], []]
 );
 console.log('Evens:', evens);
