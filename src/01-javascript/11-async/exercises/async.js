@@ -7,46 +7,83 @@
 console.log('=== Exercise 1: setTimeout callback ===');
 // TODO: Use setTimeout to log "Hello" after 1 second
 // Your code here:
-
+setTimeout(() => console.log('Hello'), 1000);
 
 console.log('\n=== Exercise 2: Create a Promise ===');
 // TODO: Create a promise that resolves with "Success!" after 1 second
 // Your code here:
-
+const delayedPromise = new Promise(resolve => setTimeout(resolve('Success'), 1000));
 
 console.log('\n=== Exercise 3: Using .then() ===');
 // TODO: Use .then() to log the result of the promise above
 // Your code here:
-
+delayedPromise.then(result => console.log(result));
 
 console.log('\n=== Exercise 4: async/await ===');
 // TODO: Rewrite Exercise 3 using async/await
 async function demo() {
   // Your code here:
+  const result = await delayedPromise;
+  console.log(result);
 }
-// demo();
+demo();
 
 
 console.log('\n=== Exercise 5: Error handling with try-catch ===');
 // TODO: Create a promise that rejects, handle it with try-catch
 async function handleError() {
   // Your code here:
+  Promise.reject('Just because').catch(reason => console.log(`Rejected with the reason: ${reason}`));
 }
-// handleError();
+handleError();
 
 
 console.log('\n=== Exercise 6: Promise.all() ===');
 // TODO: Create 3 promises, wait for all using Promise.all()
 async function waitForAll() {
   // Your code here:
+  Promise.all([
+    Promise.resolve('Promise 1'),
+    Promise.resolve('Promise 2'),
+    Promise.resolve('Promise 3'),
+  ])
+  .then(res => console.log(res));
 }
-// waitForAll();
+waitForAll();
 
 
 console.log('\n=== Exercise 7: Sequential vs Parallel ===');
 // TODO: Compare time difference between sequential and parallel execution
 // Hint: Create delay function, measure time
 // Your code here:
+function delay(ms, value) {
+  return new Promise(resolve => setTimeout(() => resolve(value), ms));
+}
+
+async function sequential() {
+  console.time('sequential');
+  const result1 = await delay(1000, 'First sequential');
+  const result2 = await delay(1000, 'Second sequential');
+  const result3 = await delay(1000, 'Third sequential');
+  console.timeEnd('sequential');
+  return [result1, result2, result3];
+}
+
+async function parallel() {
+  console.time('parallel');
+  const [result1, result2, result3] = await Promise.all([
+    delay(1000, 'First parallel'),
+    delay(1000, 'Second parallel'),
+    delay(1000, 'Third parallel')
+  ]);
+  console.timeEnd('parallel');
+  return [result1, result2, result3];
+}
+
+(async () => {
+  await sequential();
+  await parallel();
+})();
 
 
 console.log('\n=== Exercise 8: fetch API (if available) ===');
@@ -55,8 +92,14 @@ console.log('\n=== Exercise 8: fetch API (if available) ===');
 async function fetchData() {
   // Your code here:
   // Example: await fetch('https://jsonplaceholder.typicode.com/posts/1')
+  try {
+    const result = await fetch('https://jsonplaceholder.typicode.com/posts/1');
+    console.log(result);
+  } catch (error) {
+    console.error(`Error on fetching data: ${error}`);
+  }
 }
-// fetchData();
+fetchData();
 
 
 console.log('\n=== 🎯 Challenge: Retry function ===');
@@ -64,15 +107,24 @@ console.log('\n=== 🎯 Challenge: Retry function ===');
 // up to N times before giving up
 async function retry(fn, maxAttempts = 3) {
   // Your code here:
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (attempt === maxAttempts) { throw error; }
+
+      console.log(`Attempt ${attempt} failed with error: ${error}. Retrying...`);
+    }
+  }
 }
 
 // Test it (uncomment):
-// let attempts = 0;
-// retry(async () => {
-//   attempts++;
-//   if (attempts < 3) throw new Error('Fail');
-//   return 'Success!';
-// }).then(console.log);
+let attempts = 0;
+retry(async () => {
+  attempts++;
+  if (attempts < 3) throw new Error('Fail');
+  return 'Success!';
+}).then(console.log);
 
 
 console.log('\n=== 🎯 Challenge: Timeout wrapper ===');
@@ -80,27 +132,38 @@ console.log('\n=== 🎯 Challenge: Timeout wrapper ===');
 function withTimeout(promise, timeoutMs) {
   // Your code here:
   // Hint: Use Promise.race()
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), timeoutMs))
+  ]);
 }
 
 // Test it (uncomment):
-// const slowPromise = new Promise(resolve => setTimeout(() => resolve('Done'), 2000));
-// withTimeout(slowPromise, 1000)
-//   .then(console.log)
-//   .catch(err => console.log('Timeout!', err.message));
+const slowPromise = new Promise(resolve => setTimeout(() => resolve('Done'), 2000));
+withTimeout(slowPromise, 1000)
+  .then(console.log)
+  .catch(err => console.log('Timeout!', err.message));
 
 
 console.log('\n=== 🎯 Challenge: Process sequentially ===');
 // TODO: Process array items one by one (sequentially)
 async function processSequentially(items, asyncFn) {
   // Your code here:
+  const output = [];
+  for (const item of items){
+    const result = await asyncFn(item);
+    output.push(result);
+  }
+
+  return output;
 }
 
 // Test it (uncomment):
-// const items = [1, 2, 3];
-// processSequentially(items, async (item) => {
-//   await new Promise(resolve => setTimeout(resolve, 500));
-//   return item * 2;
-// }).then(console.log); // Should be [2, 4, 6]
+const items = [1, 2, 3];
+processSequentially(items, async (item) => {
+  await new Promise(resolve => setTimeout(resolve, 500));
+  return item * 2;
+}).then(console.log); // Should be [2, 4, 6]
 
 
 console.log('\n=== 🎯 Challenge: Batch processing ===');
@@ -108,14 +171,23 @@ console.log('\n=== 🎯 Challenge: Batch processing ===');
 async function processBatches(items, asyncFn, batchSize) {
   // Your code here:
   // Hint: Split into batches, use Promise.all() for each batch
+  const output = [];
+
+  for (let i = 0; i < items.length; i += batchSize){
+    const batch = items.slice(i, i+batchSize);
+    const result = await Promise.all(batch.map(asyncFn));
+    output.push(result);
+  }
+
+  return output.flat(1);
 }
 
 // Test it (uncomment):
-// const items = [1, 2, 3, 4, 5, 6];
-// processBatches(items, async (item) => {
-//   await new Promise(resolve => setTimeout(resolve, 500));
-//   return item * 2;
-// }, 2).then(console.log); // Process 2 at a time
+const items2 = [1, 2, 3, 4, 5, 6];
+processBatches(items2, async (item) => {
+  await new Promise(resolve => setTimeout(resolve, 500));
+  return item * 2;
+}, 2).then(console.log); // Process 2 at a time
 
 
 console.log('\n✅ Exercises completed! Check your answers with a mentor.');

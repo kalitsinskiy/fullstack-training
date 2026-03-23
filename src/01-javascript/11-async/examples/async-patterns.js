@@ -39,7 +39,7 @@ async function parallel() {
 
 console.log('\n=== 2. Promise.all() ===');
 
-async function demo Promise All() {
+async function demoPromiseAll() {
   const promises = [
     delay(100, 'A'),
     delay(200, 'B'),
