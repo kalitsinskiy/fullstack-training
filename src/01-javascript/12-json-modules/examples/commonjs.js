@@ -84,18 +84,18 @@ console.log('=== 4. Side-by-side comparison ===\n');
 const differences = [
   {
     aspect: 'Basic export',
-    commonjs: "module.exports = { add, PI }",
-    esm: "export { add, PI }",
+    commonjs: 'module.exports = { add, PI }',
+    esm: 'export { add, PI }',
   },
   {
     aspect: 'Single export',
-    commonjs: "module.exports = function() {}",
-    esm: "export default function() {}",
+    commonjs: 'module.exports = function() {}',
+    esm: 'export default function() {}',
   },
   {
     aspect: 'Named export inline',
-    commonjs: "exports.add = (a, b) => a + b",
-    esm: "export const add = (a, b) => a + b",
+    commonjs: 'exports.add = (a, b) => a + b',
+    esm: 'export const add = (a, b) => a + b',
   },
   {
     aspect: 'Basic import',
@@ -114,8 +114,8 @@ const differences = [
   },
   {
     aspect: 'Current file path',
-    commonjs: "__filename, __dirname",
-    esm: "import.meta.url, import.meta.dirname",
+    commonjs: '__filename, __dirname',
+    esm: 'import.meta.url, import.meta.dirname',
   },
 ];
 

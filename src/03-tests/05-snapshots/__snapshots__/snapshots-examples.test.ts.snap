@@ -1,0 +1,71 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`When to use snapshots — good cases user list format — snapshot is cleaner than toEqual for complex shape 1`] = `
+{
+  "count": 2,
+  "users": [
+    {
+      "id": "1",
+      "name": "Alice",
+      "role": "admin",
+    },
+    {
+      "id": "2",
+      "name": "Bob",
+      "role": "user",
+    },
+  ],
+}
+`;
+
+exports[`toMatchSnapshot formatApiError matches snapshot 1`] = `
+{
+  "documentation": "https://docs.example.com/errors/VALIDATION_ERROR",
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "details": [
+      "name is required",
+      "email is invalid",
+    ],
+    "httpStatus": 400,
+    "message": "Input validation failed",
+  },
+  "timestamp": Any<String>,
+}
+`;
+
+exports[`toMatchSnapshot formatUser output matches snapshot 1`] = `
+{
+  "accessLevel": "admin",
+  "contactEmail": "alice@example.com",
+  "displayName": "Alice Johnson",
+  "id": "u-123",
+  "isAdmin": true,
+  "memberSince": "2024-01-15",
+}
+`;
+
+exports[`toMatchSnapshot generateReport matches snapshot 1`] = `
+{
+  "rows": [
+    {
+      "label": "Sales",
+      "value": 1500,
+    },
+    {
+      "label": "Returns",
+      "value": 200,
+    },
+    {
+      "label": "Region",
+      "value": "North",
+    },
+  ],
+  "summary": {
+    "generated": Any<String>,
+    "rowCount": 3,
+    "total": 1700,
+  },
+  "title": "Monthly Report",
+}
+`;

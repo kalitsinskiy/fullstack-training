@@ -43,7 +43,7 @@ anything = 'hello';
 console.log(anything.toUpperCase()); // works now since anything = 'hello'
 
 // unknown — type-safe: must narrow before using
-let mystery: unknown = 'hello world';
+const mystery: unknown = 'hello world';
 
 if (typeof mystery === 'string') {
   console.log(mystery.toUpperCase()); // HELLO WORLD — safe
