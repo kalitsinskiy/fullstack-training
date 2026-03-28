@@ -20,7 +20,7 @@ class ReportGeneratorBad {
     const html = `<h1>Report</h1><p>Total: ${total}, Avg: ${avg}</p>`;
 
     // Step 4: save to file (simulated)
-    console.log(`FILE: writing report.html`);
+    console.log('FILE: writing report.html');
 
     return html;
   }

@@ -196,7 +196,7 @@ class PostgresOrderRepository {
 
 class InMemoryOrderRepository {
   #orders = [];
-  save(order) { this.#orders.push(order); console.log(`Memory: saved`); }
+  save(order) { this.#orders.push(order); console.log('Memory: saved'); }
   all() { return this.#orders; }
 }
 

@@ -84,7 +84,7 @@ divide(10, 0);  // Logs assertion error
 console.log('\n=== 6. console.count — count how many times something runs ===');
 
 function handleRequest(path) {
-  console.count(`requests`);
+  console.count('requests');
   console.count(path);    // Count per path
 }
 
