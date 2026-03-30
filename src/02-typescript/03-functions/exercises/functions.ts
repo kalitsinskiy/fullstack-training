@@ -8,22 +8,21 @@ export {};
 console.log('=== Exercise 1: Add return types ===');
 // TODO: Add explicit return type annotations to each function below
 
-function getFullName(firstName: string, lastName: string) {
+function getFullName(firstName: string, lastName: string): string {
   return `${firstName} ${lastName}`;
 }
 
-function isAdult(age: number) {
+function isAdult(age: number): boolean {
   return age >= 18;
 }
 
-function getRandomElement(arr: string[]) {
+function getRandomElement(arr: string[]): unknown {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
 console.log(getFullName('Alice', 'Smith'));
 console.log(getRandomElement(['red', 'green', 'blue']));
 console.log(isAdult(20), isAdult(15));
-
 
 console.log('\n=== Exercise 2: Optional and default parameters ===');
 // TODO: Write a function 'formatCurrency' with:
@@ -34,11 +33,25 @@ console.log('\n=== Exercise 2: Optional and default parameters ===');
 // Returns a string like '$1,234.56' or '1234.56 USD'
 
 // Your function here:
+function formatCurrency(
+  amount: number,
+  currency: string = 'USD',
+  decimals: number = 2,
+  symbol?: string
+): string {
+  const formatted = amount.toLocaleString('en-US', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
+  if (symbol) {
+    return `${symbol}${formatted}`;
+  }
+  return `${formatted} ${currency}`;
+}
 
-// console.log(formatCurrency(1234.5));           // '1,234.50 USD'
-// console.log(formatCurrency(1234.5, 'EUR', 2)); // '1,234.50 EUR'
-// console.log(formatCurrency(9.99, 'USD', 2, '$')); // '$9.99'
-
+console.log(formatCurrency(1234.5)); // '1,234.50 USD'
+console.log(formatCurrency(1234.5, 'EUR', 2)); // '1,234.50 EUR'
+console.log(formatCurrency(9.99, 'USD', 2, '$')); // '$9.99'
 
 console.log('\n=== Exercise 3: Rest parameters ===');
 // TODO: Write a function 'mergeObjects' that accepts any number of objects
@@ -46,10 +59,12 @@ console.log('\n=== Exercise 3: Rest parameters ===');
 // The function should work with any object type using generics (<T extends object>)
 
 // Your function here:
+function mergeObjects<T extends object>(...params: T[]): T {
+  return Object.assign({}, ...params);
+}
 
-// const merged = mergeObjects({ a: 1 }, { b: 2 }, { a: 10, c: 3 });
-// console.log(merged); // { a: 10, b: 2, c: 3 }
-
+const merged = mergeObjects({ a: 1 }, { b: 2 }, { a: 10, c: 3 });
+console.log(merged); // { a: 10, b: 2, c: 3 }
 
 console.log('\n=== Exercise 4: Function type alias ===');
 // TODO: Create a type alias 'Validator<T>' for a function that:
@@ -60,12 +75,18 @@ console.log('\n=== Exercise 4: Function type alias ===');
 //   - 'isPositive': Validator<number> — checks number > 0
 
 // Your code here:
+type Validator<T> = (item: T) => { valid: true } | { valid: false; message: string };
 
-// console.log(isNonEmpty(''));       // { valid: false, message: '...' }
-// console.log(isNonEmpty('hello'));  // { valid: true }
-// console.log(isPositive(-1));       // { valid: false, message: '...' }
-// console.log(isPositive(5));        // { valid: true }
+const isNonEmpty: Validator<string> = (s) =>
+  s.length > 0 ? { valid: true } : { valid: false, message: 'Should be not empty' };
 
+const isPositive: Validator<number> = (n) =>
+  n > 0 ? { valid: true } : { valid: false, message: 'Should be positive' };
+
+console.log(isNonEmpty('')); // { valid: false, message: '...' }
+console.log(isNonEmpty('hello')); // { valid: true }
+console.log(isPositive(-1)); // { valid: false, message: '...' }
+console.log(isPositive(5)); // { valid: true }
 
 console.log('\n=== Exercise 5: Overloads ===');
 // TODO: Write an overloaded function 'repeat':
@@ -75,10 +96,22 @@ console.log('\n=== Exercise 5: Overloads ===');
 //          repeat([1, 2], 3) => [1, 2, 1, 2, 1, 2]
 
 // Your overloads and implementation here:
+function repeat(str: string, times: number): string;
+function repeat(arr: number[], times: number): number[];
+function repeat(input: string | number[], times: number): string | number[] {
+  if (typeof input === 'string') {
+    return input.repeat(times);
+  } else {
+    let result: number[] = [];
+    for (let i = 0; i < times; i++) {
+      result = result.concat(input);
+    }
+    return result;
+  }
+}
 
-// console.log(repeat('ab', 3));      // 'ababab'
-// console.log(repeat([1, 2], 3));    // [1, 2, 1, 2, 1, 2]
-
+console.log(repeat('ab', 3)); // 'ababab'
+console.log(repeat([1, 2], 3)); // [1, 2, 1, 2, 1, 2]
 
 console.log('\n=== Exercise 6: Higher-order functions ===');
 // TODO: Write a function 'memoize' that:
@@ -88,17 +121,27 @@ console.log('\n=== Exercise 6: Higher-order functions ===');
 //   - if called again with the same input, returns cached result
 
 // Your function here:
+function memoize(f: (x: number) => number): (x: number) => number {
+  const cache = new Map<number, number>();
+  return (x: number) => {
+    if (cache.has(x)) {
+      return cache.get(x)!;
+    }
+    const result = f(x);
+    cache.set(x, result);
+    return result;
+  };
+}
 
-// let callCount = 0;
-// const expensive = memoize((n: number) => {
-//   callCount++;
-//   return n * n;
-// });
-// console.log(expensive(5)); // 25
-// console.log(expensive(5)); // 25 (cached)
-// console.log(expensive(3)); // 9
-// console.log('Calls made:', callCount); // 2 (not 3!)
-
+let callCount = 0;
+const expensive = memoize((n: number) => {
+  callCount++;
+  return n * n;
+});
+console.log(expensive(5)); // 25
+console.log(expensive(5)); // 25 (cached)
+console.log(expensive(3)); // 9
+console.log('Calls made:', callCount); // 2 (not 3!)
 
 console.log('\n=== Exercise 7: never for exhaustive checks ===');
 // TODO: Create a type 'Shape':
@@ -113,11 +156,27 @@ function assertNever(_value: never): never {
 }
 
 // Your code here:
+type Shape =
+  | { kind: 'circle'; radius: number }
+  | { kind: 'rectangle'; width: number; height: number }
+  | { kind: 'triangle'; base: number; height: number };
 
-// console.log(area({ kind: 'circle', radius: 5 }));
-// console.log(area({ kind: 'rectangle', width: 4, height: 6 }));
-// console.log(area({ kind: 'triangle', base: 3, height: 4 }));
+function area(shape: Shape): number {
+  switch (shape.kind) {
+    case 'circle':
+      return Math.PI * shape.radius * shape.radius;
+    case 'rectangle':
+      return shape.width * shape.height;
+    case 'triangle':
+      return 0.5 * shape.base * shape.height;
+    default:
+      return assertNever(shape);
+  }
+}
 
+console.log(area({ kind: 'circle', radius: 5 }));
+console.log(area({ kind: 'rectangle', width: 4, height: 6 }));
+console.log(area({ kind: 'triangle', base: 3, height: 4 }));
 
 console.log('\n=== 🎯 Challenge: Pipeline ===');
 // TODO: Build a simple data pipeline using function types:
@@ -136,6 +195,19 @@ console.log('\n=== 🎯 Challenge: Pipeline ===');
 // pipe('1,-2,3,-4,5', parse, filterPositive, sumAll) === 9
 
 // Your code here:
+type Step<T, U> = (input: T) => U;
+
+function pipe<A, B, C, D>(value: A, step1: Step<A, B>, step2: Step<B, C>, step3: Step<C, D>): D {
+  return step3(step2(step1(value)));
+}
+
+const parse: Step<string, number[]> = (input) => input.split(',').map(Number);
+
+const filterPositive: Step<number[], number[]> = (arr) => arr.filter((n) => n > 0);
+
+const sumAll: Step<number[], number> = (arr) => arr.reduce((sum, n) => sum + n, 0);
+
+console.log(pipe('1,-2,3,-4,5', parse, filterPositive, sumAll));
 
 console.log('\n✅ Exercises completed! Check your answers with a mentor.');
 
