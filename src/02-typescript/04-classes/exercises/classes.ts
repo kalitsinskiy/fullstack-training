@@ -16,12 +16,36 @@ console.log('=== Exercise 1: Basic typed class ===');
 //     - getBalance(): number — returns current balance
 
 // Your code here:
+class BankAccount {
+  private balance: number = 0;
 
-// const account = new BankAccount('acc_1', 'Alice');
-// account.deposit(1000);
-// account.withdraw(250);
-// console.log(account.getBalance()); // 750
-// console.log(account.id, account.owner);
+  constructor(
+    readonly id: string,
+    public owner: string
+  ) { }
+
+  deposit(amount: number): void {
+    if (amount <= 0) { throw new RangeError('Amount for deposite must be positive'); }
+
+    this.balance += amount;
+  }
+
+  withdraw(amount: number): void {
+    if (this.balance < amount) { throw new Error('Insufficient funds'); }
+
+    this.balance -= amount;
+  }
+
+  getBalance(): number {
+    return this.balance;
+  }
+}
+
+const account = new BankAccount('acc_1', 'Alice');
+account.deposit(1000);
+account.withdraw(250);
+console.log(account.getBalance()); // 750
+console.log(account.id, account.owner);
 
 
 console.log('\n=== Exercise 2: Parameter properties ===');
@@ -47,8 +71,18 @@ const _personExample = new Person('Alice', 30, 'alice@example.com', 'UA');
 console.log('Person (before refactor):', _personExample.name, _personExample.getEmail());
 
 // Your refactored version:
-// class PersonV2 { ... }
-// const p = new PersonV2('Alice', 30, 'alice@example.com', 'UA');
+class PersonV2 {
+  constructor(
+    public name: string,
+    public age: number,
+    private email: string,
+    protected country: string
+  ) { }
+
+  getEmail(): string { return this.email; }
+}
+const p = new PersonV2('Alice', 30, 'alice@example.com', 'UA');
+console.log('Person (after refactor):', p.name, p.getEmail());
 
 
 console.log('\n=== Exercise 3: Inheritance + access modifiers ===');
@@ -64,13 +98,60 @@ console.log('\n=== Exercise 3: Inheritance + access modifiers ===');
 //   - 'GasCar' extends Vehicle — fuelType returns 'gasoline', maxSpeed 180
 
 // Your code here:
+abstract class Vehicle {
+  protected speed: number = 0;
 
-// const tesla = new ElectricCar();
-// tesla.accelerate(60);
-// tesla.accelerate(60);
-// console.log(tesla.getSpeed(), tesla.fuelType()); // 120 electric
-// tesla.brake(200); // capped at 0
-// console.log(tesla.getSpeed()); // 0
+  constructor (protected maxSpeed: number) {}
+
+  abstract fuelType(): string;
+
+  accelerate(amount: number): void {
+    if (this.speed + amount < this.maxSpeed) {
+      this.speed += amount;
+    } else {
+      this.speed = this.maxSpeed;
+    }
+  }
+
+  brake(amount: number): void {
+    if (this.speed - amount > 0) {
+      this.speed -= amount;
+    } else {
+      this.speed = 0;
+    }
+  }
+
+  getSpeed(): number {
+    return this.speed;
+  }
+}
+
+class ElectricCar extends Vehicle {
+  constructor() { super(200); }
+
+  fuelType(): string {
+    return 'electric';
+  }
+}
+
+class GasCar extends Vehicle {
+  constructor() { super(180); }
+
+  fuelType(): string {
+    return 'gasoline';
+  }
+}
+
+const tesla = new ElectricCar();
+tesla.accelerate(60);
+tesla.accelerate(60);
+console.log(tesla.getSpeed(), tesla.fuelType()); // 120 electric
+tesla.brake(200); // capped at 0
+console.log(tesla.getSpeed()); // 0
+const ford = new GasCar();
+ford.accelerate(120);
+ford.brake(30);
+console.log(ford.fuelType(), ford.getSpeed());
 
 
 console.log('\n=== Exercise 4: Implement interface ===');
@@ -84,12 +165,29 @@ console.log('\n=== Exercise 4: Implement interface ===');
 //   - getLogs() returns all stored messages
 
 // Your code here:
+interface Logger {
+  log(level: 'info' | 'warn' | 'error', message: string): void;
+  getLogs(): string[];
+}
 
-// const logger = new ConsoleLogger();
-// logger.log('info', 'Server started');
-// logger.log('warn', 'High memory usage');
-// logger.log('error', 'Database connection failed');
-// console.log(logger.getLogs());
+class ConsoleLogger implements Logger {
+  private logs: string[] = [];
+
+  log(level: 'info' | 'warn' | 'error', message: string): void {
+    const formattedMessage = `[${level.toUpperCase()}] ${message}`;
+    this.logs.push(formattedMessage);
+    console.log(formattedMessage);
+  }
+  getLogs(): string[] {
+    return [...this.logs];
+  }
+}
+
+const logger = new ConsoleLogger();
+logger.log('info', 'Server started');
+logger.log('warn', 'High memory usage');
+logger.log('error', 'Database connection failed');
+console.log(logger.getLogs());
 
 
 console.log('\n=== Exercise 5: Getters and setters ===');
@@ -103,11 +201,46 @@ console.log('\n=== Exercise 5: Getters and setters ===');
 //   - static method 'fromDiameter(d: number)': Circle — creates from diameter
 
 // Your code here:
+class Circle {
+  private _radius: number;
+  constructor (radius: number) {
+    Circle.validatePositive(radius);
+    this._radius = radius;
+  }
 
-// const c = Circle.fromDiameter(10);
-// console.log(c.radius);       // 5
-// console.log(c.area.toFixed(2));          // 78.54
-// console.log(c.circumference.toFixed(2)); // 31.42
+  get radius(): number {
+    return this._radius;
+  }
+
+  set radius(value: number) {
+    Circle.validatePositive(value);
+    this._radius = value;
+  }
+
+  get area(): number {
+    return Math.PI * (this._radius ** 2);
+  }
+
+  get circumference(): number {
+    return 2 * Math.PI * this._radius;
+  }
+
+  static fromDiameter(d: number): Circle {
+    Circle.validatePositive(d, 'Diameter');
+    return new Circle(d/2);
+  }
+
+  private static validatePositive(radius: number, name: string = 'Radius'): void {
+    if (radius <= 0) {
+      throw new Error(`${name} must be positive number`);
+    }
+  }
+}
+
+const c = Circle.fromDiameter(10);
+console.log(c.radius);       // 5
+console.log(c.area.toFixed(2));          // 78.54
+console.log(c.circumference.toFixed(2)); // 31.42
 
 
 console.log('\n=== Exercise 6: Generic class ===');
@@ -120,15 +253,42 @@ console.log('\n=== Exercise 6: Generic class ===');
 //   - toArray(): T[] — returns a copy of all items
 
 // Your code here:
+class Queue<T> {
+  private _queue: T[] = [];
 
-// const queue = new Queue<string>();
-// queue.enqueue('first');
-// queue.enqueue('second');
-// queue.enqueue('third');
-// console.log(queue.peek());     // 'first'
-// console.log(queue.dequeue());  // 'first'
-// console.log(queue.size);       // 2
-// console.log(queue.toArray());  // ['second', 'third']
+  enqueue(item: T): void {
+    this._queue.push(item);
+  }
+
+  dequeue(): T | undefined {
+    return this._queue.shift();
+  }
+
+  peek(): T | undefined {
+    return this._queue[0];
+  }
+
+  get size(): number {
+    return this._queue.length;
+  }
+
+  isEmpty(): boolean {
+    return this._queue.length === 0;
+  }
+
+  toArray(): T[] {
+    return [...this._queue];
+  }
+}
+
+const queue = new Queue<string>();
+queue.enqueue('first');
+queue.enqueue('second');
+queue.enqueue('third');
+console.log(queue.peek());     // 'first'
+console.log(queue.dequeue());  // 'first'
+console.log(queue.size);       // 2
+console.log(queue.toArray());  // ['second', 'third']
 
 
 console.log('\n=== 🎯 Challenge: Event Emitter ===');
@@ -154,5 +314,43 @@ console.log('\n=== 🎯 Challenge: Event Emitter ===');
 // emitter.emit('login', 'user_1', new Date());
 
 // Your code here:
+class EventEmitter<TEvents extends Record<string, unknown[]>> {
+  private listeners: Map<keyof TEvents, Array<(...args: TEvents[keyof TEvents]) => void>> = new Map();
+
+  on<K extends keyof TEvents>(event: K, listener: (...args: TEvents[K]) => void): void {
+    const bucket = this.listeners.get(event) ?? [];
+    bucket.push(listener as (...args: TEvents[keyof TEvents]) => void);
+    this.listeners.set(event, bucket);
+  }
+
+  off<K extends keyof TEvents>(event: K, listener: (...args: TEvents[K]) => void): void {
+    const bucket = this.listeners.get(event);
+    if (bucket) {
+      const index = bucket.indexOf(listener as (...args: TEvents[keyof TEvents]) => void);
+      if (index > -1) {
+        bucket.splice(index, 1);
+      }
+    }
+  }
+
+  emit<K extends keyof TEvents>(event: K, ...args: TEvents[K]): void {
+    const bucket = this.listeners.get(event);
+    if (bucket) {
+      bucket.forEach(listener => listener(...args));
+    }
+  }
+}
+
+type AppEvents = {
+  login: [userId: string, timestamp: Date];
+  logout: [userId: string];
+  error: [message: string, code: number];
+};
+
+const emitter = new EventEmitter<AppEvents>();
+emitter.on('login', (userId, timestamp) => {
+  console.log(`User ${userId} logged in at ${timestamp}`);
+});
+emitter.emit('login', 'user_1', new Date());
 
 console.log('\n✅ Exercises completed! Check your answers with a mentor.');
