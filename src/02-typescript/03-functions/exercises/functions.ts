@@ -24,7 +24,6 @@ console.log(getFullName('Alice', 'Smith'));
 console.log(getRandomElement(['red', 'green', 'blue']));
 console.log(isAdult(20), isAdult(15));
 
-
 console.log('\n=== Exercise 2: Optional and default parameters ===');
 // TODO: Write a function 'formatCurrency' with:
 //   - amount: number (required)
@@ -39,7 +38,6 @@ console.log('\n=== Exercise 2: Optional and default parameters ===');
 // console.log(formatCurrency(1234.5, 'EUR', 2)); // '1,234.50 EUR'
 // console.log(formatCurrency(9.99, 'USD', 2, '$')); // '$9.99'
 
-
 console.log('\n=== Exercise 3: Rest parameters ===');
 // TODO: Write a function 'mergeObjects' that accepts any number of objects
 // and returns a single merged object (later properties override earlier ones)
@@ -49,7 +47,6 @@ console.log('\n=== Exercise 3: Rest parameters ===');
 
 // const merged = mergeObjects({ a: 1 }, { b: 2 }, { a: 10, c: 3 });
 // console.log(merged); // { a: 10, b: 2, c: 3 }
-
 
 console.log('\n=== Exercise 4: Function type alias ===');
 // TODO: Create a type alias 'Validator<T>' for a function that:
@@ -66,7 +63,6 @@ console.log('\n=== Exercise 4: Function type alias ===');
 // console.log(isPositive(-1));       // { valid: false, message: '...' }
 // console.log(isPositive(5));        // { valid: true }
 
-
 console.log('\n=== Exercise 5: Overloads ===');
 // TODO: Write an overloaded function 'repeat':
 //   - repeat(str: string, times: number): string  — repeats the string
@@ -78,7 +74,6 @@ console.log('\n=== Exercise 5: Overloads ===');
 
 // console.log(repeat('ab', 3));      // 'ababab'
 // console.log(repeat([1, 2], 3));    // [1, 2, 1, 2, 1, 2]
-
 
 console.log('\n=== Exercise 6: Higher-order functions ===');
 // TODO: Write a function 'memoize' that:
@@ -99,7 +94,6 @@ console.log('\n=== Exercise 6: Higher-order functions ===');
 // console.log(expensive(3)); // 9
 // console.log('Calls made:', callCount); // 2 (not 3!)
 
-
 console.log('\n=== Exercise 7: never for exhaustive checks ===');
 // TODO: Create a type 'Shape':
 //   - { kind: 'circle'; radius: number }
@@ -117,7 +111,6 @@ function assertNever(_value: never): never {
 // console.log(area({ kind: 'circle', radius: 5 }));
 // console.log(area({ kind: 'rectangle', width: 4, height: 6 }));
 // console.log(area({ kind: 'triangle', base: 3, height: 4 }));
-
 
 console.log('\n=== 🎯 Challenge: Pipeline ===');
 // TODO: Build a simple data pipeline using function types:
