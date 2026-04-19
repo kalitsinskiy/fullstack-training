@@ -10,8 +10,7 @@
 // capitalize('') → ''
 // capitalize('already') → 'Already'
 export function capitalize(_str: string): string {
-  // TODO: implement
-  throw new Error('Not implemented');
+  return _str.charAt(0).toUpperCase() + _str.slice(1);
 }
 
 // 2. Convert camelCase to kebab-case
@@ -19,8 +18,14 @@ export function capitalize(_str: string): string {
 // camelToKebab('myVariableName') → 'my-variable-name'
 // camelToKebab('already') → 'already'
 export function camelToKebab(_str: string): string {
-  // TODO: implement
-  throw new Error('Not implemented');
+  return _str.replace(
+    /[A-Z]/g,
+    (match, offset) => {
+      return offset === 0
+        ? match.toLowerCase()
+        : '-' + match.toLowerCase();
+    }
+  );
 }
 
 // 3. Truncate a string to maxLength, adding '...' if cut
@@ -28,8 +33,8 @@ export function camelToKebab(_str: string): string {
 // truncate('Hi', 10) → 'Hi'   (no truncation needed)
 // truncate('Hello', 5) → 'Hello'  (exact length — no truncation)
 export function truncate(_str: string, _maxLength: number): string {
-  // TODO: implement
-  throw new Error('Not implemented');
+  if (_str.length <= _maxLength) return _str;
+  return _str.slice(0, _maxLength) + '...';
 }
 
 // 4. Count words in a string (split by whitespace)
@@ -38,8 +43,9 @@ export function truncate(_str: string, _maxLength: number): string {
 // countWords('') → 0
 // countWords('   ') → 0
 export function countWords(_str: string): number {
-  // TODO: implement
-  throw new Error('Not implemented');
+  const trimmed = _str.trim();
+  if (trimmed === '') return 0;
+  return trimmed.split(/\s+/).length;
 }
 
 // 5. Check if a string is a palindrome (case-insensitive, ignore spaces)
@@ -48,8 +54,9 @@ export function countWords(_str: string): number {
 // isPalindrome('hello') → false
 // isPalindrome('') → true
 export function isPalindrome(_str: string): boolean {
-  // TODO: implement
-  throw new Error('Not implemented');
+  const lowerNoSpaces = _str.toLocaleLowerCase().replaceAll(/\s/g, '');
+  const reversed = lowerNoSpaces.split('').reverse().join('');
+  return lowerNoSpaces === reversed;
 }
 
 // 6. Repeat a string n times with optional separator
@@ -58,6 +65,15 @@ export function isPalindrome(_str: string): boolean {
 // repeat('x', 1) → 'x'
 // repeat('x', 0) → ''
 export function repeat(_str: string, _times: number, _sep = ''): string {
-  // TODO: implement
-  throw new Error('Not implemented');
+  const result = [''];
+
+  for (let i = 1; i <= _times; i++) {
+    result.push(
+      i === _times
+        ? _str
+        : _str + _sep
+    );
+  }
+
+  return result.join('');
 }
