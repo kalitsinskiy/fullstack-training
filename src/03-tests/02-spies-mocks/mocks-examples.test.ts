@@ -39,7 +39,8 @@ describe('jest.fn() basics', () => {
   });
 
   test('mockReturnValueOnce — different values each call', () => {
-    const mockRandom = jest.fn()
+    const mockRandom = jest
+      .fn()
       .mockReturnValueOnce(0.1)
       .mockReturnValueOnce(0.5)
       .mockReturnValue(0.9);
@@ -74,9 +75,7 @@ describe('Mock cleanup — bleed between tests', () => {
   // BUT it does NOT clear mockReturnValueOnce queue!
 
   test('problem: unconsumed mockReturnValueOnce bleeds into next test', () => {
-    const mockFn = jest.fn()
-      .mockReturnValueOnce('first')
-      .mockReturnValueOnce('second');
+    const mockFn = jest.fn().mockReturnValueOnce('first').mockReturnValueOnce('second');
 
     // Only consume "first" — "second" stays in the queue
     expect(mockFn()).toBe('first');
@@ -164,7 +163,7 @@ describe('UserService with mocked dependencies', () => {
       sendEmail: jest.fn().mockResolvedValue(undefined),
       sendWelcome: jest.fn().mockResolvedValue(undefined),
       getSentCount: jest.fn().mockReturnValue(0),
-    } as jest.Mocked<EmailService>;
+    } as unknown as jest.Mocked<EmailService>;
 
     mockLogger = {
       log: jest.fn(),
@@ -184,15 +183,11 @@ describe('UserService with mocked dependencies', () => {
   test('register logs the event', async () => {
     await userService.register('Alice', 'alice@example.com');
 
-    expect(mockLogger.log).toHaveBeenCalledWith(
-      expect.stringContaining('alice@example.com')
-    );
+    expect(mockLogger.log).toHaveBeenCalledWith(expect.stringContaining('alice@example.com'));
   });
 
   test('register throws on invalid email', async () => {
-    await expect(
-      userService.register('Alice', 'notanemail')
-    ).rejects.toThrow('Invalid email');
+    await expect(userService.register('Alice', 'notanemail')).rejects.toThrow('Invalid email');
 
     expect(mockEmailService.sendWelcome).not.toHaveBeenCalled();
   });
@@ -210,8 +205,6 @@ describe('UserService with mocked dependencies', () => {
     const result = await userService.deleteUser(user.id);
 
     expect(result).toBe(true);
-    expect(mockLogger.log).toHaveBeenLastCalledWith(
-      expect.stringContaining('deleted')
-    );
+    expect(mockLogger.log).toHaveBeenLastCalledWith(expect.stringContaining('deleted'));
   });
 });

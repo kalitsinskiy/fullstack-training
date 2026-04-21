@@ -1,0 +1,58 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Exercise 1: Basic snapshot formatApiError matches snapshot 1`] = `
+{
+  "documentation": "https://docs.example.com/errors/UNAUTHORIZED",
+  "error": {
+    "code": "UNAUTHORIZED",
+    "httpStatus": 401,
+    "message": "Not authenticated",
+  },
+  "timestamp": "2026-04-21T09:56:35.598Z",
+}
+`;
+
+exports[`Exercise 1: Basic snapshot formatUser matches snapshot 1`] = `
+{
+  "accessLevel": "user",
+  "contactEmail": "test@example.com",
+  "displayName": "Test User",
+  "id": "test-id",
+  "isAdmin": false,
+  "memberSince": "2024-03-01",
+  "prefix": "ADMIN:",
+}
+`;
+
+exports[`Exercise 2: Named snapshot simple report snapshot: Q1 report shape 1`] = `
+{
+  "rows": [
+    {
+      "label": "Revenue",
+      "value": 5000,
+    },
+    {
+      "label": "Costs",
+      "value": 3000,
+    },
+  ],
+  "summary": {
+    "generated": "2026-04-21T09:56:35.601Z",
+    "rowCount": 2,
+    "total": 8000,
+  },
+  "title": "Q1 Report",
+}
+`;
+
+exports[`Exercise 4: Snapshot update workflow admin user snapshot 1`] = `
+{
+  "accessLevel": "admin",
+  "contactEmail": "admin@example.com",
+  "displayName": "Super Admin",
+  "id": "admin-1",
+  "isAdmin": true,
+  "memberSince": "2020-01-01",
+  "prefix": "ADMIN:",
+}
+`;

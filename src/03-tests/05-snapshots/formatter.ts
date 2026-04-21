@@ -26,6 +26,7 @@ export function formatUser(user: User): object {
     accessLevel: user.role,
     memberSince: user.createdAt.toISOString().split('T')[0],
     isAdmin: user.role === 'admin',
+    prefix: 'ADMIN:',
   };
 }
 
@@ -44,7 +45,7 @@ export function formatApiError(error: ApiError): object {
 
 export function generateReport(title: string, rows: ReportRow[]): object {
   const total = rows
-    .filter(r => typeof r.value === 'number')
+    .filter((r) => typeof r.value === 'number')
     .reduce((sum, r) => sum + (r.value as number), 0);
 
   return {
@@ -61,7 +62,7 @@ export function generateReport(title: string, rows: ReportRow[]): object {
 export function formatUserList(users: User[]): object {
   return {
     count: users.length,
-    users: users.map(u => ({
+    users: users.map((u) => ({
       id: u.id,
       name: u.name,
       role: u.role,

@@ -42,6 +42,7 @@ exports[`toMatchSnapshot formatUser output matches snapshot 1`] = `
   "id": "u-123",
   "isAdmin": true,
   "memberSince": "2024-01-15",
+  "prefix": "ADMIN:",
 }
 `;
 
