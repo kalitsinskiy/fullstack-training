@@ -11,7 +11,7 @@
 // capitalize('already') → 'Already'
 export function capitalize(_str: string): string {
   // TODO: implement
-  throw new Error('Not implemented');
+  return _str.charAt(0).toUpperCase() + _str.slice(1) || '';
 }
 
 // 2. Convert camelCase to kebab-case
@@ -20,7 +20,13 @@ export function capitalize(_str: string): string {
 // camelToKebab('already') → 'already'
 export function camelToKebab(_str: string): string {
   // TODO: implement
-  throw new Error('Not implemented');
+  const resultStr = _str.replace(/([A-Z])/g, (char) => `-${char.toLowerCase()}`);
+
+  if (resultStr.startsWith('-')) {
+    return resultStr.slice(1);
+  }
+
+  return resultStr;
 }
 
 // 3. Truncate a string to maxLength, adding '...' if cut
@@ -29,7 +35,11 @@ export function camelToKebab(_str: string): string {
 // truncate('Hello', 5) → 'Hello'  (exact length — no truncation)
 export function truncate(_str: string, _maxLength: number): string {
   // TODO: implement
-  throw new Error('Not implemented');
+  if (_str.length > _maxLength) {
+    return `${_str.slice(0, _maxLength)}...`;
+  }
+
+  return _str;
 }
 
 // 4. Count words in a string (split by whitespace)
@@ -39,7 +49,9 @@ export function truncate(_str: string, _maxLength: number): string {
 // countWords('   ') → 0
 export function countWords(_str: string): number {
   // TODO: implement
-  throw new Error('Not implemented');
+  const words = _str.split(' ').filter((word) => word.length > 0);
+
+  return words.length;
 }
 
 // 5. Check if a string is a palindrome (case-insensitive, ignore spaces)
@@ -49,7 +61,10 @@ export function countWords(_str: string): number {
 // isPalindrome('') → true
 export function isPalindrome(_str: string): boolean {
   // TODO: implement
-  throw new Error('Not implemented');
+  const cleaned = _str.replace(/\s/g, '').toLowerCase();
+  const reversedStr = cleaned.split('').reverse().join('');
+
+  return cleaned === reversedStr;
 }
 
 // 6. Repeat a string n times with optional separator
@@ -59,5 +74,17 @@ export function isPalindrome(_str: string): boolean {
 // repeat('x', 0) → ''
 export function repeat(_str: string, _times: number, _sep = ''): string {
   // TODO: implement
-  throw new Error('Not implemented');
+  if (_times <= 0) return '';
+
+  let resultStr = _str;
+
+  for (let i = 0; i < _times; i++) {
+    if (i === 0) {
+      continue;
+    }
+
+    resultStr += _sep + _str;
+  }
+
+  return resultStr;
 }
