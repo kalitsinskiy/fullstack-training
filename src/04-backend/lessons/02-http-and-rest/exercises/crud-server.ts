@@ -36,7 +36,11 @@ function parseBody(req: http.IncomingMessage): Promise<any> {
     req.on('data', (chunk) => chunks.push(chunk));
     req.on('end', () => {
       const raw = Buffer.concat(chunks).toString();
-      try { resolve(raw ? JSON.parse(raw) : {}); } catch { reject(new Error('Invalid JSON')); }
+      try {
+        resolve(raw ? JSON.parse(raw) : {});
+      } catch {
+        reject(new Error('Invalid JSON'));
+      }
     });
     req.on('error', reject);
   });
@@ -50,6 +54,82 @@ function parseUrl(rawUrl: string) {
 function sendJson(res: http.ServerResponse, status: number, data: unknown) {
   res.writeHead(status, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify(data));
+}
+
+interface UserInput {
+  name?: unknown;
+  email?: unknown;
+  role?: unknown;
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
+function findUserIndexById(id: number) {
+  return users.findIndex((user) => user.id === id);
+}
+
+function hasEmailConflict(email: string, excludeUserId?: number) {
+  return users.some((user) => user.email === email && user.id !== excludeUserId);
+}
+
+function getUserIdFromPath(pathname: string) {
+  const match = pathname.match(/^\/api\/users\/(\d+)$/);
+
+  if (!match) {
+    return null;
+  }
+
+  return Number(match[1]);
+}
+
+function validateRequiredUserInput(body: UserInput) {
+  if (
+    !isNonEmptyString(body.name) ||
+    !isNonEmptyString(body.email) ||
+    !isNonEmptyString(body.role)
+  ) {
+    return 'name, email, and role must all be non-empty strings';
+  }
+
+  return null;
+}
+
+function validatePatchUserInput(body: UserInput) {
+  const allowedKeys = ['name', 'email', 'role'];
+
+  for (const key of Object.keys(body)) {
+    if (!allowedKeys.includes(key)) {
+      return `Unsupported field: ${key}`;
+    }
+  }
+
+  if ('name' in body && !isNonEmptyString(body.name)) {
+    return 'name must be a non-empty string';
+  }
+
+  if ('email' in body && !isNonEmptyString(body.email)) {
+    return 'email must be a non-empty string';
+  }
+
+  if ('role' in body && !isNonEmptyString(body.role)) {
+    return 'role must be a non-empty string';
+  }
+
+  return null;
+}
+
+function getPatchedStringValue(currentValue: string, nextValue: unknown) {
+  if (nextValue === undefined) {
+    return currentValue;
+  }
+
+  if (isNonEmptyString(nextValue)) {
+    return nextValue;
+  }
+
+  return currentValue;
 }
 
 // TODO: Create an HTTP server that implements a User REST API:
@@ -105,4 +185,188 @@ function sendJson(res: http.ServerResponse, status: number, data: unknown) {
 //   curl -X DELETE http://localhost:3000/api/users/1 -w "\nHTTP %{http_code}\n"
 //   curl http://localhost:3000/api/users
 
-// Your code here:
+const server = http.createServer(async (req, res) => {
+  const method = req.method ?? 'GET';
+  const { pathname, searchParams } = parseUrl(req.url ?? '/');
+
+  try {
+    if (method === 'GET' && pathname === '/api/users') {
+      const role = searchParams.get('role');
+      const filteredUsers = role ? users.filter((user) => user.role === role) : users;
+
+      sendJson(res, 200, filteredUsers);
+      return;
+    }
+
+    const userId = getUserIdFromPath(pathname);
+
+    if (method === 'GET' && userId !== null) {
+      const user = users.find((item) => item.id === userId);
+
+      if (!user) {
+        sendJson(res, 404, { error: 'User not found' });
+        return;
+      }
+
+      sendJson(res, 200, user);
+      return;
+    }
+
+    if (method === 'POST' && pathname === '/api/users') {
+      const body = (await parseBody(req)) as UserInput;
+      const validationError = validateRequiredUserInput(body);
+
+      if (validationError) {
+        sendJson(res, 400, { error: validationError });
+        return;
+      }
+
+      const { name, email, role } = body;
+
+      if (!isNonEmptyString(name) || !isNonEmptyString(email) || !isNonEmptyString(role)) {
+        sendJson(res, 400, { error: 'name, email, and role must all be non-empty strings' });
+        return;
+      }
+
+      if (hasEmailConflict(email)) {
+        sendJson(res, 409, { error: 'Email already exists' });
+        return;
+      }
+
+      const createdUser: User = {
+        id: nextId++,
+        name,
+        email,
+        role,
+        createdAt: new Date().toISOString(),
+      };
+
+      users.push(createdUser);
+      res.writeHead(201, {
+        'Content-Type': 'application/json',
+        Location: `/api/users/${createdUser.id}`,
+      });
+      res.end(JSON.stringify(createdUser));
+      return;
+    }
+
+    if (method === 'PUT' && userId !== null) {
+      const userIndex = findUserIndexById(userId);
+
+      if (userIndex === -1) {
+        sendJson(res, 404, { error: 'User not found' });
+        return;
+      }
+
+      const body = (await parseBody(req)) as UserInput;
+      const validationError = validateRequiredUserInput(body);
+
+      if (validationError) {
+        sendJson(res, 400, { error: validationError });
+        return;
+      }
+
+      const { name, email, role } = body;
+
+      if (!isNonEmptyString(name) || !isNonEmptyString(email) || !isNonEmptyString(role)) {
+        sendJson(res, 400, { error: 'name, email, and role must all be non-empty strings' });
+        return;
+      }
+
+      if (hasEmailConflict(email, userId)) {
+        sendJson(res, 409, { error: 'Email already exists' });
+        return;
+      }
+
+      const existingUser = users[userIndex];
+
+      if (!existingUser) {
+        sendJson(res, 404, { error: 'User not found' });
+        return;
+      }
+
+      const updatedUser: User = {
+        id: existingUser.id,
+        createdAt: existingUser.createdAt,
+        name,
+        email,
+        role,
+      };
+
+      users[userIndex] = updatedUser;
+      sendJson(res, 200, updatedUser);
+      return;
+    }
+
+    if (method === 'PATCH' && userId !== null) {
+      const userIndex = findUserIndexById(userId);
+
+      if (userIndex === -1) {
+        sendJson(res, 404, { error: 'User not found' });
+        return;
+      }
+
+      const body = (await parseBody(req)) as UserInput;
+      const validationError = validatePatchUserInput(body);
+
+      if (validationError) {
+        sendJson(res, 400, { error: validationError });
+        return;
+      }
+
+      const existingUser = users[userIndex];
+
+      if (!existingUser) {
+        sendJson(res, 404, { error: 'User not found' });
+        return;
+      }
+
+      const nextName = getPatchedStringValue(existingUser.name, body.name);
+      const nextEmail = getPatchedStringValue(existingUser.email, body.email);
+      const nextRole = getPatchedStringValue(existingUser.role, body.role);
+
+      if (nextEmail !== existingUser.email && hasEmailConflict(nextEmail, userId)) {
+        sendJson(res, 409, { error: 'Email already exists' });
+        return;
+      }
+
+      const updatedUser: User = {
+        ...existingUser,
+        name: nextName,
+        email: nextEmail,
+        role: nextRole,
+      };
+
+      users[userIndex] = updatedUser;
+      sendJson(res, 200, updatedUser);
+      return;
+    }
+
+    if (method === 'DELETE' && userId !== null) {
+      const userIndex = findUserIndexById(userId);
+
+      if (userIndex === -1) {
+        sendJson(res, 404, { error: 'User not found' });
+        return;
+      }
+
+      users.splice(userIndex, 1);
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+
+    sendJson(res, 404, { error: 'Not Found' });
+  } catch (error) {
+    if (error instanceof Error && error.message === 'Invalid JSON') {
+      sendJson(res, 400, { error: 'Invalid JSON' });
+      return;
+    }
+
+    sendJson(res, 500, { error: 'Internal Server Error' });
+  }
+});
+
+server.listen(PORT, () => {
+  console.log(`Server listening on http://localhost:${PORT}`);
+});
