@@ -30,14 +30,14 @@ let nextId = 1; // eslint-disable-line @typescript-eslint/no-unused-vars, prefer
 // The `http` module gives you the body as a stream of chunks, not a single string.
 // You need to collect all chunks, concatenate them, and then JSON.parse().
 //
-// function parseBody(req: http.IncomingMessage): Promise<any> {
-//   return new Promise((resolve, reject) => {
-//     const chunks: Buffer[] = [];
-//     req.on('data', (chunk) => ... );       // collect each chunk
-//     req.on('end', () => ... );             // concatenate and parse
-//     req.on('error', (err) => reject(err));
-//   });
-// }
+function parseBody(req: http.IncomingMessage): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    req.on('data', (chunk) => chunks.push(chunk) );
+    req.on('end', () => resolve(JSON.parse(Buffer.concat(chunks).toString())) );
+    req.on('error', (err) => reject(err));
+  });
+}
 
 // TODO: Implement a helper that parses a URL and extracts the pathname and query params.
 //
@@ -91,3 +91,85 @@ let nextId = 1; // eslint-disable-line @typescript-eslint/no-unused-vars, prefer
 //   curl http://localhost:3000/notes
 
 // Your code here:
+const server = http.createServer(async (req: http.IncomingMessage, res: http.ServerResponse) => {
+  const { method, url } = req;
+  console.log(`${method} ${url}`);
+
+  res.setHeader('Content-Type', 'application/json');
+
+  if (method === 'GET' && url === '/health') {
+    res.writeHead(200);
+    res.end(JSON.stringify({
+      status: 'ok',
+      timestamp: new Date().toISOString()
+    }));
+    return;
+  }
+
+  if (method === 'GET' && url?.startsWith('/notes')) {
+    const parsedUrl = new URL(url, `http://localhost:${PORT}`);
+    const search = parsedUrl.searchParams
+      .get('search')?.toLowerCase() || '';
+    const filteredNotes = notes.filter(note =>
+      note.text.toLowerCase().includes(search)
+    );
+    res.writeHead(200);
+    res.end(JSON.stringify(filteredNotes));
+    return;
+  }
+
+  if (method === 'POST' && url === '/notes') {
+    try {
+      const body = await parseBody(req);
+      if (!body.text || typeof body.text !== 'string') {
+        res.writeHead(400);
+        res.end(JSON.stringify({ error: 'text is required' }));
+        return;
+      }
+      const newNote: Note = {
+        id: nextId++,
+        text: body.text,
+        createdAt: new Date().toISOString(),
+      };
+      notes.push(newNote);
+      res.writeHead(201);
+      res.end(JSON.stringify(newNote));
+    } catch (err) {
+      res.writeHead(400);
+      res.end(JSON.stringify({ error: 'Invalid JSON' }));
+    }
+    return;
+  }
+
+  if (method === 'DELETE' && url?.startsWith('/notes/')) {
+    const idStr = url.split('/')[2] ?? '';
+    const id = parseInt(idStr, 10);
+    const index = notes.findIndex(note => note.id === id);
+    if (index === -1) {
+      res.writeHead(404);
+      res.end(JSON.stringify({ error: 'Note not found' }));
+    } else {
+      notes.splice(index, 1);
+      res.writeHead(200);
+      res.end(JSON.stringify({ deleted: true }));
+    }
+    return;
+  }
+
+  res.writeHead(404);
+  res.end(JSON.stringify({ error: 'Not Found' }));
+
+});
+
+server.listen(PORT, () => {
+  console.log(`Server running at http://localhost:${PORT}`);
+  console.log('Try:');
+  console.log(`  curl http://localhost:${PORT}/health`);
+  console.log(`  curl http://localhost:${PORT}/notes`);
+  console.log(`  curl -X POST http://localhost:${PORT}/notes -H "Content-Type: application/json" -d '{"text":"Buy milk"}'`);
+  console.log(`  curl -X POST http://localhost:${PORT}/notes -H "Content-Type: application/json" -d '{"text":"Learn Node.js"}'`);
+  console.log(`  curl http://localhost:${PORT}/notes?search=milk`);
+  console.log(`  curl -X DELETE http://localhost:${PORT}/notes/1`);
+  console.log(`  curl http://localhost:${PORT}/notes`);
+  console.log('\nPress Ctrl+C to stop');
+});

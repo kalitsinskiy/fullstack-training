@@ -4,6 +4,7 @@
   "description": "Fullstack JavaScript/TypeScript training repository with practical examples and test-driven exercises",
   "main": "index.js",
   "scripts": {
+    "ts-node": "TS_NODE_PROJECT=config/tsconfig.json ts-node",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:module": "jest",

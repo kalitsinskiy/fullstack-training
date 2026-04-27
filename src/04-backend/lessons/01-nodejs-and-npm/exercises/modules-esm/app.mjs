@@ -10,9 +10,16 @@
 // Default: import Calculator from '...';
 
 // Your code here:
+import { add, subtract } from './math.mjs';
+import Calculator from './math.mjs';
 
 // TODO: Use import.meta.url to derive __filename and __dirname equivalents.
 // Hint: use fileURLToPath from 'node:url' and dirname from 'node:path'.
+import { fileURLToPath } from 'node:url';
+import { dirname } from 'node:path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // --- Tests (do not modify) ---
 import assert from 'node:assert';
