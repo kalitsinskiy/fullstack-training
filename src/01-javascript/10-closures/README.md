@@ -8,7 +8,7 @@ A closure is a function that **remembers the variables from its outer scope** ev
 function makeCounter() {
   let count = 0; // This variable is "closed over"
 
-  return function() {
+  return function () {
     return ++count;
   };
 }
@@ -50,9 +50,15 @@ function createWallet(initial) {
   let balance = initial; // private!
 
   return {
-    deposit(amount) { balance += amount; },
-    withdraw(amount) { balance -= amount; },
-    getBalance() { return balance; }
+    deposit(amount) {
+      balance += amount;
+    },
+    withdraw(amount) {
+      balance -= amount;
+    },
+    getBalance() {
+      return balance;
+    },
   };
 }
 
@@ -78,4 +84,3 @@ console.log(wallet.getBalance()); // 150
 
 1. **Study examples**: Run `node src/01-javascript/10-closures/examples/<file>.js`
 2. **Complete exercises**: Open `exercises/closures.js` and write code
-

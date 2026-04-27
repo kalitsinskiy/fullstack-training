@@ -1,4 +1,4 @@
-export {};
+// export {};
 // ============================================
 // FUNCTION TYPES Examples
 // ============================================
@@ -21,7 +21,6 @@ console.log(add(3, 4));
 console.log(multiply(5, 6));
 console.log(greet('Alice'));
 
-
 console.log('\n=== 2. Optional and default parameters ===');
 
 function createTag(tag: string, content: string, className?: string): string {
@@ -37,8 +36,7 @@ function paginate(items: unknown[], page = 1, pageSize = 10) {
   return items.slice(start, start + pageSize);
 }
 
-console.log(paginate([1,2,3,4,5,6,7,8,9,10,11,12], 2, 5)); // [6,7,8,9,10]
-
+console.log(paginate([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], 2, 5)); // [6,7,8,9,10]
 
 console.log('\n=== 3. Rest parameters ===');
 
@@ -51,7 +49,6 @@ function buildUrl(base: string, ...paths: string[]): string {
   return [base, ...paths].join('/');
 }
 console.log(buildUrl('https://api.example.com', 'users', '123', 'posts'));
-
 
 console.log('\n=== 4. Function types ===');
 
@@ -69,15 +66,14 @@ loadData('1', (err, data) => console.log('Loaded:', err, data));
 const isEven: Predicate<number> = (n) => n % 2 === 0;
 const numToStr: Transform<number, string> = String;
 
-console.log([1,2,3,4,5].filter(isEven)); // [2, 4]
-console.log([1,2,3].map(numToStr));       // ['1', '2', '3']
+console.log([1, 2, 3, 4, 5].filter(isEven)); // [2, 4]
+console.log([1, 2, 3].map(numToStr)); // ['1', '2', '3']
 
 // Passing functions as arguments
 function applyToAll<T, U>(arr: T[], fn: Transform<T, U>): U[] {
   return arr.map(fn);
 }
-console.log(applyToAll([1, 2, 3], n => n * n)); // [1, 4, 9]
-
+console.log(applyToAll([1, 2, 3], (n) => n * n)); // [1, 4, 9]
 
 console.log('\n=== 5. void vs never ===');
 
@@ -98,15 +94,18 @@ type TrafficLight = 'red' | 'yellow' | 'green';
 
 function getAction(light: TrafficLight): string {
   switch (light) {
-    case 'red': return 'Stop';
-    case 'yellow': return 'Slow down';
-    case 'green': return 'Go';
-    default: return assertNever(light); // TypeScript ensures all cases handled
+    case 'red':
+      return 'Stop';
+    case 'yellow':
+      return 'Slow down';
+    case 'green':
+      return 'Go';
+    default:
+      return assertNever(light); // TypeScript ensures all cases handled
   }
 }
 console.log(getAction('red'));
 console.log(getAction('green'));
-
 
 console.log('\n=== 6. Function overloads ===');
 
@@ -120,10 +119,9 @@ function format(value: string | number | Date): string {
   return value.toISOString().split('T')[0] ?? '';
 }
 
-console.log(format('  hello  '));        // 'hello'
-console.log(format(3.14159));           // '3.14'
+console.log(format('  hello  ')); // 'hello'
+console.log(format(3.14159)); // '3.14'
 console.log(format(new Date('2024-01-15'))); // '2024-01-15'
-
 
 console.log('\n=== 7. Higher-order functions ===');
 
@@ -145,7 +143,6 @@ const numToString = (n: number): string => `num:${n}`;
 const addOneThenStringify = compose(numToString, addOne);
 
 console.log(addOneThenStringify(4)); // 'num:5'
-
 
 console.log('\n=== 8. this parameter ===');
 

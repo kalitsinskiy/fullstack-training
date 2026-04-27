@@ -6,14 +6,16 @@ Welcome to hands-on fullstack development training! Learn JavaScript, TypeScript
 
 - **JavaScript Basics** - Variables, data types, functions, arrays, objects, control flow, async, strings, error handling, classes, closures, JSON & modules
 - **TypeScript** - Types, interfaces, functions, classes, generics, utility types
-- **Tests** - Coming soon
-- **Backend Projects** - Coming soon
-- **Frontend Projects** - Coming soon
+- **Tests** - Jest matchers, mocks, lifecycle hooks, async testing, snapshots, TDD
+- **Backend** - Node.js, Fastify, NestJS, MongoDB, Mongoose, JWT auth, API design, testing
+- **Frontend** - HTML/CSS from scratch, React, hooks, routing, MUI, API integration, testing
+- **Fullstack** - Docker, Redis, RabbitMQ, WebSockets, microservices, CI/CD, deployment
 
 <details>
 <summary>📋 <strong>View Complete Course Structure</strong></summary>
 
 ### 1. JavaScript Basics
+
 - **Variables** (`01-variables`) - `let`, `const`, `var`, hoisting, scope
 - **Data Types** (`02-data-types`) - Primitives, type conversion, `typeof`, truthy/falsy
 - **Control Flow** (`03-control-flow`) - `if/else`, `switch`, ternary, loops
@@ -28,6 +30,7 @@ Welcome to hands-on fullstack development training! Learn JavaScript, TypeScript
 - **JSON & Modules** (`12-json-modules`) - `JSON.parse/stringify`, `import/export`, CommonJS vs ESM
 
 ### 2. TypeScript Basics
+
 - **Types** (`01-types`) - Primitives, unions, literals, type narrowing, enums, tuples, `any`/`unknown`/`never`
 - **Interfaces** (`02-interfaces`) - Interfaces, `type` vs `interface`, declaration merging, extending, index signatures
 - **Functions** (`03-functions`) - Typed params/returns, optional/default/rest, overloads, function type aliases, `void`/`never`
@@ -36,19 +39,59 @@ Welcome to hands-on fullstack development training! Learn JavaScript, TypeScript
 - **Utility Types** (`06-utility-types`) - `Partial`, `Required`, `Readonly`, `Pick`, `Omit`, `Record`, `Exclude`, `ReturnType`, `Awaited`
 
 ### 3. Tests
-_Coming soon - separate section for testing concepts_
 
-### 4. Backend Projects
-_Coming soon - practical Node.js/Express projects_
+- **Matchers** (`01-matchers`) - `toBe`, `toEqual`, `toThrow`, `toContain` and other Jest matchers
+- **Spies & Mocks** (`02-spies-mocks`) - `jest.fn()`, `spyOn()`, `toHaveBeenCalledWith()`, mock cleanup
+- **Lifecycle** (`03-lifecycle`) - `beforeEach`, `afterEach`, `beforeAll`, `afterAll`
+- **Async** (`04-async`) - Testing `async/await`, fake timers
+- **Snapshots** (`05-snapshots`) - Snapshot testing: when and why
+- **TDD** (`06-tdd`) - Test-Driven Development: Red → Green → Refactor
 
-### 5. Frontend Projects
-_Coming soon - practical React projects_
+### 4. Backend (10 lessons)
+
+- **Node.js & npm** (`01-nodejs-and-npm`) - Event loop, CJS vs ESM, npm, semver, scripts
+- **HTTP & REST** (`02-http-and-rest`) - HTTP protocol, REST design, status codes, idempotency
+- **Fastify** (`03-fastify`) - Plugins, hooks, decorators, Context DI, encapsulation
+- **NestJS Fundamentals** (`04-nestjs-fundamentals`) - Modules, controllers, providers, DI, Fastify adapter
+- **NestJS Advanced** (`05-nestjs-advanced`) - Guards, pipes, interceptors, DTOs, exception filters
+- **Validation & Error Handling** (`06-validation-and-error-handling`) - JSON Schema, AJV, Pino, custom errors
+- **MongoDB & Mongoose** (`07-mongodb-and-mongoose`) - Schemas, indexes, CRUD, aggregation, transactions
+- **Authentication** (`08-authentication`) - JWT, bcrypt, Passport, RBAC, guards
+- **API Design & Security** (`09-api-design-and-security`) - CORS, Swagger, pagination, Helmet, rate limiting
+- **Testing Backend** (`10-testing-backend`) - Jest, supertest, mongodb-memory-server, NestJS testing
+
+### 5. Frontend (8 lessons)
+
+- **HTML Basics** (`01-html-basics`) - Semantic elements, forms, accessibility
+- **CSS Basics** (`02-css-basics`) - Box model, flexbox, grid, positioning, units
+- **CSS Advanced** (`03-css-advanced`) - Media queries, CSS Modules, Styled Components
+- **React Fundamentals** (`04-react-fundamentals`) - JSX, components, props, useState, events
+- **React Hooks & State** (`05-react-hooks-and-state`) - useEffect, useContext, custom hooks
+- **React Router & MUI** (`06-react-router-and-mui`) - React Router v6, protected routes, Material UI
+- **Connecting to API** (`07-connecting-to-api`) - fetch/axios, API service layer, loading/error states
+- **Testing React** (`08-testing-react`) - React Testing Library, mocking, testing hooks
+
+### 6. Fullstack: Secret Santa (10 lessons)
+
+- **Docker & Infrastructure** (`01-docker-and-infrastructure`) - Dockerfile, multi-stage builds, docker-compose
+- **Environment & Config** (`02-environment-and-config`) - dotenv, config validation, 12-factor app
+- **Rooms & Draw** (`03-rooms-and-draw`) - Derangement algorithm, MongoDB transactions
+- **Redis** (`04-redis`) - Caching, TTL, rate limiting, online tracking
+- **RabbitMQ** (`05-rabbitmq`) - Exchanges, queues, DLQ, event-driven notifications
+- **Notifications** (`06-notifications`) - HTTP adapter, circuit breaker, notification UI
+- **WebSockets** (`07-websockets`) - Socket.IO, JWT auth, Redis adapter, real-time push
+- **Anonymous Messaging** (`08-anonymous-messaging`) - Service mediator, privacy patterns, chat UI
+- **Testing Microservices** (`09-testing-microservices`) - Integration tests, E2E, cross-service flows
+- **CI/CD & Deployment** (`10-ci-cd-and-deployment`) - GitHub Actions, Husky, cloud deployment
+
+**Apps:** santa-api (NestJS) + santa-notifications (Fastify) + santa-app (React) — a complete Secret Santa application
 
 </details>
 
 ## 📊 Evaluation Format
 
 Each block includes:
+
 - **Study materials**: README, examples, exercises
 - **Evaluation**: Control questions per topic
 - **Requirement**: Must complete previous block before starting next
@@ -58,6 +101,7 @@ Each block includes:
 ### What You're Learning
 
 **JavaScript** is the language of the web - originally created in 1995 for browsers, it's now one of the most popular programming languages in the world. You'll find JavaScript running:
+
 - 🌐 **In browsers** - Making websites interactive (React, Vue, Angular)
 - 🖥️ **On servers** - Building APIs and backend systems (Node.js, Express)
 - 📱 **In mobile apps** - React Native, Ionic
@@ -69,12 +113,14 @@ Each block includes:
 **TypeScript** adds static typing to JavaScript, catching errors before your code runs. Created by Microsoft in 2012, it's become the industry standard for large-scale applications.
 
 **Why this stack?**
+
 - ✅ One language for frontend and backend
 - ✅ Huge ecosystem (npm has 2+ million packages)
 - ✅ Modern, actively developed
 - ✅ High demand in job market
 
 **Want to learn more?**
+
 - [JavaScript: The First 20 Years](https://dl.acm.org/doi/10.1145/3386327) - History and evolution
 - [How JavaScript Works](https://developer.mozilla.org/en-US/docs/Web/JavaScript) - MDN Web Docs
 - [Node.js: Under the Hood](https://nodejs.org/en/learn/getting-started/introduction-to-nodejs) - Official docs
@@ -102,6 +148,7 @@ node -v  # Should show v22.x.x
 ```
 
 **Why nvm?**
+
 - 🔄 Switch between Node.js versions easily
 - 🎯 Use latest stable version (Node.js 22 LTS)
 - 🚀 Avoid permission issues
@@ -115,6 +162,7 @@ node -v  # Should show v22.x.x
 ### Setup (2 minutes)
 
 **1. Install dependencies if you not done that before**
+
 ```bash
 npm install
 ```
@@ -144,6 +192,7 @@ cat README.md
 ```
 
 Each README contains:
+
 - Quick overview of concepts
 - Key topics explained
 - Links to external resources (MDN, JavaScript.info)
@@ -196,18 +245,21 @@ git commit -m "Completed block 1: Variables"
 ## 🛠 Quick Command Reference
 
 **Running JavaScript Examples:**
+
 ```bash
 node src/01-javascript/01-variables/examples/let-const.js
 node src/01-javascript/03-control-flow/examples/conditionals.js
 ```
 
 **Running TypeScript Examples:**
+
 ```bash
 npx ts-node src/02-typescript/01-types/examples/basic-types.ts
 npx ts-node src/02-typescript/05-generics/examples/generics.ts
 ```
 
 **Code Quality:**
+
 ```bash
 npm run lint                # Check code style
 npm run lint:fix            # Auto-fix issues

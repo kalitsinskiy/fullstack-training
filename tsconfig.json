@@ -4,19 +4,17 @@
     "target": "ES2020",
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "jsx": "react",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
 
     /* Modules */
-    "module": "commonjs",
-    "rootDir": "..",
-    "moduleResolution": "node",
-    "baseUrl": "..",
-    "paths": {
-      "@config/*": ["config/*"]
-    },
+    "module": "nodenext",
+    "rootDir": ".",
+    "moduleResolution": "nodenext",
     "resolveJsonModule": true,
 
     /* Emit */
-    "outDir": "../dist",
+    "outDir": "./dist",
     "noEmit": true,
     "declaration": true,
     "declarationMap": true,
@@ -48,16 +46,22 @@
     "skipLibCheck": true
   },
   "include": [
-    "../src/02-typescript/**/*",
-    "../src/03-tests/**/*",
-    "../src/04-backend/**/*",
-    "../src/05-frontend/**/*"
+    "src/02-typescript/**/*",
+    "src/03-tests/**/*",
+    "src/04-backend/**/*",
+    "src/05-frontend/**/*",
+    "src/06-fullstack/**/*"
   ],
   "exclude": [
-    "../node_modules",
-    "../dist",
-    "../coverage",
+    "node_modules",
+    "dist",
+    "coverage",
+    "santa-api",
+    "santa-notifications",
+    "santa-app",
     "**/*.test.ts",
-    "**/*.test.tsx"
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx"
   ]
 }

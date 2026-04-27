@@ -126,7 +126,7 @@ class ConnectionError extends DatabaseError {
 }
 
 const connError = new ConnectionError('localhost:5432');
-console.log('Is AppError?', connError instanceof AppError);        // true
+console.log('Is AppError?', connError instanceof AppError); // true
 console.log('Is DatabaseError?', connError instanceof DatabaseError); // true
 console.log('Is ConnectionError?', connError instanceof ConnectionError); // true
 console.log('Error code:', connError.code);
@@ -142,7 +142,7 @@ class FormValidationError extends Error {
   }
 
   getFieldError(field) {
-    return this.errors.find(e => e.field === field)?.message;
+    return this.errors.find((e) => e.field === field)?.message;
   }
 
   hasErrors() {
@@ -177,7 +177,7 @@ try {
   validateRegistration({
     username: 'alice',
     email: 'alice@example.com',
-    password: 'secure123'
+    password: 'secure123',
   });
   console.log('Registration valid!');
 } catch (error) {
@@ -187,14 +187,14 @@ try {
 // Invalid data
 try {
   validateRegistration({
-    username: 'al',     // too short
+    username: 'al', // too short
     email: 'not-email', // invalid
-    password: 'short'   // too short
+    password: 'short', // too short
   });
 } catch (error) {
   if (error instanceof FormValidationError) {
     console.log('\nValidation errors:');
-    error.errors.forEach(e => console.log(` - ${e.field}: ${e.message}`));
+    error.errors.forEach((e) => console.log(` - ${e.field}: ${e.message}`));
     console.log('Username error:', error.getFieldError('username'));
   }
 }

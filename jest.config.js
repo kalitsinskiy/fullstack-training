@@ -10,6 +10,7 @@ module.exports = {
   testMatch: [
     '<rootDir>/src/**/__tests__/**/*.test.{js,ts,jsx,tsx}',
     '<rootDir>/src/03-tests/**/*.test.{js,ts}',
+    '<rootDir>/src/04-backend/**/*.spec.{js,ts}',
   ],
 
   transform: {
@@ -46,6 +47,7 @@ module.exports = {
         '<rootDir>/src/02-typescript/**/__tests__/**/*.test.{js,ts}',
         '<rootDir>/src/03-tests/**/__tests__/**/*.test.{js,ts}',
         '<rootDir>/src/04-backend/**/__tests__/**/*.test.{js,ts}',
+        '<rootDir>/src/04-backend/**/*.spec.{js,ts}',
         '<rootDir>/src/06-algorithms/**/__tests__/**/*.test.{js,ts}',
         '<rootDir>/src/07-patterns/**/__tests__/**/*.test.{js,ts}',
         '<rootDir>/src/08-architecture/**/__tests__/**/*.test.{js,ts}',
@@ -104,7 +106,6 @@ module.exports = {
 
   testPathIgnorePatterns: [
     '/node_modules/',
-    '/examples/',
   ],
 
   modulePaths: ['<rootDir>'],

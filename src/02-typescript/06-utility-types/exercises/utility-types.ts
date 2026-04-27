@@ -24,7 +24,6 @@ interface Author {
   bio?: string;
 }
 
-
 console.log('=== Exercise 1: Partial for updates ===');
 // TODO: Create type 'ArticleUpdate' using Partial — for PATCH requests
 //       (all fields optional, but exclude id, createdAt, authorId since those can't change)
@@ -125,7 +124,15 @@ console.log(hasPermission('viewer', 'read'));   // true
 
 console.log('\n=== Exercise 5: Exclude and Extract ===');
 // TODO: Given the union below:
-type EventType = 'click' | 'focus' | 'blur' | 'keydown' | 'keyup' | 'mouseenter' | 'mouseleave' | 'scroll';
+type EventType =
+  | 'click'
+  | 'focus'
+  | 'blur'
+  | 'keydown'
+  | 'keyup'
+  | 'mouseenter'
+  | 'mouseleave'
+  | 'scroll';
 
 // a) Create 'KeyboardEvents' — only keyboard events (keydown, keyup)
 // b) Create 'MouseEvents' — only events that start with 'mouse'
@@ -146,7 +153,9 @@ function searchArticles(_query: string, _tags: string[], _limit: number): Articl
   return []; // stub
 }
 
-async function loadAuthorWithArticles(_authorId: string): Promise<{ author: Author; articles: Article[] }> {
+async function loadAuthorWithArticles(
+  _authorId: string
+): Promise<{ author: Author; articles: Article[] }> {
   return { author: {} as Author, articles: [] }; // stub
 }
 
