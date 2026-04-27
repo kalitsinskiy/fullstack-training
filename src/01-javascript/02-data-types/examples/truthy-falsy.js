@@ -12,7 +12,7 @@ console.log('\n2. 0 (zero)');
 console.log('Boolean(0):', Boolean(0));
 
 console.log('\n3. "" (empty string)');
-console.log('Boolean(""):', Boolean(""));
+console.log('Boolean(""):', Boolean(''));
 
 console.log('\n4. null');
 console.log('Boolean(null):', Boolean(null));
@@ -29,9 +29,9 @@ console.log('\n=== 2. Everything Else is Truthy ===');
 
 // Truthy values that might surprise you
 console.log('\n--- Strings ---');
-console.log('Boolean("0"):', Boolean("0"));           // true (not empty!)
-console.log('Boolean("false"):', Boolean("false"));   // true (string!)
-console.log('Boolean(" "):', Boolean(" "));           // true (whitespace!)
+console.log('Boolean("0"):', Boolean('0'));           // true (not empty!)
+console.log('Boolean("false"):', Boolean('false'));   // true (string!)
+console.log('Boolean(" "):', Boolean(' '));           // true (whitespace!)
 
 console.log('\n--- Numbers ---');
 console.log('Boolean(1):', Boolean(1));               // true
@@ -50,25 +50,25 @@ console.log('Boolean(new Date()):', Boolean(new Date())); // true
 console.log('\n=== 3. Truthy/Falsy in Conditions ===');
 
 // if statement
-if ("") {
+if ('') {
   console.log('This will NOT print');
 } else {
   console.log('Empty string is falsy ❌');
 }
 
-if ("hello") {
+if ('hello') {
   console.log('Non-empty string is truthy ✅');
 }
 
 // Checking for existence
-let username = "";
+let username = '';
 if (username) {
   console.log('Has username');
 } else {
   console.log('No username (empty string)');
 }
 
-username = "Alice";
+username = 'Alice';
 if (username) {
   console.log('Has username:', username);
 }
@@ -77,19 +77,19 @@ console.log('\n=== 4. Logical Operators with Truthy/Falsy ===');
 
 // && (AND) - returns first falsy or last value
 console.log('--- && operator ---');
-console.log(true && "hello");        // "hello"
-console.log("hello" && "world");     // "world"
-console.log("hello" && 0);           // 0 (first falsy)
-console.log(0 && "hello");           // 0 (first falsy)
-console.log("" && "hello");          // "" (first falsy)
+console.log(true && 'hello');        // "hello"
+console.log('hello' && 'world');     // "world"
+console.log('hello' && 0);           // 0 (first falsy)
+console.log(0 && 'hello');           // 0 (first falsy)
+console.log('' && 'hello');          // "" (first falsy)
 
 // || (OR) - returns first truthy or last value
 console.log('\n--- || operator ---');
-console.log(false || "hello");       // "hello" (first truthy)
-console.log("" || "default");        // "default"
+console.log(false || 'hello');       // "hello" (first truthy)
+console.log('' || 'default');        // "default"
 console.log(0 || 100);               // 100
 console.log(null || undefined);      // undefined (last value)
-console.log("Alice" || "Default");   // "Alice" (first truthy)
+console.log('Alice' || 'Default');   // "Alice" (first truthy)
 
 // Practical use: default values
 console.log('\n--- Default values ---');
@@ -97,8 +97,8 @@ let count;
 let displayCount = count || 0;
 console.log('Display count:', displayCount); // 0
 
-let name = "";
-let displayName = name || "Guest";
+let name = '';
+let displayName = name || 'Guest';
 console.log('Display name:', displayName); // "Guest"
 
 // ⚠️ Gotcha: 0 is falsy!
@@ -116,15 +116,15 @@ console.log('\n=== 5. NOT Operator (!) ===');
 console.log('--- ! operator ---');
 console.log(!true);              // false
 console.log(!false);             // true
-console.log(!"hello");           // false (truthy → false)
-console.log(!"");                // true (falsy → true)
+console.log(!'hello');           // false (truthy → false)
+console.log(!'');                // true (falsy → true)
 console.log(!0);                 // true
 console.log(!1);                 // false
 
 // Double NOT - converts to boolean
 console.log('\n--- !! operator (convert to boolean) ---');
-console.log(!!"hello");          // true
-console.log(!!"");               // false
+console.log(!!'hello');          // true
+console.log(!!'');               // false
 console.log(!!0);                // false
 console.log(!!1);                // true
 console.log(!!{});               // true
@@ -139,8 +139,8 @@ function hasValue(value) {
 }
 
 console.log('--- hasValue() ---');
-console.log('hasValue("hello"):', hasValue("hello"));     // true
-console.log('hasValue(""):', hasValue(""));               // false
+console.log('hasValue("hello"):', hasValue('hello'));     // true
+console.log('hasValue(""):', hasValue(''));               // false
 console.log('hasValue(0):', hasValue(0));                 // false ⚠️
 console.log('hasValue(null):', hasValue(null));           // false
 
@@ -150,8 +150,8 @@ function isDefined(value) {
 }
 
 console.log('\n--- isDefined() ---');
-console.log('isDefined("hello"):', isDefined("hello"));   // true
-console.log('isDefined(""):', isDefined(""));             // true ✅
+console.log('isDefined("hello"):', isDefined('hello'));   // true
+console.log('isDefined(""):', isDefined(''));             // true ✅
 console.log('isDefined(0):', isDefined(0));               // true ✅
 console.log('isDefined(null):', isDefined(null));         // false
 console.log('isDefined(undefined):', isDefined(undefined)); // false
@@ -174,12 +174,12 @@ function validateForm(data) {
   return true;
 }
 
-validateForm({ username: "Alice", password: "123" });
-validateForm({ username: "", password: "123" });
+validateForm({ username: 'Alice', password: '123' });
+validateForm({ username: '', password: '123' });
 
 // Array filtering
 console.log('\n--- Filter truthy values ---');
-const mixed = [0, 1, false, "hello", "", null, undefined, "world"];
+const mixed = [0, 1, false, 'hello', '', null, undefined, 'world'];
 const truthyOnly = mixed.filter(Boolean); // Boolean as filter function!
 console.log('Truthy values:', truthyOnly); // [1, "hello", "world"]
 
@@ -189,10 +189,10 @@ function render(condition, content) {
 }
 
 console.log('\n--- Conditional rendering ---');
-console.log(render(true, "Show this"));     // "Show this"
-console.log(render(false, "Show this"));    // false
-console.log(render("", "Show this"));       // ""
-console.log(render(1, "Show this"));        // "Show this"
+console.log(render(true, 'Show this'));     // "Show this"
+console.log(render(false, 'Show this'));    // false
+console.log(render('', 'Show this'));       // ""
+console.log(render(1, 'Show this'));        // "Show this"
 
 console.log('\n=== Best Practices ===');
 console.log('1. Remember the 6 falsy values - everything else is truthy');

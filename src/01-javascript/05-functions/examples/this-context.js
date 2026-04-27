@@ -11,7 +11,7 @@ const person = {
   name: 'Alice',
   greet() {
     console.log(`Hi, I'm ${this.name}`); // 'this' = person object
-  }
+  },
 };
 
 person.greet(); // 'Hi, I'm Alice'
@@ -27,8 +27,8 @@ console.log('\n=== 2. "this" in different contexts ===');
 const calculator = {
   value: 0,
   add(n) {
-    this.value += n;   // 'this' = calculator
-    return this;       // return this for chaining
+    this.value += n; // 'this' = calculator
+    return this; // return this for chaining
   },
   subtract(n) {
     this.value -= n;
@@ -36,7 +36,7 @@ const calculator = {
   },
   result() {
     return this.value;
-  }
+  },
 };
 
 console.log(calculator.add(10).add(5).subtract(3).result()); // 12
@@ -44,10 +44,10 @@ console.log(calculator.add(10).add(5).subtract(3).result()); // 12
 // 'this' inside class methods
 class Counter {
   constructor() {
-    this.count = 0;  // 'this' = instance being created
+    this.count = 0; // 'this' = instance being created
   }
   increment() {
-    this.count++;    // 'this' = the Counter instance
+    this.count++; // 'this' = the Counter instance
     return this;
   }
   getValue() {
@@ -64,7 +64,7 @@ const user = {
   name: 'Bob',
   greet() {
     console.log(`Hello, ${this.name}`);
-  }
+  },
 };
 
 // ✅ Works — called as a method of user
@@ -75,8 +75,8 @@ const greetFn = user.greet;
 greetFn(); // 'Hello, undefined' — 'this' is now global/undefined
 
 // ❌ Context lost — passed as callback
-setTimeout(user.greet, 0);    // 'Hello, undefined'
-[1].forEach(user.greet);      // 'Hello, undefined'
+setTimeout(user.greet, 0); // 'Hello, undefined'
+[1].forEach(user.greet); // 'Hello, undefined'
 
 // WHY: When you pass user.greet, you're passing just the function.
 // The connection to 'user' is lost. It's like doing:
@@ -95,13 +95,15 @@ function introduce(greeting, punctuation) {
 const alice = { name: 'Alice' };
 const bob = { name: 'Bob' };
 
-introduce.call(alice, 'Hello', '!');  // "Hello, I'm Alice!"
-introduce.call(bob, 'Hi', '.');       // "Hi, I'm Bob."
+introduce.call(alice, 'Hello', '!'); // "Hello, I'm Alice!"
+introduce.call(bob, 'Hi', '.'); // "Hi, I'm Bob."
 
 // Borrow a method from another object
 const admin = {
   name: 'Admin',
-  getRole() { return 'admin'; }
+  getRole() {
+    return 'admin';
+  },
 };
 
 const regularUser = { name: 'Charlie' };
@@ -122,8 +124,8 @@ console.log('\n=== 5. apply() — same as call, but args as array ===');
 // fn.apply(thisArg, [arg1, arg2, ...])
 // Identical to call(), but arguments passed as an array
 
-introduce.apply(alice, ['Howdy', '?']);   // "Howdy, I'm Alice?"
-introduce.apply(bob, ['Hey', '...']);     // "Hey, I'm Bob..."
+introduce.apply(alice, ['Howdy', '?']); // "Howdy, I'm Alice?"
+introduce.apply(bob, ['Hey', '...']); // "Hey, I'm Bob..."
 
 // Useful when you already have args in an array
 const args = ['Greetings', '!!'];
@@ -149,27 +151,27 @@ function greetUser(greeting) {
   console.log(`${greeting}, ${this.name}!`);
 }
 
-const aliceGreet = greetUser.bind(alice);   // New function, 'this' always = alice
-const bobGreet = greetUser.bind(bob);       // New function, 'this' always = bob
+const aliceGreet = greetUser.bind(alice); // New function, 'this' always = alice
+const bobGreet = greetUser.bind(bob); // New function, 'this' always = bob
 
-aliceGreet('Hello');   // 'Hello, Alice!'
-bobGreet('Hi');        // 'Hi, Bob!'
+aliceGreet('Hello'); // 'Hello, Alice!'
+bobGreet('Hi'); // 'Hi, Bob!'
 
 // Can also pre-fill arguments (partial application)
 const sayHelloToAlice = greetUser.bind(alice, 'Hello');
-sayHelloToAlice();  // 'Hello, Alice!'
+sayHelloToAlice(); // 'Hello, Alice!'
 
 // Fix context loss with bind
 const user2 = {
   name: 'Eve',
   greet() {
     console.log(`Hi, I'm ${this.name}`);
-  }
+  },
 };
 
 const fixedGreet = user2.greet.bind(user2); // 'this' is locked to user2
-setTimeout(fixedGreet, 0);  // ✅ Works: 'Hi, I'm Eve'
-[1].forEach(fixedGreet);    // ✅ Works: 'Hi, I'm Eve'
+setTimeout(fixedGreet, 0); // ✅ Works: 'Hi, I'm Eve'
+[1].forEach(fixedGreet); // ✅ Works: 'Hi, I'm Eve'
 
 console.log('\n=== 7. Arrow Functions and "this" ===');
 
@@ -199,10 +201,10 @@ const obj = {
   name: 'Object',
 
   // Regular method — 'this' depends on caller
-  regularMethod: function() {
+  regularMethod: function () {
     console.log('Regular:', this.name);
 
-    const innerRegular = function() {
+    const innerRegular = function () {
       console.log('  Inner regular:', this?.name); // undefined — lost context
     };
     innerRegular();
@@ -216,7 +218,7 @@ const obj = {
   // Arrow method — inherits 'this' from where obj is defined (global)
   arrowMethod: () => {
     console.log('Arrow method:', this?.name); // undefined — captured global 'this'
-  }
+  },
 };
 
 obj.regularMethod();
@@ -273,8 +275,16 @@ console.log('Arrow function          — inherits this, cannot be changed');
 
 console.log('\n=== Best Practices ===');
 console.log('1. Use arrow functions for callbacks inside class methods');
-console.log('2. Use bind() when passing methods as callbacks (event listeners)');
-console.log('3. call/apply are mainly used to borrow methods from other objects');
-console.log('4. Prefer arrow class fields (handleClick = () => {}) over bind in constructor');
+console.log(
+  '2. Use bind() when passing methods as callbacks (event listeners)'
+);
+console.log(
+  '3. call/apply are mainly used to borrow methods from other objects'
+);
+console.log(
+  '4. Prefer arrow class fields (handleClick = () => {}) over bind in constructor'
+);
 console.log('5. Know that context loss is one of the most common JS bugs');
-console.log('6. Use arrow functions for array callbacks (map, filter, forEach)');
+console.log(
+  '6. Use arrow functions for array callbacks (map, filter, forEach)'
+);

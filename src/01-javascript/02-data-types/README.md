@@ -5,6 +5,7 @@
 JavaScript has **8 data types**:
 
 **Primitive types** (7):
+
 - **String** - text values (`"hello"`, `'world'`)
 - **Number** - integers and decimals (`42`, `3.14`)
 - **BigInt** - very large integers (`9007199254740991n`)
@@ -14,13 +15,15 @@ JavaScript has **8 data types**:
 - **Symbol** - unique identifiers (advanced)
 
 **Reference type** (1):
-- **Object** - collections of data (includes arrays, functions, etc.)
+
+- **Object** - collections of data (includes arrays, functions,
 
 ## Key Concepts
 
 ### Primitive vs Reference
 
 **Primitives** are immutable and compared by value:
+
 ```javascript
 let a = 5;
 let b = 5;
@@ -28,23 +31,26 @@ console.log(a === b); // true
 ```
 
 **Objects** are mutable and compared by reference:
+
 ```javascript
-let obj1 = {x: 5};
-let obj2 = {x: 5};
+let obj1 = { x: 5 };
+let obj2 = { x: 5 };
 console.log(obj1 === obj2); // false (different references)
 ```
 
 ### Type Conversion
 
 JavaScript can **automatically convert** types (type coercion):
+
 ```javascript
-"5" + 3  // "53" (number to string)
-"5" - 3  // 2 (string to number)
+'5' + 3; // "53" (number to string)
+'5' - 3; // 2 (string to number)
 ```
 
 ### Truthy and Falsy
 
 **Falsy values** (only 6):
+
 - `false`, `0`, `""`, `null`, `undefined`, `NaN`
 
 Everything else is **truthy** (including `"0"`, `[]`, `{}`)
@@ -52,13 +58,14 @@ Everything else is **truthy** (including `"0"`, `[]`, `{}`)
 ### Checking Types
 
 Use `typeof` operator:
+
 ```javascript
-typeof "hello"     // "string"
-typeof 42          // "number"
-typeof true        // "boolean"
-typeof undefined   // "undefined"
-typeof null        // "object" ⚠️ (historical bug)
-typeof []          // "object"
+typeof 'hello'; // "string"
+typeof 42; // "number"
+typeof true; // "boolean"
+typeof undefined; // "undefined"
+typeof null; // "object" ⚠️ (historical bug)
+typeof []; // "object"
 ```
 
 ## Learn More

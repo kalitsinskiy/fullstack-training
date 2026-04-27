@@ -35,21 +35,21 @@ console.table(users, ['name', 'role']);
 console.log('\n=== 3. console.group — organize related logs ===');
 
 function processOrder(order) {
-  console.group(`Order #${order.id}`);  // Start group
+  console.group(`Order #${order.id}`); // Start group
   console.log('Customer:', order.customer);
   console.log('Total:', order.total);
-  console.group('Items');               // Nested group
-  order.items.forEach(item => console.log('-', item));
-  console.groupEnd();                   // End 'Items' group
+  console.group('Items'); // Nested group
+  order.items.forEach((item) => console.log('-', item));
+  console.groupEnd(); // End 'Items' group
   console.log('Status: processing');
-  console.groupEnd();                   // End 'Order' group
+  console.groupEnd(); // End 'Order' group
 }
 
 processOrder({
   id: 101,
   customer: 'Alice',
   total: 99.99,
-  items: ['Book', 'Pen', 'Notebook']
+  items: ['Book', 'Pen', 'Notebook'],
 });
 
 console.log('\n=== 4. console.time — measure performance ===');
@@ -59,7 +59,7 @@ let sum = 0;
 for (let i = 0; i < 1_000_000; i++) {
   sum += i;
 }
-console.timeEnd('loop');  // prints: loop: Xms
+console.timeEnd('loop'); // prints: loop: Xms
 
 // Multiple named timers
 console.time('parse');
@@ -71,21 +71,21 @@ console.log('\n=== 5. console.assert — conditional logging ===');
 // Only logs if condition is FALSE (like an assertion)
 const age = 15;
 console.assert(age >= 18, 'User must be 18+, got:', age); // Logs — condition is false
-console.assert(age >= 0, 'Age cannot be negative');       // No log — condition is true
+console.assert(age >= 0, 'Age cannot be negative'); // No log — condition is true
 
 function divide(a, b) {
   console.assert(b !== 0, 'divide(): divisor cannot be 0');
   return a / b;
 }
 
-divide(10, 2);  // No assert log
-divide(10, 0);  // Logs assertion error
+divide(10, 2); // No assert log
+divide(10, 0); // Logs assertion error
 
 console.log('\n=== 6. console.count — count how many times something runs ===');
 
 function handleRequest(path) {
   console.count('requests');
-  console.count(path);    // Count per path
+  console.count(path); // Count per path
 }
 
 handleRequest('/api/users');
@@ -132,8 +132,12 @@ console.log('\n=== 9. Reading Error Messages and Stack Traces ===');
 // An error message tells you WHAT went wrong.
 // A stack trace tells you WHERE and HOW you got there.
 
-function a() { b(); }
-function b() { c(); }
+function a() {
+  b();
+}
+function b() {
+  c();
+}
 function c() {
   // Uncomment to see the full stack trace:
   // throw new Error('Something went wrong!');
@@ -162,7 +166,7 @@ console.log('\n=== 10. Common Debugging Techniques ===');
 // Technique 1: Log inputs and outputs at function boundaries
 function processData(data) {
   console.log('processData INPUT:', data);
-  const result = data.map(x => x * 2);
+  const result = data.map((x) => x * 2);
   console.log('processData OUTPUT:', result);
   return result;
 }
@@ -176,7 +180,11 @@ console.log({ firstName, lastName }); // ✅ Shows variable names + values
 
 // Technique 3: Inspect 'this' context
 function checkContext() {
-  console.log('this is:', this === globalThis ? 'global' : 'custom object', this?.constructor?.name);
+  console.log(
+    'this is:',
+    this === globalThis ? 'global' : 'custom object',
+    this?.constructor?.name
+  );
 }
 checkContext();
 
@@ -209,9 +217,15 @@ Useful node debug flags:
 
 console.log('=== Best Practices ===');
 console.log('1. Remove console.log statements before committing code');
-console.log('2. Use console.table() for arrays of objects — much more readable');
+console.log(
+  '2. Use console.table() for arrays of objects — much more readable'
+);
 console.log('3. Use { variable } shorthand to log with labels');
-console.log('4. Read the full error message before guessing — it usually tells you what happened');
+console.log(
+  '4. Read the full error message before guessing — it usually tells you what happened'
+);
 console.log('5. Read stack traces bottom-up to understand the call path');
 console.log('6. Use console.time() to find performance bottlenecks');
-console.log('7. The debugger statement + node --inspect is more powerful than console.log');
+console.log(
+  '7. The debugger statement + node --inspect is more powerful than console.log'
+);

@@ -37,21 +37,21 @@ testLet();
 console.log('\n=== 4. var in loops - the classic problem ===');
 console.log('With var:');
 for (var i = 0; i < 3; i++) {
-  setTimeout(function() {
+  setTimeout(function () {
     console.log('  var i:', i); // All print 3!
   }, 100);
 }
 
-setTimeout(function() {
+setTimeout(function () {
   console.log('\nWith let:');
   for (let j = 0; j < 3; j++) {
-    setTimeout(function() {
+    setTimeout(function () {
       console.log('  let j:', j); // Prints 0, 1, 2
     }, 100);
   }
 }, 200);
 
-setTimeout(function() {
+setTimeout(function () {
   console.log('\n=== 5. var redeclaration ===');
   var name = 'John';
   console.log('name:', name);
@@ -64,7 +64,7 @@ setTimeout(function() {
   // let city = 'LA'; // ❌ Error: Identifier 'city' has already been declared
 }, 400);
 
-setTimeout(function() {
+setTimeout(function () {
   console.log('\n=== 6. Why var is problematic ===');
   console.log('1. Function scope instead of block scope');
   console.log('2. Can be redeclared without error');

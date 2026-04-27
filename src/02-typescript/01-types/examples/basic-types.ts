@@ -2,7 +2,7 @@ export {};
 // ============================================
 // BASIC TYPES Examples
 // ============================================
-// Run this file with: npx ts-node src/02-typescript/01-types/examples/basic-types.ts
+// Run this file with: nnpx tsx src/02-typescript/01-types/examples/basic-types.ts
 
 console.log('=== 1. Primitive types ===');
 

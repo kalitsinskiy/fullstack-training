@@ -5,13 +5,14 @@
 Objects store collections of key-value pairs (properties). They are fundamental to JavaScript - everything except primitives is an object.
 
 **Basic syntax:**
+
 ```javascript
 const person = {
   name: 'Alice',
   age: 25,
   greet() {
     console.log(`Hello, I'm ${this.name}`);
-  }
+  },
 };
 ```
 
@@ -23,12 +24,12 @@ const person = {
 // Create object
 const user = {
   name: 'Alice',
-  age: 25
+  age: 25,
 };
 
 // Access properties
-user.name        // Dot notation
-user['age']      // Bracket notation
+user.name; // Dot notation
+user['age']; // Bracket notation
 ```
 
 ### Object Methods
@@ -38,7 +39,7 @@ user['age']      // Bracket notation
 const obj = {
   greet() {
     return 'Hello';
-  }
+  },
 };
 
 // this keyword
@@ -46,7 +47,7 @@ const person = {
   name: 'Alice',
   sayHi() {
     console.log(`Hi, I'm ${this.name}`);
-  }
+  },
 };
 ```
 
@@ -87,13 +88,13 @@ const updated = { ...original, a: 99 };
 const obj = { a: 1, b: 2, c: 3 };
 
 // Get keys
-Object.keys(obj)     // ['a', 'b', 'c']
+Object.keys(obj); // ['a', 'b', 'c']
 
 // Get values
-Object.values(obj)   // [1, 2, 3]
+Object.values(obj); // [1, 2, 3]
 
 // Get entries (key-value pairs)
-Object.entries(obj)  // [['a', 1], ['b', 2], ['c', 3]]
+Object.entries(obj); // [['a', 1], ['b', 2], ['c', 3]]
 ```
 
 ## Important Methods
@@ -116,4 +117,3 @@ Object.entries(obj)  // [['a', 1], ['b', 2], ['c', 3]]
 
 1. **Study examples**: Run `node src/01-javascript/07-objects/examples/<file>.js`
 2. **Complete exercises**: Open `exercises/objects.js` and write code
-

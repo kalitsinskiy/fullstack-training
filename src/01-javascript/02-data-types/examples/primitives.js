@@ -4,7 +4,7 @@
 
 console.log('=== 1. String ===');
 const greeting = 'Hello';
-const name = "Alice";
+const name = 'Alice';
 const template = `My name is ${name}`; // Template literal
 console.log(greeting, name);
 console.log(template);
@@ -44,7 +44,7 @@ console.log('Type:', typeof isActive); // "boolean"
 
 // Booleans from comparisons
 console.log('5 > 3:', 5 > 3); // true
-console.log('10 === "10":', 10 === "10"); // false
+console.log('10 === "10":', 10 === '10'); // false
 
 console.log('\n=== 5. Undefined ===');
 let notAssigned;
