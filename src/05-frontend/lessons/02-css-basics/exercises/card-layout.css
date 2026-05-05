@@ -1,0 +1,77 @@
+/*
+  TODO: Style the card grid layout.
+
+  Requirements:
+
+  1. RESET & BASE
+     - Apply box-sizing: border-box to all elements
+     - Set body font-family to system-ui, sans-serif
+     - Set body background to a light gray (#f5f5f5)
+     - Remove default margin from body
+
+  2. PAGE HEADER (.page-header)
+     - Background: dark green (#2d5a27)
+     - Text color: white
+     - Padding: 1.5rem 2rem
+     - Center the text
+
+  3. CARD GRID (.card-grid)
+     - Use CSS Grid OR Flexbox to create a responsive grid
+     - RESPONSIVE BREAKPOINTS:
+       - Desktop (>1024px): 3 cards per row
+       - Tablet (600px - 1024px): 2 cards per row
+       - Mobile (<600px): 1 card per row
+     - Gap between cards: 1.5rem
+     - Add horizontal padding and max-width for readability
+     - Center the grid on the page
+
+  4. INDIVIDUAL CARD (.card)
+     - White background
+     - Rounded corners (border-radius: 8px)
+     - Subtle box shadow
+     - Overflow: hidden (so the image corners are rounded too)
+     - On hover: slightly stronger shadow (transition this!)
+
+  5. CARD IMAGE (.card-image)
+     - Full width of the card
+     - Height: auto (maintain aspect ratio)
+     - Display: block (removes the inline gap under images)
+
+  6. CARD BODY (.card-body)
+     - Padding: 1rem 1.25rem
+
+  7. CARD TITLE (.card-title)
+     - Font size: 1.2rem
+     - Margin bottom: 0.5rem
+
+  8. CARD TEXT (.card-text)
+     - Color: #666
+     - Font size: 0.9rem
+     - Margin bottom: 0.75rem
+
+  9. CARD PRICE (.card-price)
+     - Font size: 1.25rem
+     - Font weight: bold
+     - Color: #2d5a27 (green)
+     - Margin bottom: 1rem
+
+  10. CARD BUTTON (.card-button)
+      - Full width of the card body
+      - Padding: 0.6rem
+      - Background: #2d5a27
+      - Color: white
+      - No border
+      - Rounded corners
+      - Cursor: pointer
+      - On hover: darken the background
+
+  Hints:
+  - For the responsive grid, you can use either:
+    a) CSS Grid: grid-template-columns with repeat(auto-fill, minmax(280px, 1fr))
+       — this gives automatic responsiveness without media queries
+    b) Media queries with explicit column counts:
+       @media (min-width: 600px) { ... }
+       @media (min-width: 1024px) { ... }
+  - Use transition on .card for a smooth hover shadow effect
+  - Look at examples/grid-layouts.html and examples/flexbox-layouts.html for reference
+*/

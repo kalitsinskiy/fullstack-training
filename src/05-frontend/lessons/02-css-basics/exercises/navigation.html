@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Navigation — Exercise</title>
+  <link rel="stylesheet" href="navigation.css">
+</head>
+<body>
+
+  <!--
+    The HTML structure is provided. Your job is to write the CSS in navigation.css.
+    See the TODO comments in navigation.css for instructions.
+  -->
+
+  <nav class="navbar">
+    <a href="#" class="navbar-logo">
+      Secret Santa
+    </a>
+
+    <!-- This checkbox hack enables the hamburger toggle with pure CSS -->
+    <input type="checkbox" id="nav-toggle" class="nav-toggle">
+    <label for="nav-toggle" class="nav-toggle-label" aria-label="Toggle navigation">
+      <span class="hamburger"></span>
+    </label>
+
+    <ul class="navbar-links">
+      <li><a href="#" class="nav-link">Home</a></li>
+      <li><a href="#" class="nav-link">My Rooms</a></li>
+      <li><a href="#" class="nav-link">Wishlist</a></li>
+      <li><a href="#" class="nav-link nav-link-cta">Create Room</a></li>
+    </ul>
+  </nav>
+
+  <main style="padding: 2rem; max-width: 800px; margin: 0 auto;">
+    <h1>Responsive Navigation Exercise</h1>
+    <p>Resize the browser window to see the navbar switch between desktop and mobile layouts.</p>
+    <p>On mobile, click the hamburger icon to toggle the navigation links.</p>
+  </main>
+
+</body>
+</html>

@@ -1,0 +1,70 @@
+/*
+  TODO: Make this page responsive using a mobile-first approach.
+
+  Requirements:
+
+  1. RESET & BASE
+     - Apply box-sizing: border-box to all elements
+     - Remove default margin/padding
+     - Set font-family, line-height, color, background on body
+
+  2. CSS VARIABLES
+     - Define at least these variables on :root:
+       --color-primary, --color-primary-dark, --color-text,
+       --color-bg, --color-surface, --spacing-sm, --spacing-md,
+       --spacing-lg, --radius
+     - Use var() everywhere instead of hardcoded values
+
+  3. HEADER (.header)
+     - Sticky at the top (position: sticky)
+     - Background: var(--color-primary)
+     - Mobile: stack title and nav vertically, center-aligned
+     - Tablet+: flex row with space-between
+
+  4. NAV LINKS (.header-nav a)
+     - Style as pill-shaped links with hover transition
+     - Smooth color/background transition on hover (use transition)
+
+  5. HERO SECTION (.hero)
+     - Centered text with larger font size
+     - Add vertical padding
+     - Use a transition or animation to fade in the hero text when the page loads
+       (hint: create a @keyframes fadeIn animation)
+
+  6. FEATURE CARDS (.features)
+     Pick ONE of two approaches and add a CSS comment saying which and why:
+
+     APPROACH A — modern auto-fill (recommended, single line, scales smoothly):
+       .features { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+       — no media queries needed; works phone → 4K. Same approach as the
+         README App Task §3 and Lesson 02.
+
+     APPROACH B — explicit breakpoint columns (use when a designer dictates
+       exact column counts at specific viewport widths):
+       Mobile (<768px):  .features { grid-template-columns: 1fr; }
+       Tablet (≥768px):  .features { grid-template-columns: repeat(2, 1fr); }
+       Desktop (≥1024px): .features { grid-template-columns: repeat(3, 1fr); }
+
+     Use CSS Grid with `gap` either way. Don't mix.
+
+     Each .feature-card:
+       - Background: var(--color-surface)
+       - Rounded corners, padding, subtle box-shadow
+       - Hover effect: lift up slightly (transform: translateY) with transition
+       - Add a colored top border or a ::before pseudo-element as a decorative accent
+
+  7. FOOTER (.footer)
+     - Dark background, light text, centered, padding
+
+  8. TRANSITIONS & ANIMATIONS
+     - Cards should have a smooth hover effect (transition)
+     - Nav links should have a smooth hover color change (transition)
+     - Hero section should fade in on page load (@keyframes + animation)
+
+  Hints:
+  - Start with mobile styles (no media query)
+  - Add @media (min-width: 768px) for tablet
+  - Add @media (min-width: 1024px) for desktop
+  - Look at examples/responsive.html + responsive.css for reference
+  - Look at examples/css-variables.html for variable patterns
+*/

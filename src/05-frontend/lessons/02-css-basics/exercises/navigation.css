@@ -1,0 +1,73 @@
+/*
+  TODO: Style a responsive navbar.
+
+  Requirements:
+
+  1. RESET & BASE
+     - Apply box-sizing: border-box to all elements
+     - Remove default margin/padding from body
+     - Set font-family to system-ui, sans-serif
+
+  2. NAVBAR (.navbar)
+     - Background: dark green (#2d5a27)
+     - Display: flex
+     - Align items: center
+     - Padding: 0 1.5rem
+     - Position: sticky, top: 0 (stays at top on scroll)
+     - z-index: 100 (above other content)
+     - Flex-wrap: wrap (so links can drop below on mobile)
+
+  3. LOGO (.navbar-logo)
+     - Color: white
+     - Font-size: 1.25rem
+     - Font-weight: bold
+     - Text-decoration: none
+     - Padding: 1rem 0
+
+  4. NAV LINKS (.navbar-links)
+     - List-style: none
+     - Display: flex
+     - Gap: 0.25rem
+     - Margin-left: auto (pushes links to the right)
+
+  5. INDIVIDUAL LINKS (.nav-link)
+     - Color: #cde6ca (light green)
+     - Text-decoration: none
+     - Padding: 0.5rem 1rem
+     - Border-radius: 4px
+     - Transition: background-color and color
+     - On hover: background rgba(255,255,255,0.1), color white
+
+  6. CTA LINK (.nav-link-cta)
+     - Background: #c0392b (red)
+     - Color: white
+     - On hover: background #e74c3c
+
+  7. HAMBURGER TOGGLE (CSS-only, no JavaScript)
+     - The <input type="checkbox"> (.nav-toggle) should be hidden (display: none)
+     - The <label> (.nav-toggle-label) should also be hidden on desktop (display: none)
+     - The .hamburger span inside the label represents the middle bar
+       of the hamburger icon. Use ::before and ::after pseudo-elements
+       for the top and bottom bars.
+     - Each bar: width 24px, height 2px, background white
+     - Space the bars vertically using transform: translateY()
+
+  8. MOBILE LAYOUT (max-width: 768px)
+     - Show the hamburger label (display: block)
+     - .navbar-links:
+       - Take full width (flex-basis: 100%)
+       - Stack vertically (flex-direction: column)
+       - Hidden by default: max-height: 0; overflow: hidden
+       - Transition max-height for a smooth open/close animation
+     - When the hidden checkbox is checked:
+       .nav-toggle:checked ~ .navbar-links { max-height: 300px; }
+       This reveals the links menu
+     - Each .nav-link on mobile should be full-width with more padding
+
+  Hints:
+  - The checkbox hack: a hidden <input type="checkbox"> + <label for="...">
+    lets you toggle state with pure CSS using the :checked pseudo-class
+    and the ~ (general sibling) combinator.
+  - Look at examples/flexbox-layouts.html for navbar patterns
+  - Test by resizing the browser below 768px width
+*/

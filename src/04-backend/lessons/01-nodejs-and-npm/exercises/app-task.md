@@ -1,68 +1,19 @@
-# App Task: Initialize Secret Santa Backend Services
+# App Task: Initialize santa-notifications
 
-Create two backend services **at the repo root** (not inside `src/`).
-These are real applications that you will develop throughout the course.
+Create the **santa-notifications** service at the **repo root** (not inside `src/`).
+This is a real application that you will develop throughout the course.
 
----
-
-## 1. santa-api (NestJS + Fastify adapter, port 3001)
-
-The main API — auth, users, rooms, wishlists, assignments.
-
-### Create the project
-
-```bash
-# From the repo root:
-npx @nestjs/cli new santa-api --package-manager npm --skip-git
-cd santa-api
-```
-
-### Switch from Express to Fastify
-
-NestJS uses Express by default. We want Fastify (faster, schema-based validation).
-
-1. Install the adapter:
-   ```bash
-   npm install @nestjs/platform-fastify
-   ```
-
-2. Open `santa-api/src/main.ts`. Right now it uses `NestFactory.create(AppModule)` — that's Express.
-   
-   **Your task:** Change it to use `FastifyAdapter`. You'll need:
-   - Import `FastifyAdapter` and `NestFastifyApplication` from `@nestjs/platform-fastify`
-   - Pass `new FastifyAdapter()` as the second argument to `NestFactory.create`
-   - Use `NestFastifyApplication` as the generic type
-   - Listen on port **3001** (not 3000) with host `'0.0.0.0'`
-
-   > Hint: check [NestJS Fastify docs](https://docs.nestjs.com/techniques/performance) if stuck.
-
-### Add a health endpoint
-
-Open `santa-api/src/app.controller.ts`. Add a new `GET /health` route that returns:
-```json
-{ "status": "ok" }
-```
-
-You already have an example of `@Get()` in the same file — follow the same pattern.
-
-### Verify
-
-```bash
-cd santa-api
-npm run start
-
-# In another terminal:
-curl http://localhost:3001/health
-# Expected: {"status":"ok"}
-```
+> 💡 santa-api (NestJS) will be set up later in **Lesson 04 — NestJS Fundamentals**.
+> For now you only need santa-notifications, which is a great fit for this lesson:
+> it's a clean `npm init` + `tsconfig.json` + a tiny HTTP server.
 
 ---
 
-## 2. santa-notifications (raw Fastify, port 3002)
+## santa-notifications (raw Fastify, port 3002)
 
 The notification service — notifications, anonymous messages, real-time push.
 
-Unlike santa-api where NestJS CLI sets everything up, here you build from scratch — just like the `http-server.ts` example you ran earlier, but with Fastify instead of raw `http`.
+You build this from scratch — just like the `http-server.ts` example you ran earlier, but with Fastify instead of raw `http`. Don't worry if Fastify feels new — Lesson 03 is dedicated to it. For now, treat the few Fastify lines below as a preview.
 
 ### Create the project
 
@@ -123,20 +74,14 @@ curl http://localhost:3002/health
 
 ## Final check
 
-Both services running at the same time:
-
-```bash
-curl http://localhost:3001/health   # {"status":"ok"}  — santa-api (NestJS)
-curl http://localhost:3002/health   # {"status":"ok"}  — santa-notifications (Fastify)
-```
-
 Your repo root should now look like:
 
 ```
 fullstack-training/
-  santa-api/              <-- NestJS project
-  santa-notifications/    <-- Fastify project
+  santa-notifications/    <-- Fastify project (you just created)
   src/
     04-backend/
     ...
 ```
+
+The `santa-api/` directory will appear later, in Lesson 04.

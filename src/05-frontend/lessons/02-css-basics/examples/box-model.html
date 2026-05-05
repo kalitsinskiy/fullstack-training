@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Box Model — Visual Demo</title>
+  <style>
+    * { margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+    h1 { margin-bottom: 1rem; color: #2d5a27; }
+    h2 { margin: 2rem 0 1rem; color: #444; }
+    p { margin-bottom: 0.5rem; }
+    code { background: #f0f0f0; padding: 0.1rem 0.4rem; border-radius: 3px; font-size: 0.9rem; }
+
+    /* ===================================================
+       BOX MODEL DEMO — colored layers to visualize
+       =================================================== */
+
+    .demo-container {
+      display: flex;
+      gap: 2rem;
+      flex-wrap: wrap;
+      margin-bottom: 2rem;
+    }
+
+    /* CONTENT-BOX (default) */
+    .content-box-demo {
+      width: 200px;
+      padding: 30px;
+      border: 10px solid #e74c3c;
+      margin: 20px;
+      background-color: #3498db;
+      color: white;
+      font-weight: bold;
+      text-align: center;
+      /* box-sizing: content-box; — this is the default */
+    }
+
+    /* BORDER-BOX */
+    .border-box-demo {
+      width: 200px;
+      padding: 30px;
+      border: 10px solid #e74c3c;
+      margin: 20px;
+      background-color: #3498db;
+      color: white;
+      font-weight: bold;
+      text-align: center;
+      box-sizing: border-box;
+    }
+
+    /* Layered visualization */
+    .box-layers {
+      display: inline-block;
+      /* Margin layer */
+      background: #ffeaa7;
+      padding: 20px;
+    }
+    .box-layers .border-layer {
+      /* Border layer */
+      background: #fab1a0;
+      padding: 10px;
+    }
+    .box-layers .padding-layer {
+      /* Padding layer */
+      background: #81ecec;
+      padding: 30px;
+    }
+    .box-layers .content-layer {
+      /* Content */
+      background: #74b9ff;
+      padding: 20px;
+      color: white;
+      font-weight: bold;
+      text-align: center;
+      min-width: 120px;
+    }
+
+    .legend {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin: 1rem 0;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.9rem;
+    }
+    .legend-swatch {
+      width: 20px;
+      height: 20px;
+      border-radius: 3px;
+    }
+
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+    }
+    .comparison-table th,
+    .comparison-table td {
+      padding: 0.5rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+    .comparison-table th {
+      background: #f5f5f5;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>The CSS Box Model</h1>
+
+  <!-- =============================================
+       1. VISUAL LAYERS
+       ============================================= -->
+  <h2>1. Box Model Layers</h2>
+  <p>Every element is wrapped in four layers: margin, border, padding, content.</p>
+
+  <div class="box-layers">
+    <div class="border-layer">
+      <div class="padding-layer">
+        <div class="content-layer">
+          Content
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-swatch" style="background: #ffeaa7;"></div> Margin
+    </div>
+    <div class="legend-item">
+      <div class="legend-swatch" style="background: #fab1a0;"></div> Border
+    </div>
+    <div class="legend-item">
+      <div class="legend-swatch" style="background: #81ecec;"></div> Padding
+    </div>
+    <div class="legend-item">
+      <div class="legend-swatch" style="background: #74b9ff;"></div> Content
+    </div>
+  </div>
+
+  <!-- =============================================
+       2. CONTENT-BOX vs BORDER-BOX
+       ============================================= -->
+  <h2>2. content-box vs border-box</h2>
+  <p>Both boxes below have <code>width: 200px; padding: 30px; border: 10px solid;</code></p>
+
+  <div class="demo-container">
+    <div>
+      <p><strong>content-box</strong> (default)</p>
+      <p>Rendered width: 200 + 30*2 + 10*2 = <strong>280px</strong></p>
+      <div class="content-box-demo">
+        200px width
+      </div>
+    </div>
+    <div>
+      <p><strong>border-box</strong></p>
+      <p>Rendered width: <strong>200px</strong> (padding + border fit inside)</p>
+      <div class="border-box-demo">
+        200px width
+      </div>
+    </div>
+  </div>
+
+  <table class="comparison-table">
+    <thead>
+      <tr>
+        <th>Property</th>
+        <th>content-box (default)</th>
+        <th>border-box</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>width</code> sets</td>
+        <td>Content width only</td>
+        <td>Content + padding + border</td>
+      </tr>
+      <tr>
+        <td>Total rendered width</td>
+        <td>width + padding-left + padding-right + border-left + border-right</td>
+        <td>width (padding and border are inside)</td>
+      </tr>
+      <tr>
+        <td>Predictable?</td>
+        <td>No — adding padding changes total size</td>
+        <td>Yes — total size stays at <code>width</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- =============================================
+       3. MARGIN COLLAPSE
+       ============================================= -->
+  <h2>3. Margin Collapse</h2>
+  <p>Adjacent vertical margins collapse into a single margin (the larger one wins):</p>
+
+  <div style="background: #f0f0f0; padding: 1rem; margin-top: 1rem;">
+    <div style="background: #74b9ff; padding: 1rem; margin-bottom: 30px; color: white;">
+      margin-bottom: 30px
+    </div>
+    <div style="background: #ff7675; padding: 1rem; margin-top: 20px; color: white;">
+      margin-top: 20px
+    </div>
+    <p style="margin-top: 1rem;">
+      The gap between the two boxes is <strong>30px</strong> (not 50px).
+      The larger margin wins — they collapse.
+    </p>
+  </div>
+
+  <!-- =============================================
+       4. DISPLAY PROPERTY
+       ============================================= -->
+  <h2>4. Display Values</h2>
+
+  <div style="background: #f0f0f0; padding: 1rem; margin-top: 1rem;">
+    <p><strong>block</strong> (takes full width, new line):</p>
+    <div style="background: #74b9ff; padding: 0.5rem; margin-bottom: 0.5rem; color: white;">Block 1</div>
+    <div style="background: #55efc4; padding: 0.5rem; margin-bottom: 1rem;">Block 2</div>
+
+    <p><strong>inline</strong> (flows with text, no width/height):</p>
+    <span style="background: #ffeaa7; padding: 0.2rem;">Inline 1</span>
+    <span style="background: #fab1a0; padding: 0.2rem;">Inline 2</span>
+    <span style="background: #81ecec; padding: 0.2rem;">Inline 3</span>
+
+    <p style="margin-top: 1rem;"><strong>inline-block</strong> (inline flow, but respects width/height):</p>
+    <span style="display: inline-block; width: 120px; height: 50px; background: #a29bfe; color: white; text-align: center; line-height: 50px; margin: 0.25rem;">Box A</span>
+    <span style="display: inline-block; width: 120px; height: 50px; background: #fd79a8; color: white; text-align: center; line-height: 50px; margin: 0.25rem;">Box B</span>
+    <span style="display: inline-block; width: 120px; height: 50px; background: #00cec9; color: white; text-align: center; line-height: 50px; margin: 0.25rem;">Box C</span>
+  </div>
+
+</body>
+</html>

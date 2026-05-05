@@ -1,0 +1,65 @@
+/*
+  CSS Modules Demo — Card.module.css
+
+  This file demonstrates CSS Modules.
+  When imported in a React/Vite project, each class name is automatically
+  made unique (e.g., "card" becomes "Card_card_x7d2k").
+
+  NOTE: This file cannot run standalone in a browser.
+  To use it, import it in a React component inside a Vite project:
+
+    import styles from './Card.module.css';
+
+    <div className={styles.card}>
+      <h3 className={styles.title}>Room Name</h3>
+      <p className={styles.meta}>12 participants</p>
+      <span className={styles.badge}>Open</span>
+    </div>
+*/
+
+.card {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 1.25rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #2d5a27;
+}
+
+.meta {
+  color: #666;
+  font-size: 0.9rem;
+  margin-bottom: 0.75rem;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: white;
+  background: #27ae60;
+}
+
+/* Variant: closed room */
+.badgeClosed {
+  background: #7f8c8d;
+}
+
+/* Variant: drawn room */
+.badgeDrawn {
+  background: #2980b9;
+}

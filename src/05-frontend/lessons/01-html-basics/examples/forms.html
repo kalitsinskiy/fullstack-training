@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HTML Forms — Examples</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.6; color: #333; max-width: 700px; margin: 2rem auto; padding: 0 1rem; }
+    h1 { margin-bottom: 1.5rem; color: #2d5a27; }
+    h2 { margin: 2rem 0 0.75rem; color: #444; border-bottom: 1px solid #ddd; padding-bottom: 0.25rem; }
+
+    form { background: #f9f9f9; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem; }
+    fieldset { border: 1px solid #ccc; border-radius: 6px; padding: 1rem; margin-bottom: 1rem; }
+    legend { font-weight: bold; padding: 0 0.5rem; color: #2d5a27; }
+    label { display: block; margin-top: 0.75rem; font-weight: 500; }
+    input, select, textarea { display: block; width: 100%; padding: 0.5rem; margin-top: 0.25rem; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem; }
+    input[type="checkbox"], input[type="radio"] { display: inline; width: auto; margin-right: 0.5rem; }
+    textarea { resize: vertical; min-height: 80px; }
+    button { margin-top: 1rem; padding: 0.6rem 1.5rem; background: #2d5a27; color: white; border: none; border-radius: 4px; font-size: 1rem; cursor: pointer; }
+    button:hover { background: #1e3d1a; }
+    .inline-label { display: inline; font-weight: normal; margin-top: 0; }
+    .radio-group label, .checkbox-group label { margin-top: 0.4rem; }
+  </style>
+</head>
+<body>
+
+  <h1>HTML Forms — All Input Types</h1>
+
+  <!-- =============================================
+       1. TEXT INPUTS
+       ============================================= -->
+  <h2>1. Text Inputs</h2>
+  <form action="#" method="POST">
+    <fieldset>
+      <legend>Account Information</legend>
+
+      <label for="fullname">Full Name</label>
+      <input type="text" id="fullname" name="fullname" required placeholder="John Doe" autocomplete="name">
+
+      <label for="email">Email Address</label>
+      <input type="email" id="email" name="email" required placeholder="john@example.com" autocomplete="email">
+
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" required minlength="8" placeholder="At least 8 characters">
+
+      <label for="phone">Phone Number</label>
+      <input type="tel" id="phone" name="phone" placeholder="+1 (555) 123-4567" pattern="[+]?[0-9\s\-\(\)]+">
+
+      <label for="website">Website URL</label>
+      <input type="url" id="website" name="website" placeholder="https://example.com">
+
+      <label for="age">Age</label>
+      <input type="number" id="age" name="age" min="13" max="120" step="1">
+
+      <label for="birthday">Birthday</label>
+      <input type="date" id="birthday" name="birthday">
+    </fieldset>
+
+    <button type="submit">Submit</button>
+  </form>
+
+  <!-- =============================================
+       2. CHECKBOXES AND RADIO BUTTONS
+       ============================================= -->
+  <h2>2. Checkboxes and Radio Buttons</h2>
+  <form action="#" method="POST">
+    <fieldset>
+      <legend>Gift Preferences</legend>
+
+      <!-- Radio buttons — same "name" means only one can be selected -->
+      <p style="margin-top: 0.5rem; font-weight: 500;">Budget Range:</p>
+      <div class="radio-group">
+        <label>
+          <input type="radio" name="budget" value="15" checked>
+          <span class="inline-label">Up to $15</span>
+        </label>
+        <label>
+          <input type="radio" name="budget" value="25">
+          <span class="inline-label">Up to $25</span>
+        </label>
+        <label>
+          <input type="radio" name="budget" value="50">
+          <span class="inline-label">Up to $50</span>
+        </label>
+      </div>
+
+      <!-- Checkboxes — multiple can be selected -->
+      <p style="margin-top: 1rem; font-weight: 500;">Interests (select all that apply):</p>
+      <div class="checkbox-group">
+        <label>
+          <input type="checkbox" name="interests" value="books">
+          <span class="inline-label">Books</span>
+        </label>
+        <label>
+          <input type="checkbox" name="interests" value="gadgets">
+          <span class="inline-label">Gadgets</span>
+        </label>
+        <label>
+          <input type="checkbox" name="interests" value="food">
+          <span class="inline-label">Food & Drinks</span>
+        </label>
+        <label>
+          <input type="checkbox" name="interests" value="clothing">
+          <span class="inline-label">Clothing</span>
+        </label>
+      </div>
+    </fieldset>
+
+    <button type="submit">Save Preferences</button>
+  </form>
+
+  <!-- =============================================
+       3. SELECT (DROPDOWN) AND TEXTAREA
+       ============================================= -->
+  <h2>3. Select and Textarea</h2>
+  <form action="#" method="POST">
+    <fieldset>
+      <legend>Room Settings</legend>
+
+      <label for="room-type">Room Type</label>
+      <select id="room-type" name="roomType">
+        <option value="" disabled selected>-- Choose a type --</option>
+        <option value="family">Family</option>
+        <option value="friends">Friends</option>
+        <option value="work">Work</option>
+        <option value="other">Other</option>
+      </select>
+
+      <label for="max-participants">Max Participants</label>
+      <select id="max-participants" name="maxParticipants">
+        <option value="5">5 people</option>
+        <option value="10" selected>10 people</option>
+        <option value="20">20 people</option>
+        <option value="50">50 people</option>
+      </select>
+
+      <label for="description">Room Description</label>
+      <textarea id="description" name="description" rows="4" placeholder="Describe the gift exchange rules..."></textarea>
+    </fieldset>
+
+    <button type="submit">Create Room</button>
+  </form>
+
+  <!-- =============================================
+       4. COMPLETE FORM EXAMPLE
+       ============================================= -->
+  <h2>4. Complete Form — Join a Room</h2>
+  <form action="#" method="POST">
+    <fieldset>
+      <legend>Join a Secret Santa Room</legend>
+
+      <label for="join-name">Your Display Name</label>
+      <input type="text" id="join-name" name="displayName" required maxlength="50">
+
+      <label for="room-code">Room Code</label>
+      <input type="text" id="room-code" name="roomCode" required
+             pattern="[A-Z0-9]{6}" title="6-character alphanumeric code"
+             placeholder="e.g. ABC123" style="text-transform: uppercase;">
+
+      <label for="wishlist-item">One Thing on Your Wishlist</label>
+      <input type="text" id="wishlist-item" name="wishlistItem" placeholder="A warm scarf">
+
+      <label>
+        <input type="checkbox" name="agree" required>
+        <span class="inline-label">I agree to the gift exchange rules</span>
+      </label>
+    </fieldset>
+
+    <button type="submit">Join Room</button>
+    <button type="reset" style="background: #888; margin-left: 0.5rem;">Clear</button>
+  </form>
+
+</body>
+</html>

@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tables and Lists — Examples</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
+    h1 { margin-bottom: 1.5rem; color: #2d5a27; }
+    h2 { margin: 2rem 0 0.75rem; color: #444; border-bottom: 1px solid #ddd; padding-bottom: 0.25rem; }
+
+    /* Table styles */
+    table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; }
+    th, td { padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid #ddd; }
+    thead th { background: #2d5a27; color: white; font-weight: 600; }
+    tbody tr:hover { background: #f5f5f5; }
+    tfoot td { font-weight: bold; background: #eee; }
+
+    /* List styles */
+    ul, ol { margin-left: 1.5rem; margin-bottom: 1rem; }
+    li { margin-bottom: 0.3rem; }
+    dl { margin-bottom: 1rem; }
+    dt { font-weight: bold; margin-top: 0.5rem; color: #2d5a27; }
+    dd { margin-left: 1.5rem; color: #555; }
+
+    .nested-list ul { margin-top: 0.3rem; }
+  </style>
+</head>
+<body>
+
+  <h1>Tables and Lists</h1>
+
+  <!-- =============================================
+       1. TABLE WITH THEAD, TBODY, TFOOT
+       ============================================= -->
+  <h2>1. Table — Secret Santa Rooms</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Room Name</th>
+        <th>Code</th>
+        <th>Participants</th>
+        <th>Budget</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Engineering Team</td>
+        <td>ENG2025</td>
+        <td>12</td>
+        <td>$25</td>
+        <td>Open</td>
+      </tr>
+      <tr>
+        <td>Family Holiday</td>
+        <td>FAM123</td>
+        <td>8</td>
+        <td>$50</td>
+        <td>Drawn</td>
+      </tr>
+      <tr>
+        <td>Book Club Swap</td>
+        <td>BKC789</td>
+        <td>6</td>
+        <td>$15</td>
+        <td>Open</td>
+      </tr>
+      <tr>
+        <td>College Friends</td>
+        <td>CLG456</td>
+        <td>10</td>
+        <td>$30</td>
+        <td>Closed</td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="2">Total</td>
+        <td>36</td>
+        <td colspan="2"></td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <!-- =============================================
+       2. TABLE WITH COLUMN SPAN AND ROW SPAN
+       ============================================= -->
+  <h2>2. Table — Gift Exchange Schedule</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Event</th>
+        <th>Location</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td rowspan="2">Dec 10</td>
+        <td>Wishlist deadline</td>
+        <td>Online</td>
+      </tr>
+      <tr>
+        <td>Secret Santa draw</td>
+        <td>Online</td>
+      </tr>
+      <tr>
+        <td>Dec 15</td>
+        <td>Gift wrapping party</td>
+        <td>Office kitchen</td>
+      </tr>
+      <tr>
+        <td>Dec 20</td>
+        <td colspan="2">Gift exchange party at the main hall</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- =============================================
+       3. UNORDERED LIST
+       ============================================= -->
+  <h2>3. Unordered List — Wishlist</h2>
+  <ul>
+    <li>Warm wool scarf</li>
+    <li>Coffee table book about photography</li>
+    <li>Wireless earbuds</li>
+    <li>Gourmet chocolate box</li>
+    <li>Puzzle (1000 pieces)</li>
+  </ul>
+
+  <!-- =============================================
+       4. ORDERED LIST
+       ============================================= -->
+  <h2>4. Ordered List — How to Participate</h2>
+  <ol>
+    <li>Create an account or log in</li>
+    <li>Join a room using the room code</li>
+    <li>Add items to your wishlist</li>
+    <li>Wait for the room owner to run the draw</li>
+    <li>Check who you are buying a gift for</li>
+    <li>Buy and wrap your gift</li>
+    <li>Bring it to the exchange party</li>
+  </ol>
+
+  <!-- =============================================
+       5. NESTED LISTS
+       ============================================= -->
+  <h2>5. Nested List — Gift Categories</h2>
+  <ul class="nested-list">
+    <li>
+      Books
+      <ul>
+        <li>Fiction</li>
+        <li>Non-fiction</li>
+        <li>Graphic novels</li>
+      </ul>
+    </li>
+    <li>
+      Electronics
+      <ul>
+        <li>Headphones</li>
+        <li>USB gadgets</li>
+        <li>Phone accessories</li>
+      </ul>
+    </li>
+    <li>
+      Food & Drinks
+      <ul>
+        <li>Chocolate</li>
+        <li>Coffee beans</li>
+        <li>Tea set</li>
+      </ul>
+    </li>
+  </ul>
+
+  <!-- =============================================
+       6. DEFINITION LIST
+       ============================================= -->
+  <h2>6. Definition List — Secret Santa Glossary</h2>
+  <dl>
+    <dt>Room</dt>
+    <dd>A group of people participating in a gift exchange. Each room has a unique code.</dd>
+
+    <dt>Draw</dt>
+    <dd>The random assignment of gift givers to recipients. Each person is assigned exactly one other person.</dd>
+
+    <dt>Wishlist</dt>
+    <dd>A list of gift ideas that a participant would like to receive. Helps the gift giver choose something appropriate.</dd>
+
+    <dt>Budget</dt>
+    <dd>The maximum amount of money to spend on a gift, agreed upon by all room members.</dd>
+
+    <dt>Room Code</dt>
+    <dd>A short alphanumeric string (e.g., ABC123) used to invite others to join a room.</dd>
+  </dl>
+
+</body>
+</html>

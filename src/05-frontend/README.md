@@ -4,75 +4,91 @@
 
 Before starting this section, you should have completed:
 
-- **Block 1**: JavaScript Basics (14 lessons)
-- **Block 2**: TypeScript (6 lessons)
-- **Block 3**: Testing with Jest (6 lessons)
+- **Block 1**: JavaScript Basics
+- **Block 2**: TypeScript
+- **Block 3**: Testing with Jest
 
 ## What You'll Learn
 
-- HTML5 fundamentals — semantic elements, forms, accessibility
-- CSS from scratch — box model, flexbox, grid, responsive design
-- Modular CSS approaches — CSS Modules, Styled Components
-- React 18 — components, props, state, hooks, JSX
-- State management — useContext, custom hooks, Context API
-- Routing — React Router v6, protected routes, layouts
-- Component libraries — Material UI (MUI), theming
-- Connecting frontend to REST APIs — fetch, loading/error states
-- Testing React — React Testing Library, mocking
+- HTML5 — semantic elements, forms, accessibility, responsive media
+- CSS — box model, flexbox, grid, **mobile-first responsive design** (media queries, container queries, fluid typography)
+- Styling React — **CSS Modules vs Tailwind vs Styled Components** (with side-by-side comparison)
+- React 18/19 — components, props, state, hooks, JSX, **TypeScript-first** patterns
+- State management — `useState`, `useReducer`, `useContext`, custom hooks, when to reach for Zustand
+- Routing — **React Router v7** (primary), TanStack Router (typed alternative)
+- UI Components — Material UI (existing-codebase choice) and Tailwind + shadcn/ui (modern default)
+- Forms — **React Hook Form + Zod** (validation, types from schema)
+- Data fetching — manual `fetch` foundation **then TanStack Query** (cache, dedup, mutations, devtools)
+- Advanced React — `Suspense`, `lazy`, **Error Boundaries**, `useTransition`, `useDeferredValue`, `useId`, **`useOptimistic`**, **`useActionState`** / `useFormStatus`, code splitting
+- React DevTools + Profiler walkthrough
+- Testing — **Vitest + MSW** + React Testing Library
+
+## Course Philosophy
+
+Each lesson teaches the **modern way first**, then explains the **manual / legacy way** so you understand what the abstraction is doing under the hood. Two reasons:
+1. Code reviews — you will see both styles in real codebases.
+2. Trade-offs — choosing between approaches requires knowing both.
 
 ## Course Structure
 
 Each lesson contains:
-- **README.md** — Theory, concepts, code snippets, links to resources
-- **QUESTIONS.md** — 5-8 evaluation questions
-- **examples/** — Working runnable code demonstrating concepts
-- **exercises/** — TODO-based standalone exercises
+- **README.md** — theory, concepts, code snippets, links
+- **examples/** — working runnable code
+- **exercises/** — TODO-based standalone exercises (use `it.todo`-style markers so progress is visible)
 
-Most lessons also include an **App Task** — a concrete task to implement in the Secret Santa frontend (`santa-app` at the repo root). You build the app gradually as you progress.
+Most lessons include an **App Task** — a concrete piece of the Secret Santa frontend (`santa-app` at the repo root). The app builds gradually; later lessons retroactively refactor earlier work to the modern stack (e.g. Lesson 08 rewrites the manual forms from Lesson 04 with RHF + Zod).
 
 ### Lessons
 
-| #  | Topic | Technologies | Description |
-|----|-------|-------------|-------------|
-| 01 | [HTML Basics](lessons/01-html-basics/) | HTML5, semantic elements, forms | Document structure, tags, forms, attributes, accessibility |
-| 02 | [CSS Basics](lessons/02-css-basics/) | Box model, flexbox, grid, positioning | Selectors, specificity, units, flex/grid layout |
-| 03 | [CSS Advanced](lessons/03-css-advanced/) | Media queries, CSS Modules, Styled Components | Responsive design, modular CSS, CSS-in-JS |
-| 04 | [React Fundamentals](lessons/04-react-fundamentals/) | React 18, JSX, useState, Vite | Components, props, events, conditional/list rendering |
-| 05 | [React Hooks & State](lessons/05-react-hooks-and-state/) | useEffect, useContext, custom hooks | Side effects, global state, Context API, custom hooks |
-| 06 | [React Router & MUI](lessons/06-react-router-and-mui/) | React Router v6, Material UI | Client routing, protected routes, layouts, MUI components |
-| 07 | [Connecting to API](lessons/07-connecting-to-api/) | fetch/axios, API service layer | REST consumption, loading/error states, API patterns |
-| 08 | [Testing React](lessons/08-testing-react/) | React Testing Library, Jest | Component testing, mocking API, testing hooks |
+| # | Topic | Tech | Description |
+|----|-------|------|-------------|
+| 01 | [HTML Basics](lessons/01-html-basics/) | HTML5, semantic, forms, a11y | Document structure, semantic elements, forms, responsive images |
+| 02 | [CSS Essentials & Responsive](lessons/02-css-basics/) | Flexbox, Grid, media queries, container queries | Box model, layout, units, **mobile-first**, container queries, `clamp()` |
+| 03 | [Styling in React](lessons/03-css-advanced/) | CSS Modules, Tailwind, Styled Components | Same component built three ways; trade-offs and recommendation |
+| 04 | [React Fundamentals](lessons/04-react-fundamentals/) | React 18, JSX, useState, Vite | Components, props, events, conditional/list rendering, **TS-first patterns** |
+| 05 | [React Hooks & State](lessons/05-react-hooks-and-state/) | useEffect, useContext, custom hooks, AbortController | Side effects, global state, custom hooks, **Zustand** mention for when Context is too heavy |
+| 06 | [React Router](lessons/06-react-router/) | React Router v7 | Client routing, protected routes, nested layouts, brief tour of TanStack Router |
+| 07 | [UI Components](lessons/07-ui-components/) | MUI, Tailwind, shadcn/ui | When to use a component library vs utility-first; same UI compared |
+| 08 | [Forms with RHF + Zod](lessons/08-forms-rhf-zod/) | React Hook Form, Zod, React 19 actions | Form schemas, typed inputs, async validation, mention of `useActionState` |
+| 09 | [Data Fetching](lessons/09-data-fetching/) | fetch → TanStack Query | Manual fetch first, then TanStack Query — what it adds and why |
+| 10 | [Advanced React](lessons/10-advanced-react/) | Suspense, lazy, Error Boundaries, useTransition, useOptimistic, DevTools | Performance, async UI, error handling, React DevTools + Profiler |
+| 11 | [Testing React](lessons/11-testing-react/) | Vitest, MSW, RTL | Component, hook, form, and route tests with mocked API |
 
-### App Tasks
+### App Tasks Arc
 
-As you progress through lessons, you gradually build the Secret Santa frontend:
+You build `santa-app` (React + Vite + TypeScript) gradually:
 
-**santa-app** (React + Vite + TypeScript) — port 5173
-- Login/register pages (lessons 01-05)
-- Room dashboard, room detail pages (lessons 06-07)
-- Full API integration (lesson 07)
-- Component tests (lesson 08)
+| Lessons | What you add to santa-app |
+|---|---|
+| 01-02 | Static HTML mockups, then CSS layout |
+| 03 | App-wide styling stack (CSS Modules or Tailwind) |
+| 04 | First React components — Login/Register forms (manual) |
+| 05 | AuthContext + JWT in localStorage + API request hook |
+| 06 | Routing + protected routes + layout |
+| 07 | UI library wired in (whichever you chose in Lesson 03) |
+| 08 | **Refactor Lesson 04 forms to RHF + Zod** |
+| 09 | **Replace manual fetch with TanStack Query** for read paths |
+| 10 | Error boundaries, code splitting, optimistic UI for one mutation |
+| 11 | Component + integration tests for the auth and rooms flows |
 
-The app lives at the repo root (`/santa-app`).
+The app lives at `/santa-app` (port 5173) and talks to `santa-api` (port 3001).
 
 ## How to Work
 
 1. Read the lesson **README.md** for theory
-2. Study **examples/** — open HTML files in browser or run React examples
-3. Complete **exercises/** by replacing TODO comments with your code
+2. Study **examples/** — open HTML files in the browser, run React examples in your Vite project
+3. Complete **exercises/** by replacing TODOs with your code
 4. Complete the **App Task** described at the bottom of each README
-5. Answer **QUESTIONS.md** for self-evaluation
 
-## Tech Stack
+## Tech Stack — at a glance
 
-| Category | Technology | Lesson |
-|----------|-----------|--------|
-| Markup | HTML5, semantic elements | 01 |
-| Styling | CSS3, Flexbox, Grid | 02 |
-| CSS Architecture | CSS Modules, Styled Components | 03 |
-| Framework | React 18, Vite, TypeScript | 04 |
-| State | useState, useContext, custom hooks | 05 |
-| Routing | React Router v6 | 06 |
-| UI Library | Material UI (MUI) | 06 |
-| API | fetch/axios, API service layer | 07 |
-| Testing | React Testing Library, Jest | 08 |
+| Category | Primary choice | Alternative shown |
+|---|---|---|
+| Framework | React 18/19 + Vite + TypeScript | — |
+| Styling | **CSS Modules** *or* **Tailwind** | Styled Components (legacy/CSS-in-JS) |
+| Routing | React Router v7 | TanStack Router (typed routes) |
+| UI components | Material UI **or** Tailwind + shadcn/ui | — |
+| Forms | React Hook Form + Zod | manual `useState` (Lesson 04 baseline) |
+| Data fetching | TanStack Query | raw `fetch` + `useEffect` (Lesson 09 baseline) |
+| Testing | Vitest + RTL + MSW | Jest (legacy projects) |
+| Production concerns | env via `VITE_*`, build via `vite build`, deploy to Vercel/Netlify (covered briefly in Lessons 09 + 11) | — |
