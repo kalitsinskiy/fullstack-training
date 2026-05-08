@@ -23,12 +23,24 @@ export {};
 
 import 'reflect-metadata';
 import {
-  Controller, Get, Post, Put, Delete,
-  Param, Body, Module, Injectable,
-  NotFoundException, HttpCode, HttpStatus,
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Param,
+  Body,
+  Module,
+  Injectable,
+  NotFoundException,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
+import {
+  FastifyAdapter,
+  NestFastifyApplication,
+} from '@nestjs/platform-fastify';
 
 // ---- Types ----
 
@@ -66,7 +78,47 @@ interface UpdateProductDto {
 //   create(dto: CreateProductDto): Product          — generate id with crypto.randomUUID(), set createdAt/updatedAt
 //   update(id: string, dto: UpdateProductDto): Product — find existing or throw 404, merge fields, update updatedAt
 //   remove(id: string): void                        — find existing or throw 404, delete from map
+@Injectable()
+class ProductsService {
+  private store = new Map<string, Product>();
 
+  findAll(): Product[] {
+    return Array.from(this.store.values());
+  }
+
+  findOne(id: string): Product {
+    const product = this.store.get(id);
+    if (!product) {
+      throw new NotFoundException('Product not found');
+    }
+    return product;
+  }
+
+  create(dto: CreateProductDto): Product {
+    const product: Product = {
+      id: crypto.randomUUID(),
+      name: dto.name,
+      price: dto.price,
+      category: dto.category,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.store.set(product.id, product);
+    return product;
+  }
+
+  update(id: string, dto: UpdateProductDto): Product {
+    const product = this.findOne(id);
+    const updatedProduct = { ...product, ...dto, updatedAt: new Date() };
+    this.store.set(id, updatedProduct);
+    return updatedProduct;
+  }
+
+  remove(id: string): void {
+    const product = this.findOne(id);
+    this.store.delete(id);
+  }
+}
 
 // ---- Controller ----
 
@@ -79,20 +131,56 @@ interface UpdateProductDto {
 //   @Post()        create(@Body)          — create product (201 — default for @Post)
 //   @Put(':id')    update(@Param, @Body)  — update product (200) or 404
 //   @Delete(':id') remove(@Param)         — delete product, return 204 (use @HttpCode)
+@Controller('products')
+class ProductsController {
+  constructor(private readonly productsService: ProductsService) {}
 
+  @Get()
+  findAll() {
+    return this.productsService.findAll();
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.productsService.findOne(id);
+  }
+
+  @Post()
+  create(@Body() dto: CreateProductDto) {
+    return this.productsService.create(dto);
+  }
+
+  @Put(':id')
+  update(@Param('id') id: string, @Body() dto: UpdateProductDto) {
+    return this.productsService.update(id, dto);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  remove(@Param('id') id: string) {
+    this.productsService.remove(id);
+  }
+}
 
 // ---- Module ----
 
 // TODO 3: Create a ProductsModule
 // - Register ProductsController in controllers
 // - Register ProductsService in providers
-
+@Module({
+  controllers: [ProductsController],
+  providers: [ProductsService],
+})
+class ProductsModule {}
 
 // ---- App Module ----
 
 // TODO 4: Create an AppModule
 // - Import ProductsModule
-
+@Module({
+  imports: [ProductsModule],
+})
+class AppModule {}
 
 // ---- Bootstrap ----
 
@@ -103,6 +191,22 @@ interface UpdateProductDto {
 
 async function bootstrap() {
   // Your bootstrap code here
+  const app = await NestFactory.create<NestFastifyApplication>(
+    AppModule,
+    new FastifyAdapter(),
+    { logger: ['warn', 'error'] },
+  );
+  await app.listen(3000);
+  console.log(`Application is running on: ${await app.getUrl()}`);
+  console.log('Try: curl http://localhost:3000/products');
+  console.log(
+    `curl -X POST http://localhost:3000/products -H "Content-Type: application/json" -d '{"name":"Laptop","price":999,"category":"electronics"}'`,
+  );
+  console.log(`curl http://localhost:3000/products/<id>`);
+  console.log(
+    `curl -X PUT http://localhost:3000/products/<id> -H "Content-Type: application/json" -d '{"name":"Laptop Pro","price":1299}'`,
+  );
+  console.log(`curl -X DELETE http://localhost:3000/products/<id>`);
 }
 
 bootstrap();
