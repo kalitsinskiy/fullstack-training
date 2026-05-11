@@ -7,7 +7,7 @@ export {};
 // Implement custom error classes and a Fastify error handler that maps them
 // to proper HTTP responses with consistent formatting.
 
-import Fastify from 'fastify';
+import Fastify, { FastifyError } from 'fastify';
 
 // ============================================
 // Part 1: Custom Error Classes
@@ -23,6 +23,18 @@ import Fastify from 'fastify';
 //   - Call super(message)
 //   - Set this.name = this.constructor.name
 //   - Set all properties
+class AppError extends Error {
+  constructor(
+    message: string,
+    public readonly statusCode: number = 500,
+    public readonly code: string = 'INTERNAL_ERROR',
+    public readonly isOperational: boolean = true,
+  ) {
+    super(message);
+    this.name = this.constructor.name;
+    Error.captureStackTrace(this, this.constructor);
+  }
+}
 
 // TODO 2: Create these subclasses of AppError:
 //
@@ -31,28 +43,72 @@ import Fastify from 'fastify';
 //   statusCode: 404, code: 'NOT_FOUND'
 //   message: `${resource} with id "${id}" not found`
 //
+class NotFoundError extends AppError {
+  constructor(resource: string, id: string) {
+    super(`${resource} with id "${id}" not found`, 404, 'NOT_FOUND');
+  }
+}
+
 // ValidationError:
 //   constructor(message: string, details: Array<{ field: string; message: string }>)
 //   statusCode: 400, code: 'VALIDATION_ERROR'
 //   Additional property: details array
 //
+class ValidationError extends AppError {
+  constructor(
+    message: string,
+    public readonly details: Array<{ field: string; message: string }> = [],
+  ) {
+    super(message, 400, 'VALIDATION_ERROR');
+  }
+}
+
 // ConflictError:
 //   constructor(message: string)
 //   statusCode: 409, code: 'CONFLICT'
 //
+class ConflictError extends AppError {
+  constructor(message: string) {
+    super(message, 409, 'CONFLICT');
+  }
+}
+
 // UnauthorizedError:
 //   constructor(message?: string)   // default: 'Authentication required'
 //   statusCode: 401, code: 'UNAUTHORIZED'
 //
+class UnauthorizedError extends AppError {
+  constructor(message: string = 'Authentication required') {
+    super(message, 401, 'UNAUTHORIZED');
+  }
+}
+
 // ForbiddenError:
 //   constructor(message?: string)   // default: 'Access denied'
 //   statusCode: 403, code: 'FORBIDDEN'
 //
+class ForbiddenError extends AppError {
+  constructor(message: string = 'Access denied') {
+    super(message, 403, 'FORBIDDEN');
+  }
+}
+
 // RateLimitError:
 //   constructor(retryAfterSeconds: number)
 //   statusCode: 429, code: 'RATE_LIMITED'
 //   message: `Too many requests. Retry after ${retryAfterSeconds} seconds`
 //   Additional property: retryAfter number
+class RateLimitError extends AppError {
+  constructor(retryAfterSeconds: number) {
+    super(
+      `Too many requests. Retry after ${retryAfterSeconds} seconds`,
+      429,
+      'RATE_LIMITED',
+    );
+    this.retryAfter = retryAfterSeconds;
+  }
+  public readonly retryAfter: number;
+}
 
 // ============================================
 // Part 2: Fastify App with Error Handler
@@ -60,7 +116,7 @@ import Fastify from 'fastify';
 
 const app = Fastify({
   logger: {
-    level: 'warn',
+    level: 'debug',
     transport: {
       target: 'pino-pretty',
       options: { colorize: true, translateTime: 'HH:MM:ss', ignore: 'pid,hostname' },
@@ -85,6 +141,50 @@ const app = Fastify({
 //    - Return 500 with { success: false, error: { code: 'INTERNAL_ERROR', message: 'An unexpected error occurred' } }
 //    - NEVER expose internal error details to the client
 
+app.setErrorHandler((error: FastifyError | AppError, _request, reply) => {
+  if (error instanceof AppError && error.isOperational) {
+    const response: Record<string, unknown> = {
+      success: false,
+      error: {
+        code: error.code,
+        message: error.message,
+      },
+    };
+
+    if (error instanceof ValidationError && error.details.length > 0) {
+      (response.error as Record<string, unknown>).details = error.details;
+    }
+
+    if (error instanceof RateLimitError) {
+      reply.header('Retry-After', error.retryAfter.toString());
+    }
+
+    reply.log.warn(`Application error ${error.code}: ${error.message}`);
+    return reply.status(error.statusCode).send(response);
+  }
+
+  if ('validation' in error && error.validation) {
+    reply.log.warn(`Schema validation failed: ${error.message}`);
+    return reply.status(400).send({
+      success: false,
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'Request validation failed',
+        details: (error as FastifyError).validation,
+      },
+    });
+  }
+
+  reply.log.error(error, 'Unexpected error');
+  return reply.status(500).send({
+    success: false,
+    error: {
+      code: 'INTERNAL_ERROR',
+      message: 'An unexpected error occurred',
+    },
+  });
+});
+
 // ============================================
 // Test Routes (provided — do not modify)
 // ============================================
@@ -94,8 +194,7 @@ const app = Fastify({
 app.get('/items/:id', async (request) => {
   const { id } = request.params as { id: string };
   if (id === '999') {
-    // TODO: throw new NotFoundError('Item', id)
-    throw new Error('Replace me with NotFoundError');
+    throw new NotFoundError('Item', id);
   }
   return { id, name: 'Widget' };
 });
@@ -114,36 +213,31 @@ app.post('/items', {
 }, async (request) => {
   const { name } = request.body as { name: string; price: number };
   if (name === 'duplicate') {
-    // TODO: throw new ConflictError(`Item "${name}" already exists`)
-    throw new Error('Replace me with ConflictError');
+    throw new ConflictError(`Item "${name}" already exists`);
   }
   return { id: crypto.randomUUID().slice(0, 8), ...request.body as object };
 });
 
 app.post('/items/:id/validate', async (_request) => {
-  // TODO: throw new ValidationError('Item validation failed', [
-  //   { field: 'price', message: 'Price must be positive' },
-  //   { field: 'category', message: 'Invalid category' },
-  // ]);
-  throw new Error('Replace me with ValidationError');
+  throw new ValidationError('Item validation failed', [
+    { field: 'price', message: 'Price must be positive' },
+    { field: 'category', message: 'Invalid category' },
+  ]);
 });
 
 app.get('/secret', async (request) => {
   const token = request.headers.authorization;
   if (!token) {
-    // TODO: throw new UnauthorizedError()
-    throw new Error('Replace me with UnauthorizedError');
+    throw new UnauthorizedError();
   }
   if (token !== 'Bearer admin-token') {
-    // TODO: throw new ForbiddenError('Admin access required')
-    throw new Error('Replace me with ForbiddenError');
+    throw new ForbiddenError('Admin access required');
   }
   return { secret: 42 };
 });
 
 app.get('/rate-limited', async () => {
-  // TODO: throw new RateLimitError(60)
-  throw new Error('Replace me with RateLimitError');
+  throw new RateLimitError(60);
 });
 
 app.get('/crash', async () => {

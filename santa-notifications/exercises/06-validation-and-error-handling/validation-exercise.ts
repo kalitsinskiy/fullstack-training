@@ -34,59 +34,83 @@ addFormats(ajv as unknown as Parameters<typeof addFormats>[0]);
 //   - additionalProperties: false
 
 const userRegistrationSchema: Record<string, unknown> = {
-  // Your JSON Schema here
+  type: 'object',
+  required: ['username', 'email', 'password'],
+  properties: {
+    username: { type: 'string', minLength: 3, maxLength: 30, pattern: '^[a-zA-Z0-9_]+$' },
+    email: { type: 'string', format: 'email' },
+    password: { type: 'string', minLength: 8, maxLength: 100 },
+    age: { type: 'integer', minimum: 13, maximum: 120 },
+    role: { type: 'string', enum: ['user', 'moderator', 'admin'], default: 'user' },
+    interests: {
+      type: 'array',
+      items: { type: 'string', minLength: 1, maxLength: 50 },
+      maxItems: 10,
+    },
+    address: {
+      type: 'object',
+      required: ['street', 'city', 'zipCode'],
+      properties: {
+        street: { type: 'string' },
+        city: { type: 'string' },
+        zipCode: { type: 'string', pattern: '^\\d{5}$' },
+      },
+      additionalProperties: false,
+    },
+  },
+  additionalProperties: false,
 };
 
 // Compile the schema
-// const validateUser = ajv.compile(userRegistrationSchema);
+const validateUser = ajv.compile(userRegistrationSchema);
 
 // TODO 2: Test your schema with these payloads.
 // Uncomment each block, run the file, and verify the results.
 
 // Valid user:
-// console.log('--- Valid user ---');
-// console.log(validateUser({
-//   username: 'alice_123',
-//   email: 'alice@example.com',
-//   password: 'securePass1!',
-//   age: 25,
-//   interests: ['coding', 'gaming'],
-// }));
+console.log('--- Valid user ---');
+console.log(validateUser({
+  username: 'alice_123',
+  email: 'alice@example.com',
+  password: 'securePass1!',
+  age: 25,
+  interests: ['coding', 'gaming'],
+}));
 
 // Invalid — missing required fields:
-// console.log('\n--- Missing fields ---');
-// console.log(validateUser({}));
-// console.log(validateUser.errors);
+console.log('\n--- Missing fields ---');
+console.log(validateUser({}));
+console.log(validateUser.errors);
 
 // Invalid — username too short:
-// console.log('\n--- Username too short ---');
-// console.log(validateUser({ username: 'ab', email: 'a@b.com', password: '12345678' }));
-// console.log(validateUser.errors);
+console.log('\n--- Username too short ---');
+console.log(validateUser({ username: 'ab', email: 'a@b.com', password: '12345678' }));
+console.log(validateUser.errors);
 
 // Invalid — bad email format:
-// console.log('\n--- Bad email ---');
-// console.log(validateUser({ username: 'alice', email: 'not-email', password: '12345678' }));
-// console.log(validateUser.errors);
+console.log('\n--- Bad email ---');
+console.log(validateUser({ username: 'alice', email: 'not-email', password: '12345678' }));
+console.log(validateUser.errors);
 
 // Invalid — age below minimum:
-// console.log('\n--- Age too low ---');
-// console.log(validateUser({ username: 'alice', email: 'a@b.com', password: '12345678', age: 5 }));
-// console.log(validateUser.errors);
+console.log('\n--- Age too low ---');
+console.log(validateUser({ username: 'alice', email: 'a@b.com', password: '12345678', age: 5 }));
+console.log(validateUser.errors);
 
 // Invalid — extra field (additionalProperties: false):
-// console.log('\n--- Extra field ---');
-// console.log(validateUser({ username: 'alice', email: 'a@b.com', password: '12345678', hackField: true }));
-// console.log(validateUser.errors);
+console.log('\n--- Extra field ---');
+console.log(validateUser({ username: 'alice', email: 'a@b.com', password: '12345678', hackField: true }));
+console.log(validateUser.errors);
 
 // Invalid — bad address zipCode:
-// console.log('\n--- Bad zipCode ---');
-// console.log(validateUser({
-//   username: 'alice',
-//   email: 'a@b.com',
-//   password: '12345678',
-//   address: { street: '123 Main St', city: 'Kyiv', zipCode: 'ABCDE' },
-// }));
-// console.log(validateUser.errors);
+console.log('\n--- Bad zipCode ---');
+console.log(validateUser({
+  username: 'alice',
+  email: 'a@b.com',
+  password: '12345678',
+  address: { street: '123 Main St', city: 'Kyiv', zipCode: 'ABCDE' },
+}));
+console.log(validateUser.errors);
 
 // ============================================
 // Part 2: Fastify Integration
@@ -96,6 +120,48 @@ const userRegistrationSchema: Record<string, unknown> = {
 // - Use your userRegistrationSchema as the body schema in the route config
 // - The handler should return { success: true, user: { ...body, id: <random-uuid> } } with 201
 // - Add a custom error handler that formats validation errors nicely
+const app = Fastify();
+
+app.post('/register', {
+  schema: {
+    body: userRegistrationSchema,
+  },
+}, async (request, reply) => {
+  const user = request.body as Record<string, unknown>;
+  return reply.status(201).send({
+    success: true,
+    user: { id: crypto.randomUUID(), ...user },
+  });
+});
+
+// Custom error handler
+app.setErrorHandler(async (error: any, request, reply) => {
+  if ('statusCode' in error && 'code' in error) {
+    const response: {
+      success: boolean;
+      error: {
+        code: string;
+        message: unknown;
+        details?: unknown;
+      };
+    } = {
+      success: false,
+      error: {
+        code: (error as { code: string }).code,
+        message: error.message,
+      },
+    };
+
+    if ('details' in error && error.details) {
+      response.error.details = error.details;
+    }
+
+    return reply.status((error as { statusCode: number }).statusCode).send(response);
+  }
+
+  console.error(error);
+  return reply.status(500).send({ success: false, error: { message: 'Internal server error' } });
+});
 
 // TODO 4: Create a GET /users route with query string validation
 // Schema for querystring:
@@ -104,6 +170,28 @@ const userRegistrationSchema: Record<string, unknown> = {
 //   - role: optional string, enum: ["user", "moderator", "admin"]
 //   - search: optional string, minLength 1
 // Handler returns: { page, limit, role, search }
+app.get('/users', {
+  schema: {
+    querystring: {
+      type: 'object',
+      properties: {
+        page: { type: 'integer', minimum: 1, default: 1 },
+        limit: { type: 'integer', minimum: 1, maximum: 50, default: 10 },
+        role: { type: 'string', enum: ['user', 'moderator', 'admin'] },
+        search: { type: 'string', minLength: 1 },
+      },
+    },
+  },
+}, async (request) => {
+  const { page, limit, role, search } = request.query as {
+    page: number;
+    limit: number;
+    role?: string;
+    search?: string;
+  };
+
+  return { page, limit, role, search };
+});
 
 // TODO 5: Start the server and test with curl:
 //   curl -X POST http://localhost:3000/register \
@@ -121,7 +209,8 @@ async function main() {
   // Part 1 tests run here (uncomment above)
 
   // Part 2 — your Fastify app here
-  console.log('Implement the TODOs and uncomment the test cases!');
+  await app.listen({ port: 3000, host: 'localhost' });
+  console.log('Validation Exercise running on http://localhost:3000');
 }
 
 main();
