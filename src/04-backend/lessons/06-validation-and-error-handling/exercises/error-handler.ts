@@ -54,6 +54,62 @@ import Fastify from 'fastify';
 //   message: `Too many requests. Retry after ${retryAfterSeconds} seconds`
 //   Additional property: retryAfter number
 
+class AppError extends Error {
+  statusCode: number;
+  code: string;
+  isOperational: boolean;
+
+  constructor(message: string, statusCode = 500, code = 'INTERNAL_ERROR', isOperational = true) {
+    super(message);
+    this.name = this.constructor.name;
+    this.statusCode = statusCode;
+    this.code = code;
+    this.isOperational = isOperational;
+  }
+}
+
+class NotFoundError extends AppError {
+  constructor(resource: string, id: string) {
+    super(`${resource} with id "${id}" not found`, 404, 'NOT_FOUND');
+  }
+}
+
+class ValidationError extends AppError {
+  details: Array<{ field: string; message: string }>;
+
+  constructor(message: string, details: Array<{ field: string; message: string }>) {
+    super(message, 400, 'VALIDATION_ERROR');
+    this.details = details;
+  }
+}
+
+class ConflictError extends AppError {
+  constructor(message: string) {
+    super(message, 409, 'CONFLICT');
+  }
+}
+
+class UnauthorizedError extends AppError {
+  constructor(message = 'Authentication required') {
+    super(message, 401, 'UNAUTHORIZED');
+  }
+}
+
+class ForbiddenError extends AppError {
+  constructor(message = 'Access denied') {
+    super(message, 403, 'FORBIDDEN');
+  }
+}
+
+class RateLimitError extends AppError {
+  retryAfter: number;
+
+  constructor(retryAfterSeconds: number) {
+    super(`Too many requests. Retry after ${retryAfterSeconds} seconds`, 429, 'RATE_LIMITED');
+    this.retryAfter = retryAfterSeconds;
+  }
+}
+
 // ============================================
 // Part 2: Fastify App with Error Handler
 // ============================================
@@ -85,6 +141,37 @@ const app = Fastify({
 //    - Return 500 with { success: false, error: { code: 'INTERNAL_ERROR', message: 'An unexpected error occurred' } }
 //    - NEVER expose internal error details to the client
 
+app.setErrorHandler((error, _request, reply) => {
+  if (error instanceof AppError && error.isOperational) {
+    app.log.warn(error);
+    const errorBody: Record<string, unknown> = { code: error.code, message: error.message };
+    if (error instanceof ValidationError) {
+      errorBody.details = error.details;
+    }
+    if (error instanceof RateLimitError) {
+      reply.header('Retry-After', String(error.retryAfter));
+    }
+    return reply.status(error.statusCode).send({ success: false, error: errorBody });
+  }
+
+  if ((error as { validation?: unknown }).validation) {
+    return reply.status(400).send({
+      success: false,
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: (error as Error).message,
+        details: (error as { validation: unknown }).validation,
+      },
+    });
+  }
+
+  app.log.error(error);
+  return reply.status(500).send({
+    success: false,
+    error: { code: 'INTERNAL_ERROR', message: 'An unexpected error occurred' },
+  });
+});
+
 // ============================================
 // Test Routes (provided — do not modify)
 // ============================================
@@ -95,55 +182,62 @@ app.get('/items/:id', async (request) => {
   const { id } = request.params as { id: string };
   if (id === '999') {
     // TODO: throw new NotFoundError('Item', id)
-    throw new Error('Replace me with NotFoundError');
+    throw new NotFoundError('Item', id);
   }
   return { id, name: 'Widget' };
 });
 
-app.post('/items', {
-  schema: {
-    body: {
-      type: 'object',
-      required: ['name', 'price'],
-      properties: {
-        name: { type: 'string', minLength: 1 },
-        price: { type: 'number', minimum: 0 },
+app.post(
+  '/items',
+  {
+    schema: {
+      body: {
+        type: 'object',
+        required: ['name', 'price'],
+        properties: {
+          name: { type: 'string', minLength: 1 },
+          price: { type: 'number', minimum: 0 },
+        },
       },
     },
   },
-}, async (request) => {
-  const { name } = request.body as { name: string; price: number };
-  if (name === 'duplicate') {
-    // TODO: throw new ConflictError(`Item "${name}" already exists`)
-    throw new Error('Replace me with ConflictError');
+  async (request) => {
+    const { name } = request.body as { name: string; price: number };
+    if (name === 'duplicate') {
+      // TODO: throw new ConflictError(`Item "${name}" already exists`)
+      throw new ConflictError(`Item "${name}" already exists`);
+    }
+    return { id: crypto.randomUUID().slice(0, 8), ...(request.body as object) };
   }
-  return { id: crypto.randomUUID().slice(0, 8), ...request.body as object };
-});
+);
 
 app.post('/items/:id/validate', async (_request) => {
   // TODO: throw new ValidationError('Item validation failed', [
   //   { field: 'price', message: 'Price must be positive' },
   //   { field: 'category', message: 'Invalid category' },
   // ]);
-  throw new Error('Replace me with ValidationError');
+  throw new ValidationError('Item validation failed', [
+    { field: 'price', message: 'Price must be positive' },
+    { field: 'category', message: 'Invalid category' },
+  ]);
 });
 
 app.get('/secret', async (request) => {
   const token = request.headers.authorization;
   if (!token) {
     // TODO: throw new UnauthorizedError()
-    throw new Error('Replace me with UnauthorizedError');
+    throw new UnauthorizedError();
   }
   if (token !== 'Bearer admin-token') {
     // TODO: throw new ForbiddenError('Admin access required')
-    throw new Error('Replace me with ForbiddenError');
+    throw new ForbiddenError('Admin access required');
   }
   return { secret: 42 };
 });
 
 app.get('/rate-limited', async () => {
   // TODO: throw new RateLimitError(60)
-  throw new Error('Replace me with RateLimitError');
+  throw new RateLimitError(60);
 });
 
 app.get('/crash', async () => {

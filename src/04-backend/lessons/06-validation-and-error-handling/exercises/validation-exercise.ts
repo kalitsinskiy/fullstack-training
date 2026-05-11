@@ -35,6 +35,30 @@ addFormats(ajv as unknown as Parameters<typeof addFormats>[0]);
 
 const userRegistrationSchema: Record<string, unknown> = {
   // Your JSON Schema here
+  type: 'object',
+  required: ['username', 'email', 'password'],
+  additionalProperties: false,
+  properties: {
+    username: { type: 'string', minLength: 3, maxLength: 30, pattern: '^[a-zA-Z0-9_]+$' },
+    email: { type: 'string', format: 'email' },
+    password: { type: 'string', minLength: 8, maxLength: 100 },
+    age: { type: 'integer', minimum: 13, maximum: 120 },
+    role: { type: 'string', enum: ['user', 'moderator', 'admin'], default: 'user' },
+    interests: {
+      type: 'array',
+      maxItems: 10,
+      items: { type: 'string', minLength: 1, maxLength: 50 },
+    },
+    address: {
+      type: 'object',
+      required: ['street', 'city', 'zipCode'],
+      properties: {
+        street: { type: 'string' },
+        city: { type: 'string' },
+        zipCode: { type: 'string', pattern: '^\\d{5}$' },
+      },
+    },
+  },
 };
 
 // Compile the schema
@@ -117,11 +141,72 @@ const userRegistrationSchema: Record<string, unknown> = {
 //     -H "Content-Type: application/json" \
 //     -d '{"username":"x","email":"bad"}'
 
+const app = Fastify({
+  logger: {
+    level: 'warn',
+    transport: {
+      target: 'pino-pretty',
+      options: { colorize: true, translateTime: 'HH:MM:ss', ignore: 'pid,hostname' },
+    },
+  },
+});
+
+app.post('/register', {
+  schema: {
+    body: userRegistrationSchema,
+  },
+}, async (request, reply) => {
+  const body = request.body as Record<string, unknown>;
+  return reply.status(201).send({
+    success: true,
+    user: { ...body, id: crypto.randomUUID() },
+  });
+});
+
+app.get('/users', {
+  schema: {
+    querystring: {
+      type: 'object',
+      properties: {
+        page: { type: 'integer', minimum: 1, default: 1 },
+        limit: { type: 'integer', minimum: 1, maximum: 50, default: 10 },
+        role: { type: 'string', enum: ['user', 'moderator', 'admin'] },
+        search: { type: 'string', minLength: 1 },
+      },
+    },
+  },
+}, async (request) => {
+  const { page, limit, role, search } = request.query as {
+    page: number;
+    limit: number;
+    role?: string;
+    search?: string;
+  };
+  return { page, limit, role, search };
+});
+
+app.setErrorHandler((error, _request, reply) => {
+  if ((error as { validation?: unknown }).validation) {
+    return reply.status(400).send({
+      success: false,
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: (error as Error).message,
+        details: (error as { validation: unknown }).validation,
+      },
+    });
+  }
+  return reply.status(500).send({ success: false, error: { message: 'Internal server error' } });
+});
+
 async function main() {
   // Part 1 tests run here (uncomment above)
 
   // Part 2 — your Fastify app here
-  console.log('Implement the TODOs and uncomment the test cases!');
+  await app.listen({ port: 3000, host: '0.0.0.0' });
+  console.log('Validation Exercise running on http://localhost:3000');
+  console.log('Test with the curl commands in the comments above.');
+  console.log('Press Ctrl+C to stop.');
 }
 
 main();
