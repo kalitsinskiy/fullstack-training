@@ -10,7 +10,7 @@ export {};
 
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
-import Fastify from 'fastify';
+import Fastify, { FastifyError } from 'fastify';
 
 // ============================================
 // Part 1: AJV Standalone Validation
@@ -34,11 +34,48 @@ addFormats(ajv as unknown as Parameters<typeof addFormats>[0]);
 //   - additionalProperties: false
 
 const userRegistrationSchema: Record<string, unknown> = {
-  // Your JSON Schema here
+  type: 'object',
+  required: ['username', 'email', 'password'],
+  properties: {
+    username: {
+      type: 'string',
+      minLength: 3,
+      maxLength: 30,
+      pattern: '^[A-Za-z0-9_]+$',
+    },
+    email: { type: 'string', format: 'email' },
+    password: { type: 'string', minLength: 8, maxLength: 100 },
+    age: { type: 'integer', minimum: 13, maximum: 120 },
+    role: {
+      type: 'string',
+      enum: ['user', 'moderator', 'admin'],
+      default: 'user',
+    },
+    interests: {
+      type: 'array',
+      maxItems: 10,
+      items: {
+        type: 'string',
+        minLength: 1,
+        maxLength: 50,
+      },
+    },
+    address: {
+      type: 'object',
+      required: ['street', 'city', 'zipCode'],
+      properties: {
+        street: { type: 'string', minLength: 1 },
+        city: { type: 'string', minLength: 1 },
+        zipCode: { type: 'string', pattern: '^\\d{5}$' },
+      },
+      additionalProperties: false,
+    },
+  },
+  additionalProperties: false,
 };
 
 // Compile the schema
-// const validateUser = ajv.compile(userRegistrationSchema);
+const validateUser = ajv.compile(userRegistrationSchema);
 
 // TODO 2: Test your schema with these payloads.
 // Uncomment each block, run the file, and verify the results.
@@ -117,11 +154,121 @@ const userRegistrationSchema: Record<string, unknown> = {
 //     -H "Content-Type: application/json" \
 //     -d '{"username":"x","email":"bad"}'
 
-async function main() {
-  // Part 1 tests run here (uncomment above)
+const app = Fastify({
+  ajv: {
+    customOptions: {
+      removeAdditional: false,
+    },
+    plugins: [addFormats as never],
+  },
+  logger: {
+    level: 'warn',
+    transport: {
+      target: 'pino-pretty',
+      options: {
+        colorize: true,
+        translateTime: 'HH:MM:ss',
+        ignore: 'pid,hostname',
+      },
+    },
+  },
+});
 
-  // Part 2 — your Fastify app here
-  console.log('Implement the TODOs and uncomment the test cases!');
+app.post(
+  '/register',
+  {
+    schema: {
+      body: userRegistrationSchema,
+    },
+  },
+  async (request, reply) => {
+    const user = request.body as Record<string, unknown>;
+
+    // Echo the validated payload back with a generated id so the shape is easy to inspect.
+    return reply.status(201).send({
+      success: true,
+      user: {
+        id: crypto.randomUUID(),
+        ...user,
+      },
+    });
+  }
+);
+
+app.get(
+  '/users',
+  {
+    schema: {
+      querystring: {
+        type: 'object',
+        properties: {
+          page: { type: 'integer', minimum: 1, default: 1 },
+          limit: { type: 'integer', minimum: 1, maximum: 50, default: 10 },
+          role: { type: 'string', enum: ['user', 'moderator', 'admin'] },
+          search: { type: 'string', minLength: 1 },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  async (request) => {
+    const query = request.query as {
+      page: number;
+      limit: number;
+      role?: 'user' | 'moderator' | 'admin';
+      search?: string;
+    };
+
+    return {
+      page: query.page,
+      limit: query.limit,
+      role: query.role ?? 'all',
+      search: query.search ?? '',
+    };
+  }
+);
+
+app.setErrorHandler((error: FastifyError, _request, reply) => {
+  if (error.validation) {
+    return reply.status(400).send({
+      success: false,
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'Request validation failed',
+        details: error.validation.map((issue) => ({
+          field: issue.instancePath || issue.params?.missingProperty || 'unknown',
+          message: issue.message,
+          keyword: issue.keyword,
+        })),
+      },
+    });
+  }
+
+  return reply.status(500).send({
+    success: false,
+    error: {
+      code: 'INTERNAL_ERROR',
+      message: error.message ?? 'An unexpected error occurred',
+    },
+  });
+});
+
+async function main() {
+  // Part 1 tests run here if you want to inspect raw Ajv behavior without Fastify.
+  console.log('--- Standalone AJV check ---');
+  console.log(
+    validateUser({
+      username: 'alice_123',
+      email: 'alice@example.com',
+      password: 'securePass1!',
+      age: 25,
+      interests: ['coding', 'gaming'],
+    })
+  );
+
+  await app.listen({ port: 3000, host: '0.0.0.0' });
+  console.log('Validation Exercise running on http://localhost:3000');
+  console.log('Try POST /register and GET /users with the curl commands above.');
 }
 
 main();
