@@ -136,3 +136,114 @@ interface Bookmark {
 //   curl -v http://localhost:3000/health 2>&1 | grep x-response-time
 
 // Your code here:
+
+declare module 'fastify' {
+  interface FastifyInstance {
+    store: { bookmarks: Bookmark[]; nextId: number };
+    appConfig: { port: number; env: string };
+  }
+  interface FastifyRequest {
+    startTime: number;
+  }
+}
+
+async function configPlugin(fastify: FastifyInstance) {
+  fastify.decorate('appConfig', { port: 3000, env: process.env.NODE_ENV ?? 'development' });
+}
+const configPluginWrapped = fp(configPlugin, { name: 'config' });
+
+async function dbPlugin(fastify: FastifyInstance) {
+  fastify.decorate('store', { bookmarks: [] as Bookmark[], nextId: 1 });
+}
+const dbPluginWrapped = fp(dbPlugin, { name: 'db' });
+
+async function timingPlugin(fastify: FastifyInstance) {
+  fastify.decorateRequest('startTime', 0);
+  fastify.addHook('onRequest', async (request) => {
+    request.startTime = Date.now();
+  });
+  fastify.addHook('onSend', async (request, reply) => {
+    const elapsed = Date.now() - request.startTime;
+    reply.header('X-Response-Time', `${elapsed}ms`);
+  });
+}
+const timingPluginWrapped = fp(timingPlugin, { name: 'timing' });
+
+async function statsPlugin(fastify: FastifyInstance) {
+  let count = 0;
+  fastify.addHook('onRequest', async () => {
+    count++;
+  });
+  fastify.get('/stats', async () => ({ requestCount: count }));
+}
+
+const createBookmarkSchema = {
+  body: {
+    type: 'object',
+    required: ['url', 'title', 'tags'],
+    properties: {
+      url: { type: 'string', format: 'uri' },
+      title: { type: 'string', minLength: 1 },
+      tags: { type: 'array', items: { type: 'string' } },
+    },
+  },
+};
+
+async function bookmarkRoutes(fastify: FastifyInstance) {
+  const { store } = fastify;
+
+  fastify.get('/', async (request) => {
+    const { tag } = request.query as { tag?: string };
+    if (tag) return store.bookmarks.filter((b) => b.tags.includes(tag));
+    return store.bookmarks;
+  });
+
+  fastify.get('/:id', async (request, reply) => {
+    const id = parseInt((request.params as { id: string }).id, 10);
+    const bookmark = store.bookmarks.find((b) => b.id === id);
+    if (!bookmark) return reply.status(404).send({ message: 'Not found' });
+    return bookmark;
+  });
+
+  fastify.post('/', { schema: createBookmarkSchema }, async (request, reply) => {
+    const { url, title, tags } = request.body as { url: string; title: string; tags: string[] };
+    const bookmark: Bookmark = {
+      id: store.nextId++,
+      url,
+      title,
+      tags,
+      createdAt: new Date().toISOString(),
+    };
+    store.bookmarks.push(bookmark);
+    return reply.status(201).send(bookmark);
+  });
+
+  fastify.delete('/:id', async (request, reply) => {
+    const id = parseInt((request.params as { id: string }).id, 10);
+    const index = store.bookmarks.findIndex((b) => b.id === id);
+    if (index === -1) return reply.status(404).send({ message: 'Not found' });
+    store.bookmarks.splice(index, 1);
+    return reply.status(204).send();
+  });
+}
+
+const app = Fastify({ logger: true });
+
+app.register(configPluginWrapped);
+app.register(dbPluginWrapped);
+app.register(timingPluginWrapped);
+app.register(statsPlugin);
+app.register(bookmarkRoutes, { prefix: '/api/bookmarks' });
+app.get('/health', async () => ({ status: 'ok' }));
+
+app.ready().then(() => {
+  console.log('Has store?', app.hasDecorator('store')); // true
+  console.log('Has appConfig?', app.hasDecorator('appConfig')); // true
+});
+
+app.listen({ port: 3000 }, (err) => {
+  if (err) {
+    app.log.error(err);
+    process.exit(1);
+  }
+});
