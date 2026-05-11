@@ -4,9 +4,23 @@ import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
 import { RoomsModule } from './rooms/rooms.module';
 import { WishlistModule } from './wishlist/wishlist.module';
+import { LoggerModule } from 'nestjs-pino';
 
 @Module({
-  imports: [UsersModule, RoomsModule, WishlistModule],
+  imports: [
+    LoggerModule.forRoot({
+      pinoHttp: {
+        level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
+        transport:
+          process.env.NODE_ENV !== 'production'
+            ? { target: 'pino-pretty', options: { colorize: true } }
+            : undefined,
+      },
+    }),
+    UsersModule,
+    RoomsModule,
+    WishlistModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
