@@ -10,7 +10,7 @@ export {};
 // pattern. The schema is given. Implement the repository methods, then run
 // the test scenario at the bottom.
 
-import mongoose, { Schema, model, Types, FilterQuery } from 'mongoose';
+import mongoose, { Schema, model, Types } from 'mongoose';
 
 // --- Pre-built schema (do not modify) ---
 
@@ -33,19 +33,28 @@ const bookSchema = new Schema<IBook>(
     title: { type: String, required: true, minlength: 1, maxlength: 300 },
     author: { type: String, required: true },
     isbn: { type: String, required: true, unique: true, match: /^\d{10}(\d{3})?$/ },
-    genre: { type: String, enum: ['fiction', 'non-fiction', 'sci-fi', 'biography', 'tech'], required: true },
+    genre: {
+      type: String,
+      enum: ['fiction', 'non-fiction', 'sci-fi', 'biography', 'tech'],
+      required: true,
+    },
     pages: { type: Number, required: true, min: 1 },
     publishedYear: { type: Number, required: true, min: 1000, max: new Date().getFullYear() },
     inStock: { type: Boolean, default: true },
     tags: { type: [String], default: [] },
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
 bookSchema.index({ author: 1, publishedYear: -1 });
 bookSchema.index({ title: 'text', author: 'text' });
 
 const Book = model<IBook>('Book', bookSchema);
+
+type CreateBookInput = Omit<IBook, '_id' | 'createdAt' | 'updatedAt' | 'inStock' | 'tags'> &
+  Partial<Pick<IBook, 'inStock' | 'tags'>>;
+
+type BookFilter = Record<string, unknown>;
 
 // ============================================
 // TODO: Implement the BookRepository class
@@ -92,7 +101,98 @@ const Book = model<IBook>('Book', bookSchema);
 // Your repository here:
 
 class BookRepository {
-  // TODO: implement methods listed above
+  async create(data: CreateBookInput): Promise<IBook> {
+    const created = await Book.create(data);
+    return created.toObject();
+  }
+
+  async findById(id: Types.ObjectId | string): Promise<IBook | null> {
+    return Book.findById(id).lean<IBook>().exec();
+  }
+
+  async findByIsbn(isbn: string): Promise<IBook | null> {
+    return Book.findOne({ isbn }).lean<IBook>().exec();
+  }
+
+  async list(
+    filter: BookFilter = {},
+    options: { page?: number; limit?: number; sortBy?: string; sortDir?: 'asc' | 'desc' } = {}
+  ): Promise<{ items: IBook[]; total: number }> {
+    const page = Math.max(1, options.page ?? 1);
+    const limit = Math.max(1, options.limit ?? 20);
+    const sortBy = options.sortBy ?? 'createdAt';
+    const sortDir = options.sortDir === 'asc' ? 1 : -1;
+    const skip = (page - 1) * limit;
+
+    // Keep reads and counts in sync by executing both queries against the same filter.
+    const [items, total] = await Promise.all([
+      Book.find(filter)
+        .sort({ [sortBy]: sortDir })
+        .skip(skip)
+        .limit(limit)
+        .lean()
+        .exec() as Promise<IBook[]>,
+      Book.countDocuments(filter).exec(),
+    ]);
+
+    return { items, total };
+  }
+
+  async updateById(
+    id: Types.ObjectId | string,
+    patch: mongoose.UpdateQuery<IBook>
+  ): Promise<IBook | null> {
+    return Book.findByIdAndUpdate(id, patch, {
+      returnDocument: 'after',
+      runValidators: true,
+    })
+      .lean<IBook>()
+      .exec();
+  }
+
+  async addTag(id: Types.ObjectId | string, tag: string): Promise<IBook | null> {
+    return Book.findByIdAndUpdate(
+      id,
+      { $addToSet: { tags: tag } },
+      { returnDocument: 'after', runValidators: true }
+    )
+      .lean<IBook>()
+      .exec();
+  }
+
+  async removeTag(id: Types.ObjectId | string, tag: string): Promise<IBook | null> {
+    return Book.findByIdAndUpdate(
+      id,
+      { $pull: { tags: tag } },
+      { returnDocument: 'after', runValidators: true }
+    )
+      .lean<IBook>()
+      .exec();
+  }
+
+  async deleteById(id: Types.ObjectId | string): Promise<boolean> {
+    const result = await Book.deleteOne({ _id: id }).exec();
+    return result.deletedCount === 1;
+  }
+
+  async countByGenre(): Promise<Array<{ genre: string; count: number }>> {
+    return Book.aggregate<{ genre: string; count: number }>([
+      {
+        $group: {
+          _id: '$genre',
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          genre: '$_id',
+          count: 1,
+        },
+      },
+      { $sort: { count: -1, genre: 1 } },
+    ]).exec();
+  }
 }
 
 // ============================================
@@ -110,62 +210,86 @@ async function main(): Promise<void> {
 
   // 1. CREATE
   console.log('--- 1. Create books ---');
-  const dune = await (repo as any).create({
-    title: 'Dune', author: 'Frank Herbert', isbn: '9780441172719',
-    genre: 'sci-fi', pages: 688, publishedYear: 1965, tags: ['classic'],
+  const dune = await repo.create({
+    title: 'Dune',
+    author: 'Frank Herbert',
+    isbn: '9780441172719',
+    genre: 'sci-fi',
+    pages: 688,
+    publishedYear: 1965,
+    tags: ['classic'],
   });
-  const foundation = await (repo as any).create({
-    title: 'Foundation', author: 'Isaac Asimov', isbn: '9780553293357',
-    genre: 'sci-fi', pages: 244, publishedYear: 1951, tags: ['classic'],
+  const foundation = await repo.create({
+    title: 'Foundation',
+    author: 'Isaac Asimov',
+    isbn: '9780553293357',
+    genre: 'sci-fi',
+    pages: 244,
+    publishedYear: 1951,
+    tags: ['classic'],
   });
-  await (repo as any).create({
-    title: 'The Pragmatic Programmer', author: 'Andy Hunt', isbn: '9780201616224',
-    genre: 'tech', pages: 352, publishedYear: 1999,
+  await repo.create({
+    title: 'The Pragmatic Programmer',
+    author: 'Andy Hunt',
+    isbn: '9780201616224',
+    genre: 'tech',
+    pages: 352,
+    publishedYear: 1999,
   });
-  await (repo as any).create({
-    title: 'Steve Jobs', author: 'Walter Isaacson', isbn: '9781451648539',
-    genre: 'biography', pages: 656, publishedYear: 2011, inStock: false,
+  await repo.create({
+    title: 'Steve Jobs',
+    author: 'Walter Isaacson',
+    isbn: '9781451648539',
+    genre: 'biography',
+    pages: 656,
+    publishedYear: 2011,
+    inStock: false,
   });
   console.log('Created 4 books');
 
   // 2. READ
   console.log('\n--- 2. Find one ---');
-  console.log('By id:', (await (repo as any).findById(dune._id))?.title);
-  console.log('By isbn:', (await (repo as any).findByIsbn('9780553293357'))?.title);
-  console.log('Not found:', await (repo as any).findById(new Types.ObjectId()));
+  console.log('By id:', (await repo.findById(dune._id))?.title);
+  console.log('By isbn:', (await repo.findByIsbn('9780553293357'))?.title);
+  console.log('Not found:', await repo.findById(new Types.ObjectId()));
 
   // 3. LIST with pagination + filter
   console.log('\n--- 3. List ---');
-  const page1 = await (repo as any).list({ genre: 'sci-fi' }, { page: 1, limit: 10, sortBy: 'publishedYear', sortDir: 'asc' });
-  console.log(`sci-fi books: total=${page1.total}, items=${page1.items.map((b: IBook) => b.title).join(', ')}`);
-  const inStock = await (repo as any).list({ inStock: true });
+  const page1 = await repo.list(
+    { genre: 'sci-fi' },
+    { page: 1, limit: 10, sortBy: 'publishedYear', sortDir: 'asc' }
+  );
+  console.log(
+    `sci-fi books: total=${page1.total}, items=${page1.items.map((b: IBook) => b.title).join(', ')}`
+  );
+  const inStock = await repo.list({ inStock: true });
   console.log(`in-stock books: total=${inStock.total}`);
 
   // 4. UPDATE
   console.log('\n--- 4. Update ---');
-  const updated = await (repo as any).updateById(dune._id, { pages: 700 });
+  const updated = await repo.updateById(dune._id, { pages: 700 });
   console.log(`Updated Dune pages: ${updated?.pages}`);
 
   // 5. ADD/REMOVE TAG
   console.log('\n--- 5. Tags ---');
-  await (repo as any).addTag(dune._id, 'must-read');
-  await (repo as any).addTag(dune._id, 'must-read'); // duplicate — should be ignored
-  const tagged = await (repo as any).findById(dune._id);
+  await repo.addTag(dune._id, 'must-read');
+  await repo.addTag(dune._id, 'must-read'); // duplicate — should be ignored
+  const tagged = await repo.findById(dune._id);
   console.log(`Dune tags after addTag x2: [${tagged?.tags.join(', ')}]`);
-  await (repo as any).removeTag(dune._id, 'classic');
-  const untagged = await (repo as any).findById(dune._id);
+  await repo.removeTag(dune._id, 'classic');
+  const untagged = await repo.findById(dune._id);
   console.log(`Dune tags after removeTag classic: [${untagged?.tags.join(', ')}]`);
 
   // 6. AGGREGATION
   console.log('\n--- 6. Count by genre ---');
-  const stats = await (repo as any).countByGenre();
+  const stats = await repo.countByGenre();
   console.log(stats);
 
   // 7. DELETE
   console.log('\n--- 7. Delete ---');
-  console.log(`Deleted Foundation? ${await (repo as any).deleteById(foundation._id)}`);
-  console.log(`Delete missing id? ${await (repo as any).deleteById(new Types.ObjectId())}`);
-  console.log(`Books left: ${(await (repo as any).list({})).total}`);
+  console.log(`Deleted Foundation? ${await repo.deleteById(foundation._id)}`);
+  console.log(`Delete missing id? ${await repo.deleteById(new Types.ObjectId())}`);
+  console.log(`Books left: ${(await repo.list({})).total}`);
 
   await mongoose.disconnect();
   console.log('\nDone.');
