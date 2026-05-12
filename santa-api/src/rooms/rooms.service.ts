@@ -1,49 +1,45 @@
-import { Injectable } from '@nestjs/common';
-
-export interface Room {
-  id: string;
-  name: string;
-  ownerId: string;
-  code: string;
-  members: string[];
-  createdAt: Date;
-}
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { Room, RoomDocument } from './schemas/room.schema';
 
 @Injectable()
 export class RoomsService {
-  private readonly rooms = new Map<string, Room>();
+  constructor(
+    @InjectModel(Room.name) private readonly roomModel: Model<RoomDocument>,
+  ) {}
 
-  create({ name, ownerId }: { name: string; ownerId: string }): Room {
-    const room: Room = {
-      id: crypto.randomUUID(),
+  create({ name, ownerId }: { name: string; ownerId: string }) {
+    const inviteCode = Math.random().toString(36).slice(2, 8).toUpperCase();
+    return this.roomModel.create({
       name,
-      ownerId,
-      code: Math.random().toString(36).slice(2, 8).toUpperCase(),
-      members: [ownerId],
-      createdAt: new Date(),
-    };
-    this.rooms.set(room.id, room);
+      creatorId: ownerId,
+      inviteCode,
+      participants: [ownerId],
+    });
+  }
+
+  findAll() {
+    return this.roomModel.find().exec();
+  }
+
+  async findById(id: string) {
+    const room = await this.roomModel.findById(id).exec();
+    if (!room) throw new NotFoundException(`Room ${id} not found`);
     return room;
   }
 
-  findAll(): Room[] {
-    return [...this.rooms.values()];
+  findByCode(code: string) {
+    return this.roomModel.findOne({ inviteCode: code }).exec();
   }
 
-  findById(id: string): Room | undefined {
-    return this.rooms.get(id);
-  }
-
-  findByCode(code: string): Room | undefined {
-    return [...this.rooms.values()].find((r) => r.code === code);
-  }
-
-  addMember(code: string, userId: string): Room | undefined {
-    const room = this.findByCode(code);
-    if (!room) return undefined;
-    if (!room.members.includes(userId)) {
-      room.members.push(userId);
-    }
-    return room;
+  addMember(code: string, userId: string) {
+    return this.roomModel
+      .findOneAndUpdate(
+        { inviteCode: code },
+        { $addToSet: { participants: userId } },
+        { new: true },
+      )
+      .exec();
   }
 }

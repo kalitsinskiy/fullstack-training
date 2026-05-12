@@ -1,24 +1,27 @@
 import { Injectable } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { Wishlist, WishlistDocument } from './schemas/wishlist.schema';
+import { WishlistItemDto } from './dto/update-wishlist.dto';
 
 @Injectable()
 export class WishlistService {
-  private readonly store = new Map<string, string[]>();
+  constructor(
+    @InjectModel(Wishlist.name)
+    private readonly wishlistModel: Model<WishlistDocument>,
+  ) {}
 
-  private key(roomId: string, userId: string): string {
-    return `${roomId}:${userId}`;
+  set(roomId: string, userId: string, items: WishlistItemDto[]) {
+    return this.wishlistModel
+      .findOneAndUpdate(
+        { userId, roomId },
+        { $set: { items } },
+        { upsert: true, new: true },
+      )
+      .exec();
   }
 
-  set(roomId: string, userId: string, items: string[]) {
-    this.store.set(this.key(roomId, userId), items);
-    return { roomId, userId, items };
-  }
-
-  get(
-    roomId: string,
-    userId: string,
-  ): { roomId: string; userId: string; items: string[] } | undefined {
-    const items = this.store.get(this.key(roomId, userId));
-    if (items === undefined) return undefined;
-    return { roomId, userId, items };
+  get(roomId: string, userId: string) {
+    return this.wishlistModel.findOne({ userId, roomId }).exec();
   }
 }

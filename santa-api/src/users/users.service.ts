@@ -1,28 +1,25 @@
-import { Injectable } from '@nestjs/common';
-
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  createdAt: Date;
-}
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { User, UserDocument } from './schemas/user.schema';
 
 @Injectable()
 export class UsersService {
-  private readonly users = new Map<string, User>();
+  constructor(
+    @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
+  ) {}
 
-  create({ name, email }: { name: string; email: string }): User {
-    const user: User = {
-      id: crypto.randomUUID(),
-      name,
-      email,
-      createdAt: new Date(),
-    };
-    this.users.set(user.id, user);
-    return user;
+  create(dto: { name: string; email: string }) {
+    return this.userModel.create({
+      email: dto.email,
+      displayName: dto.name,
+      passwordHash: 'TODO_LESSON_08',
+    });
   }
 
-  findById(id: string): User | undefined {
-    return this.users.get(id);
+  async findById(id: string) {
+    const user = await this.userModel.findById(id).exec();
+    if (!user) throw new NotFoundException(`User ${id} not found`);
+    return user;
   }
 }
