@@ -18,6 +18,8 @@ async function timingPlugin(fastify: FastifyInstance) {
     const elapsed = Date.now() - request.startTime;
     reply.header('X-Response-Time', `${elapsed}ms`);
   });
+
+  fastify.log.info('Timing plugin loaded');
 }
 
 const timingPluginWrapped = fp(timingPlugin, { name: 'timing' });
