@@ -4,6 +4,7 @@ import {
   NestFastifyApplication,
 } from '@nestjs/platform-fastify';
 import { AppModule } from '../src/app.module';
+import { ValidationPipe } from '@nestjs/common';
 
 describe('AppController (e2e)', () => {
   let app: NestFastifyApplication;
@@ -16,6 +17,15 @@ describe('AppController (e2e)', () => {
     app = moduleFixture.createNestApplication<NestFastifyApplication>(
       new FastifyAdapter(),
     );
+
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      }),
+    );
+
     await app.init();
     await app.getHttpAdapter().getInstance().ready();
   });

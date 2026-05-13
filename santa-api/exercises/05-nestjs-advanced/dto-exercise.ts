@@ -66,7 +66,7 @@ enum TaskStatus {
 //   - tags: optional array of strings, each tag min 1 char, max 20 chars
 class CreateTaskDto {
   @IsString()
-  @minLength(3)
+  @MinLength(3)
   @MaxLength(100)
   title!: string;
 

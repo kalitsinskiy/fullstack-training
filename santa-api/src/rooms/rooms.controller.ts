@@ -8,7 +8,9 @@ import {
   Param,
   Post,
 } from '@nestjs/common';
-import { RoomsService, type CreateRoomInput, type Room } from './rooms.service';
+import { RoomsService, type Room } from './rooms.service';
+import { CreateRoomDto } from './dto/create-room.dto';
+import { JoinRoomDto } from './dto/join-room.dto';
 
 interface JoinRoomInput {
   userId: string;
@@ -19,7 +21,7 @@ export class RoomsController {
   constructor(private readonly roomsService: RoomsService) {}
 
   @Post()
-  create(@Body() input: CreateRoomInput): Room {
+  create(@Body() input: CreateRoomDto): Room {
     return this.roomsService.create(input);
   }
 
@@ -41,7 +43,7 @@ export class RoomsController {
 
   @Post(':code/join')
   @HttpCode(HttpStatus.OK)
-  join(@Param('code') code: string, @Body() input: JoinRoomInput): Room {
+  join(@Param('code') code: string, @Body() input: JoinRoomDto): Room {
     const room = this.roomsService.addMember(code, input.userId);
 
     if (!room) {
