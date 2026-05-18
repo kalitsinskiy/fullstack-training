@@ -10,13 +10,13 @@ export class RoomsService {
     @InjectModel(Room.name) private readonly roomModel: Model<Room>,
   ) {}
 
-  create(dto: CreateRoomDto) {
+  create(dto: CreateRoomDto, ownerId: string) {
     const inviteCode = Math.random().toString(36).slice(2, 8).toUpperCase();
     return this.roomModel.create({
       name: dto.name,
-      creatorId: dto.ownerId,
+      creatorId: ownerId,
       inviteCode,
-      participants: [dto.ownerId],
+      participants: [ownerId],
     });
   }
 

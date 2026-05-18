@@ -4,18 +4,28 @@ import {
   Get,
   NotFoundException,
   Param,
-  Post,
+  Patch,
+  UseGuards,
 } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UsersService } from './users.service';
-import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @Post()
-  async create(@Body() dto: CreateUserDto) {
-    return this.usersService.create(dto);
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  getMe(@CurrentUser('id') userId: string) {
+    return this.usersService.findById(userId);
+  }
+
+  @Patch('me')
+  @UseGuards(JwtAuthGuard)
+  updateMe(@CurrentUser('id') userId: string, @Body() dto: UpdateUserDto) {
+    return this.usersService.updateById(userId, dto);
   }
 
   @Get(':id')

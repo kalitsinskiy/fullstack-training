@@ -1,6 +1,2 @@
-import { IsMongoId } from 'class-validator';
-
-export class JoinRoomDto {
-  @IsMongoId({ message: 'User ID must be a valid MongoDB ObjectId' })
-  userId!: string;
-}
+// userId now comes from the JWT via @CurrentUser — no body needed for join
+export class JoinRoomDto {}

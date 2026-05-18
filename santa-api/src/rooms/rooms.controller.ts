@@ -5,22 +5,25 @@ import {
   NotFoundException,
   Param,
   Post,
+  UseGuards,
 } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { RoomsService } from './rooms.service';
 import { CreateRoomDto } from './dto/create-room.dto';
-import { JoinRoomDto } from './dto/join-room.dto';
 
 @Controller('rooms')
+@UseGuards(JwtAuthGuard)
 export class RoomsController {
   constructor(private readonly roomsService: RoomsService) {}
 
   @Post()
-  async create(@Body() dto: CreateRoomDto) {
-    return this.roomsService.create(dto);
+  create(@Body() dto: CreateRoomDto, @CurrentUser('id') userId: string) {
+    return this.roomsService.create(dto, userId);
   }
 
   @Get()
-  async findAll() {
+  findAll() {
     return this.roomsService.findAll();
   }
 
@@ -32,8 +35,8 @@ export class RoomsController {
   }
 
   @Post(':code/join')
-  async join(@Param('code') code: string, @Body() dto: JoinRoomDto) {
-    const room = await this.roomsService.addMember(code, dto.userId);
+  async join(@Param('code') code: string, @CurrentUser('id') userId: string) {
+    const room = await this.roomsService.addMember(code, userId);
     if (!room) throw new NotFoundException('Room not found');
     return room;
   }
