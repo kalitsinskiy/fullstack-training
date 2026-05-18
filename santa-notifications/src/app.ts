@@ -1,5 +1,4 @@
 import Fastify, { FastifyInstance, FastifyError } from 'fastify';
-import { dbPlugin } from './plugins/db';
 import { timingPlugin } from './plugins/timing';
 import { configPlugin } from './plugins/config';
 import { healthRoutes } from './routes/health';
@@ -21,7 +20,6 @@ async function buildApp(): Promise<FastifyInstance> {
   });
 
   app.log.info('Registering plugins');
-  app.register(dbPlugin);
   app.register(configPlugin);
   app.register(timingPlugin);
 

@@ -1,46 +1,49 @@
 import { Injectable } from '@nestjs/common';
-import { Room } from './models/room';
 import CreateRoomDto from './dto/create-room.dto';
 import JoinRoomDto from './dto/join-room.dto';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { Room } from './schemas/room.schema';
 
 @Injectable()
 export class RoomsService {
-  private readonly rooms: Map<string, Room> = new Map();
+  constructor(
+    @InjectModel(Room.name) private readonly roomModel: Model<Room>,
+  ) {}
 
-  create(room: CreateRoomDto): Room {
-    const id = crypto.randomUUID();
+  create(room: CreateRoomDto) {
     const code = Math.random().toString(36).slice(2, 8).toUpperCase();
-    const newRoom: Room = {
-      id,
+    return this.roomModel.create({
       name: room.name,
-      ownerId: room.ownerId,
-      code,
-      members: [room.ownerId],
-      createdAt: new Date(),
-    };
-    this.rooms.set(id, newRoom);
-    return newRoom;
+      creatorId: room.ownerId,
+      inviteCode: code,
+      participants: [room.ownerId],
+    });
   }
 
-  findAll(): Array<Room> {
-    return Array.from(this.rooms.values());
+  findAll() {
+    return this.roomModel.find().exec();
   }
 
-  findById(id: string): Room | undefined {
-    return this.rooms.get(id);
+  findById(id: string) {
+    return this.roomModel.findById(id).exec();
   }
 
-  findByCode(code: string): Room | undefined {
-    return Array.from(this.rooms.values()).find((room) => room.code === code);
+  findByCode(code: string) {
+    return this.roomModel.findOne({ inviteCode: code }).exec();
   }
 
-  addMember(code: string, joinData: JoinRoomDto): Room | undefined {
+  addMember(code: string, joinData: JoinRoomDto) {
     const { userId } = joinData;
-    const room = this.findByCode(code);
-    if (!room) return undefined;
-    if (!room.members.includes(userId)) {
-      room.members.push(userId);
-    }
-    return room;
+
+    return this.roomModel
+      .findOneAndUpdate(
+        { inviteCode: code },
+        {
+          $addToSet: { participants: userId },
+        },
+        { new: true },
+      )
+      .exec();
   }
 }

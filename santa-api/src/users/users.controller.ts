@@ -7,7 +7,6 @@ import {
   Post,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
-import type User from './models/user';
 import { CreateUserDto } from './dto/create-user.dto';
 
 @Controller('users')
@@ -15,14 +14,14 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post()
-  create(@Body() user: CreateUserDto): User {
-    return this.usersService.create(user);
+  async create(@Body() user: CreateUserDto) {
+    return await this.usersService.create(user);
   }
 
   @Get(':id')
-  findById(@Param('id') id: string): User {
-    const user = this.usersService.findById(id);
-    if (!user) {
+  async findById(@Param('id') id: string) {
+    const user = await this.usersService.findById(id);
+    if (user === null) {
       throw new NotFoundException('User not found');
     }
     return user;

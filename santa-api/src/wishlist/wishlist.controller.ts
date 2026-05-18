@@ -20,35 +20,35 @@ export class WishlistController {
   ) {}
 
   @Post()
-  setWishlist(
+  async setWishlist(
     @Param('roomCode') roomCode: string,
     @Body() wishlist: UpdateWishlistDto,
   ) {
     const { userId, items } = wishlist;
-    const room = this.roomsService.findByCode(roomCode);
+    const room = await this.roomsService.findByCode(roomCode);
     if (!room) {
       throw new NotFoundException(`Room with code ${roomCode} not found`);
     }
-    const user = this.usersService.findById(userId);
+    const user = await this.usersService.findById(userId);
     if (!user) {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
-    return this.wishlistService.set(roomCode, userId, items);
+    return this.wishlistService.set(room._id, user._id, items);
   }
 
   @Get('/:userId')
-  getWishlist(
+  async getWishlist(
     @Param('roomCode') roomCode: string,
     @Param('userId') userId: string,
   ) {
-    const room = this.roomsService.findByCode(roomCode);
+    const room = await this.roomsService.findByCode(roomCode);
     if (!room) {
       throw new NotFoundException(`Room with code ${roomCode} not found`);
     }
-    const user = this.usersService.findById(userId);
+    const user = await this.usersService.findById(userId);
     if (!user) {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
-    return this.wishlistService.get(roomCode, userId);
+    return this.wishlistService.get(room._id, user._id);
   }
 }

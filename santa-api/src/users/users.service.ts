@@ -1,23 +1,24 @@
 import { Injectable } from '@nestjs/common';
-import User from './models/user';
 import { CreateUserDto } from './dto/create-user.dto';
+import { InjectModel } from '@nestjs/mongoose';
+import { User } from './schemas/user.schema';
+import { Model } from 'mongoose';
 
 @Injectable()
 export class UsersService {
-  private readonly users: Map<string, User> = new Map();
+  constructor(
+    @InjectModel(User.name) private readonly userModel: Model<User>,
+  ) {}
 
-  create(user: CreateUserDto): User {
-    const id = crypto.randomUUID();
-    const newUser: User = {
-      id,
-      createdAt: new Date(),
-      ...user,
-    };
-    this.users.set(id, newUser);
-    return newUser;
+  create(user: CreateUserDto) {
+    return this.userModel.create({
+      email: user.email,
+      displayName: user.displayName,
+      passwordHash: 'TODO_LESSON_08',
+    });
   }
 
-  findById(id: string): User | undefined {
-    return this.users.get(id);
+  findById(id: string) {
+    return this.userModel.findById(id).exec();
   }
 }

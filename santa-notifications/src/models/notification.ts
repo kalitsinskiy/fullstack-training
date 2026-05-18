@@ -1,12 +1,18 @@
-interface Notification {
-  id: number;
-  userId: string;
-  type: string; // e.g. "room.created", "user.joined", "draw.completed"
-  message: string;
-  read: boolean;
-  createdAt: string; // ISO timestamp
-}
+import { Schema, model, Types } from 'mongoose';
 
-type NotificationDTO = Pick<Notification, 'userId' | 'type' | 'message'>;
+const notificationSchema = new Schema({
+  userId: { type: Types.ObjectId, ref: 'User', required: true, index: true },
+  type: {
+    type: String,
+    enum: ['room_invite', 'assignment', 'wishlist_update', 'system'],
+    required: true,
+  },
+  payload: { type: Schema.Types.Mixed },
+  message: { type: String, required: true },
+  read: { type: Boolean, default: false },
+  createdAt: { type: Date, default: Date.now },
+});
 
-export { Notification, NotificationDTO };
+notificationSchema.index({ userId: 1, createdAt: -1 });
+
+export const NotificationModel = model('Notification', notificationSchema);

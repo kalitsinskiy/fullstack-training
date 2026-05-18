@@ -33,13 +33,17 @@ const bookSchema = new Schema<IBook>(
     title: { type: String, required: true, minlength: 1, maxlength: 300 },
     author: { type: String, required: true },
     isbn: { type: String, required: true, unique: true, match: /^\d{10}(\d{3})?$/ },
-    genre: { type: String, enum: ['fiction', 'non-fiction', 'sci-fi', 'biography', 'tech'], required: true },
+    genre: {
+      type: String,
+      enum: ['fiction', 'non-fiction', 'sci-fi', 'biography', 'tech'],
+      required: true,
+    },
     pages: { type: Number, required: true, min: 1 },
     publishedYear: { type: Number, required: true, min: 1000, max: new Date().getFullYear() },
     inStock: { type: Boolean, default: true },
     tags: { type: [String], default: [] },
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
 bookSchema.index({ author: 1, publishedYear: -1 });
@@ -92,7 +96,74 @@ const Book = model<IBook>('Book', bookSchema);
 // Your repository here:
 
 class BookRepository {
-  // TODO: implement methods listed above
+  create(data: any): Promise<IBook> {
+    const book = Book.insertOne(data);
+    return book;
+  }
+
+  findById(id: Types.ObjectId): Promise<IBook | null> {
+    const book = Book.findById(id);
+    return book;
+  }
+
+  findByIsbn(isbn: string): Promise<IBook | null> {
+    const book = Book.findOne({ isbn });
+    return book;
+  }
+
+  list(filter: FilterQuery<IBook>, options?: any): Promise<{ items: IBook[]; total: number }> {
+    const page = options?.page ?? 1;
+    const limit = options?.limit ?? 20;
+    const sortBy = options?.sortBy ?? 'createdAt';
+    const sortDir = options?.sortDir === 'asc' ? 1 : -1;
+
+    const itemsPromise = Book.find(filter)
+      .sort({ [sortBy]: sortDir })
+      .skip((page - 1) * limit)
+      .limit(limit);
+    const countPromise = Book.countDocuments(filter);
+
+    return Promise.all([itemsPromise, countPromise]).then(([items, total]) => ({ items, total }));
+  }
+
+  updateById(id: Types.ObjectId, patch: any): Promise<IBook | null> {
+    const updated = Book.findByIdAndUpdate(id, patch, {
+      returnDocument: 'after',
+      runValidators: true,
+    });
+    return updated;
+  }
+
+  addTag(id: Types.ObjectId, tag: string): Promise<IBook | null> {
+    const updated = Book.findByIdAndUpdate(
+      id,
+      { $addToSet: { tags: tag } },
+      { returnDocument: 'after' }
+    );
+    return updated;
+  }
+
+  removeTag(id: Types.ObjectId, tag: string): Promise<IBook | null> {
+    const updated = Book.findByIdAndUpdate(
+      id,
+      { $pull: { tags: tag } },
+      { returnDocument: 'after' }
+    );
+    return updated;
+  }
+
+  deleteById(id: Types.ObjectId): Promise<boolean> {
+    const result = Book.findByIdAndDelete(id);
+    return result.then((doc) => !!doc);
+  }
+
+  countByGenre(): Promise<Array<{ genre: string; count: number }>> {
+    return Book.aggregate([
+      { $group: { _id: '$genre', count: { $sum: 1 } } },
+      { $project: { genre: '$_id', count: 1, _id: 0 } },
+      { $sort: { count: -1 } },
+    ]);
+  }
 }
 
 // ============================================
@@ -111,20 +182,39 @@ async function main(): Promise<void> {
   // 1. CREATE
   console.log('--- 1. Create books ---');
   const dune = await (repo as any).create({
-    title: 'Dune', author: 'Frank Herbert', isbn: '9780441172719',
-    genre: 'sci-fi', pages: 688, publishedYear: 1965, tags: ['classic'],
+    title: 'Dune',
+    author: 'Frank Herbert',
+    isbn: '9780441172719',
+    genre: 'sci-fi',
+    pages: 688,
+    publishedYear: 1965,
+    tags: ['classic'],
   });
   const foundation = await (repo as any).create({
-    title: 'Foundation', author: 'Isaac Asimov', isbn: '9780553293357',
-    genre: 'sci-fi', pages: 244, publishedYear: 1951, tags: ['classic'],
+    title: 'Foundation',
+    author: 'Isaac Asimov',
+    isbn: '9780553293357',
+    genre: 'sci-fi',
+    pages: 244,
+    publishedYear: 1951,
+    tags: ['classic'],
   });
   await (repo as any).create({
-    title: 'The Pragmatic Programmer', author: 'Andy Hunt', isbn: '9780201616224',
-    genre: 'tech', pages: 352, publishedYear: 1999,
+    title: 'The Pragmatic Programmer',
+    author: 'Andy Hunt',
+    isbn: '9780201616224',
+    genre: 'tech',
+    pages: 352,
+    publishedYear: 1999,
   });
   await (repo as any).create({
-    title: 'Steve Jobs', author: 'Walter Isaacson', isbn: '9781451648539',
-    genre: 'biography', pages: 656, publishedYear: 2011, inStock: false,
+    title: 'Steve Jobs',
+    author: 'Walter Isaacson',
+    isbn: '9781451648539',
+    genre: 'biography',
+    pages: 656,
+    publishedYear: 2011,
+    inStock: false,
   });
   console.log('Created 4 books');
 
@@ -136,8 +226,13 @@ async function main(): Promise<void> {
 
   // 3. LIST with pagination + filter
   console.log('\n--- 3. List ---');
-  const page1 = await (repo as any).list({ genre: 'sci-fi' }, { page: 1, limit: 10, sortBy: 'publishedYear', sortDir: 'asc' });
-  console.log(`sci-fi books: total=${page1.total}, items=${page1.items.map((b: IBook) => b.title).join(', ')}`);
+  const page1 = await (repo as any).list(
+    { genre: 'sci-fi' },
+    { page: 1, limit: 10, sortBy: 'publishedYear', sortDir: 'asc' }
+  );
+  console.log(
+    `sci-fi books: total=${page1.total}, items=${page1.items.map((b: IBook) => b.title).join(', ')}`
+  );
   const inStock = await (repo as any).list({ inStock: true });
   console.log(`in-stock books: total=${inStock.total}`);
 

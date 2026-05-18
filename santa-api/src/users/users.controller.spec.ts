@@ -11,6 +11,8 @@ describe('UsersController', () => {
   };
 
   beforeEach(async () => {
+    jest.clearAllMocks();
+
     const module = await Test.createTestingModule({
       controllers: [UsersController],
       providers: [{ provide: UsersService, useValue: mockUsersService }],
@@ -18,26 +20,31 @@ describe('UsersController', () => {
     controller = module.get(UsersController);
   });
 
-  it('should call service.create with the dto', () => {
-    const dto = { name: 'John', email: 'john@example.com' };
-    const fakeUser = { id: '1', ...dto, createdAt: new Date() };
-    mockUsersService.create.mockReturnValue(fakeUser);
+  it('should call service.create with the dto', async () => {
+    const dto = { displayName: 'John', email: 'john@example.com' };
+    const fakeUser = { _id: '64e000000000000000000001', ...dto };
+    mockUsersService.create.mockResolvedValue(fakeUser);
 
-    expect(controller.create(dto)).toEqual(fakeUser);
+    await expect(controller.create(dto)).resolves.toEqual(fakeUser);
     expect(mockUsersService.create).toHaveBeenCalledWith(dto);
   });
 
-  it('should call service.findById', () => {
-    const fakeUser = { id: '1', name: 'John', email: 'john@example.com' };
-    mockUsersService.findById.mockReturnValue(fakeUser);
+  it('should call service.findById', async () => {
+    const fakeUser = {
+      _id: '64e000000000000000000001',
+      displayName: 'John',
+      email: 'john@example.com',
+    };
+    mockUsersService.findById.mockResolvedValue(fakeUser);
 
-    expect(controller.findById('1')).toEqual(fakeUser);
+    await expect(controller.findById('1')).resolves.toEqual(fakeUser);
     expect(mockUsersService.findById).toHaveBeenCalledWith('1');
   });
 
-  it('should throw NotFoundException when user not found', () => {
-    mockUsersService.findById.mockReturnValue(undefined);
-    expect(() => controller.findById('non-existing-id')).toThrow(
+  it('should throw NotFoundException when user not found', async () => {
+    mockUsersService.findById.mockResolvedValue(null);
+
+    await expect(controller.findById('non-existing-id')).rejects.toThrow(
       NotFoundException,
     );
     expect(mockUsersService.findById).toHaveBeenCalledWith('non-existing-id');

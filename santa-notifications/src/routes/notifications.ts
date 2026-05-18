@@ -1,10 +1,19 @@
 import { FastifyInstance, FastifyPluginOptions } from 'fastify';
-import { Notification, NotificationDTO } from '../models/notification';
 import { NotFoundError } from '../errors';
+import { NotificationModel } from '../models/notification';
+
+type NotificationType = 'room_invite' | 'assignment' | 'wishlist_update' | 'system';
+
+type NotificationDTO = {
+  userId: string;
+  type: NotificationType;
+  message: string;
+  payload?: unknown;
+};
+
+const OBJECT_ID_PATTERN = '^[a-fA-F0-9]{24}$';
 
 async function notificationsRoutes(fastify: FastifyInstance, _opts: FastifyPluginOptions) {
-  const { db } = fastify;
-
   fastify.log.info({ prefix: '/api/notifications' }, 'Registering notifications routes');
 
   const idParamSchema = {
@@ -13,7 +22,7 @@ async function notificationsRoutes(fastify: FastifyInstance, _opts: FastifyPlugi
         type: 'object',
         required: ['id'],
         properties: {
-          id: { type: 'string', pattern: '^\\d+$' },
+          id: { type: 'string', pattern: OBJECT_ID_PATTERN },
         },
         additionalProperties: false,
       },
@@ -29,7 +38,10 @@ async function notificationsRoutes(fastify: FastifyInstance, _opts: FastifyPlugi
         querystring: {
           type: 'object',
           properties: {
-            userId: { type: 'string', pattern: '^\\d+$' },
+            userId: {
+              type: 'string',
+              pattern: OBJECT_ID_PATTERN,
+            },
           },
           additionalProperties: false,
         },
@@ -37,11 +49,13 @@ async function notificationsRoutes(fastify: FastifyInstance, _opts: FastifyPlugi
     },
     async (request) => {
       const { userId } = request.query;
-      if (userId) {
-        const filteredNotifications = db.notifications.filter((n) => n.userId === userId);
-        return filteredNotifications;
+      const query: { userId?: string } = {};
+
+      if (userId !== undefined) {
+        query.userId = userId;
       }
-      return db.notifications;
+
+      return NotificationModel.find(query).sort({ createdAt: -1 });
     }
   );
 
@@ -51,8 +65,7 @@ async function notificationsRoutes(fastify: FastifyInstance, _opts: FastifyPlugi
     Params: { id: string };
   }>('/:id', idParamSchema, async (request, _reply) => {
     const { id } = request.params;
-    const idNum = parseInt(id, 10);
-    const notification = db.notifications.find((n) => n.id === idNum);
+    const notification = await NotificationModel.findById(id);
 
     if (!notification) {
       throw new NotFoundError('Notification', id);
@@ -73,12 +86,16 @@ async function notificationsRoutes(fastify: FastifyInstance, _opts: FastifyPlugi
           type: 'object',
           required: ['userId', 'type', 'message'],
           properties: {
-            userId: { type: 'string', pattern: '^\\d+$' },
+            userId: {
+              type: 'string',
+              pattern: OBJECT_ID_PATTERN,
+            },
             type: {
               type: 'string',
               enum: ['room_invite', 'assignment', 'wishlist_update', 'system'],
             },
             message: { type: 'string', minLength: 1, maxLength: 500 },
+            payload: {},
           },
           additionalProperties: false,
         },
@@ -86,16 +103,12 @@ async function notificationsRoutes(fastify: FastifyInstance, _opts: FastifyPlugi
     },
     async (request, reply) => {
       const data = request.body;
-      const notification: Notification = {
-        id: db.nextId++,
-        read: false,
-        createdAt: new Date().toISOString(),
+      const notification = await NotificationModel.create({
         userId: data.userId,
         type: data.type,
+        payload: data.payload,
         message: data.message,
-      };
-
-      db.notifications.push(notification);
+      });
 
       reply.code(201);
       return notification;
@@ -108,12 +121,10 @@ async function notificationsRoutes(fastify: FastifyInstance, _opts: FastifyPlugi
     Params: { id: string };
   }>('/:id/read', idParamSchema, async (request, _reply) => {
     const { id } = request.params;
-    const idNum = parseInt(id, 10);
-    const notificationIdx = db.notifications.findIndex((n) => n.id === idNum);
+    const updated = await NotificationModel.findByIdAndUpdate(id, { read: true }, { new: true });
 
-    if (notificationIdx !== -1) {
-      db.notifications[notificationIdx].read = true;
-      return db.notifications[notificationIdx];
+    if (updated) {
+      return updated;
     }
 
     throw new NotFoundError('Notification', id);
@@ -125,12 +136,11 @@ async function notificationsRoutes(fastify: FastifyInstance, _opts: FastifyPlugi
     Params: { id: string };
   }>('/:id', idParamSchema, async (request, reply) => {
     const { id } = request.params;
-    const idNum = parseInt(id, 10);
-    const notificationIdx = db.notifications.findIndex((n) => n.id === idNum);
+    const deleted = await NotificationModel.findByIdAndDelete(id);
 
-    if (notificationIdx !== -1) {
-      db.notifications.splice(notificationIdx, 1);
+    if (deleted) {
       reply.code(204);
+      return;
     } else {
       throw new NotFoundError('Notification', id);
     }

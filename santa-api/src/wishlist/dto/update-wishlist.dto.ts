@@ -1,11 +1,37 @@
-import { IsArray, IsString, IsUUID, MinLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  IsArray,
+  IsInt,
+  IsMongoId,
+  IsOptional,
+  IsString,
+  IsUrl,
+  Min,
+  MinLength,
+  ValidateNested,
+} from 'class-validator';
+
+export class WishlistItemDto {
+  @IsString()
+  @MinLength(1)
+  name: string;
+
+  @IsOptional()
+  @IsUrl()
+  url?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  priority?: number;
+}
 
 export default class UpdateWishlistDto {
-  @IsUUID()
+  @IsMongoId()
   userId: string;
 
   @IsArray()
-  @IsString({ each: true })
-  @MinLength(1, { each: true })
-  items: string[];
+  @ValidateNested({ each: true })
+  @Type(() => WishlistItemDto)
+  items: WishlistItemDto[];
 }

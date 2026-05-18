@@ -1,12 +1,34 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { getModelToken } from '@nestjs/mongoose';
 import { RoomsService } from './rooms.service';
+import { Room } from './schemas/room.schema';
 
 describe('RoomsService', () => {
   let service: RoomsService;
+  const exec = jest.fn();
+  const create = jest.fn();
+  const find = jest.fn(() => ({ exec }));
+  const findById = jest.fn(() => ({ exec }));
+  const findOne = jest.fn(() => ({ exec }));
+  const findOneAndUpdate = jest.fn(() => ({ exec }));
 
   beforeEach(async () => {
+    jest.clearAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
-      providers: [RoomsService],
+      providers: [
+        RoomsService,
+        {
+          provide: getModelToken(Room.name),
+          useValue: {
+            create,
+            find,
+            findById,
+            findOne,
+            findOneAndUpdate,
+          },
+        },
+      ],
     }).compile();
 
     service = module.get<RoomsService>(RoomsService);
@@ -16,88 +38,75 @@ describe('RoomsService', () => {
     expect(service).toBeDefined();
   });
 
-  it('should create a room', () => {
-    const room = service.create({ name: 'Test Room', ownerId: '1' });
-    expect(room).toBeDefined();
-    expect(room).toHaveProperty('id');
-    expect(room).toHaveProperty('code');
-    expect(room).toHaveProperty('members');
-    expect(room.members).toContain('1');
+  it('should create a room', async () => {
+    const dto = {
+      name: 'Test Room',
+      ownerId: 'a4883b3e-4f49-4b99-9d34-6bfc8fda0ce5',
+    };
+    const savedRoom = { _id: '64e000000000000000000001', ...dto };
+    create.mockResolvedValue(savedRoom);
+
+    const room = await service.create(dto);
+
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: dto.name,
+        creatorId: dto.ownerId,
+        participants: [dto.ownerId],
+      }),
+    );
+    expect(create.mock.calls[0][0].inviteCode).toMatch(/^[A-Z0-9]{6}$/);
+    expect(room).toEqual(savedRoom);
   });
 
-  it('should create unique ids and codes for different rooms', () => {
-    const room1 = service.create({ name: 'Room 1', ownerId: '1' });
-    const room2 = service.create({ name: 'Room 2', ownerId: '2' });
-    const room3 = service.create({ name: 'Room 1', ownerId: '2' });
-    const duplicated = service.create({ name: 'Room 1', ownerId: '1' });
+  it('should find all rooms', async () => {
+    const roomList = [{ _id: '1' }, { _id: '2' }];
+    exec.mockResolvedValue(roomList);
 
-    const ids = new Set([room1.id, room2.id, room3.id, duplicated.id]);
-    const codes = new Set([
-      room1.code,
-      room2.code,
-      room3.code,
-      duplicated.code,
-    ]);
+    const rooms = await service.findAll();
 
-    // Both sets should have 4 unique values, meaning no duplicates
-    expect(ids.size).toBe(4);
-    expect(codes.size).toBe(4);
+    expect(find).toHaveBeenCalled();
+    expect(rooms).toEqual(roomList);
   });
 
-  it('should find all rooms', () => {
-    service.create({ name: 'Room 1', ownerId: '1' });
-    service.create({ name: 'Room 2', ownerId: '2' });
-    const rooms = service.findAll();
-    expect(rooms.length).toBe(2);
-    rooms.forEach((room) => {
-      expect(room).toBeDefined();
-    });
-  });
+  it('should find a room by id', async () => {
+    const id = '64e000000000000000000001';
+    const room = { _id: id, name: 'Test Room' };
+    exec.mockResolvedValue(room);
 
-  it('should return an empty array if no rooms are created', () => {
-    const rooms = service.findAll();
-    expect(rooms).toEqual([]);
-  });
+    const foundRoom = await service.findById(id);
 
-  it('should find a room by id', () => {
-    const room = service.create({ name: 'Test Room', ownerId: '1' });
-    const foundRoom = service.findById(room.id);
+    expect(findById).toHaveBeenCalledWith(id);
     expect(foundRoom).toEqual(room);
   });
 
-  it('should return undefined if room id not found', () => {
-    const foundRoom = service.findById('non-existent-id');
-    expect(foundRoom).toBeUndefined();
-  });
+  it('should find a room by code', async () => {
+    const code = 'ABC123';
+    const room = { _id: '64e000000000000000000001', inviteCode: code };
+    exec.mockResolvedValue(room);
 
-  it('should find a room by code', () => {
-    const room = service.create({ name: 'Test Room', ownerId: '1' });
-    const foundRoom = service.findByCode(room.code);
+    const foundRoom = await service.findByCode(code);
+
+    expect(findOne).toHaveBeenCalledWith({ inviteCode: code });
     expect(foundRoom).toEqual(room);
   });
 
-  it('should return undefined if room code not found', () => {
-    const foundRoom = service.findByCode('NONEXIST');
-    expect(foundRoom).toBeUndefined();
-  });
+  it('should add a member to a room', async () => {
+    const code = 'ABC123';
+    const joinData = { userId: '8ad26f7f-b1a5-4e90-8e74-79f4f34b0d9c' };
+    const updatedRoom = {
+      _id: '64e000000000000000000001',
+      participants: ['x'],
+    };
+    exec.mockResolvedValue(updatedRoom);
 
-  it('should add a member to a room', () => {
-    const room = service.create({ name: 'Test Room', ownerId: '1' });
-    const updatedRoom = service.addMember(room.code, { userId: '2' });
-    expect(updatedRoom).toBeDefined();
-    expect(updatedRoom?.members).toContain('2');
-  });
+    const result = await service.addMember(code, joinData);
 
-  it('should not add a member if already in the room', () => {
-    const room = service.create({ name: 'Test Room', ownerId: '1' });
-    service.addMember(room.code, { userId: '2' });
-    const updatedRoom = service.addMember(room.code, { userId: '2' });
-    expect(updatedRoom).toBeDefined();
-    expect(updatedRoom?.members.filter((id) => id === '2').length).toBe(1);
-  });
-
-  it('should return undefined when adding a member to a non-existent room', () => {
-    const updatedRoom = service.addMember('NONEXIST', { userId: '2' });
-    expect(updatedRoom).toBeUndefined();
+    expect(findOneAndUpdate).toHaveBeenCalledWith(
+      { inviteCode: code },
+      { $addToSet: { participants: joinData.userId } },
+      { new: true },
+    );
+    expect(result).toEqual(updatedRoom);
   });
 });

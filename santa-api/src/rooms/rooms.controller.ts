@@ -15,13 +15,13 @@ export class RoomsController {
   constructor(private readonly roomsService: RoomsService) {}
 
   @Get()
-  findAll() {
-    return this.roomsService.findAll();
+  async findAll() {
+    return await this.roomsService.findAll();
   }
 
   @Get(':id')
-  findById(@Param('id') id: string) {
-    const room = this.roomsService.findById(id);
+  async findById(@Param('id') id: string) {
+    const room = await this.roomsService.findById(id);
     if (!room) {
       throw new NotFoundException(`Room with ID ${id} not found`);
     }
@@ -29,13 +29,13 @@ export class RoomsController {
   }
 
   @Post()
-  create(@Body() room: CreateRoomDto) {
-    return this.roomsService.create(room);
+  async create(@Body() room: CreateRoomDto) {
+    return await this.roomsService.create(room);
   }
 
   @Post(':code/join')
-  join(@Param('code') code: string, @Body() joinDto: JoinRoomDto) {
-    const room = this.roomsService.findByCode(code);
+  async join(@Param('code') code: string, @Body() joinDto: JoinRoomDto) {
+    const room = await this.roomsService.findByCode(code);
     if (!room) {
       throw new NotFoundException(`Room with code ${code} not found`);
     }

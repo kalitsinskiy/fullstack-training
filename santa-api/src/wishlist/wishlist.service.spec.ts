@@ -1,19 +1,29 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { getModelToken } from '@nestjs/mongoose';
+import { Types } from 'mongoose';
 import { WishlistService } from './wishlist.service';
-
-/*
-Storage: Map<string, string[]> — key is ${roomId}:${userId}, value is the items array
-Methods:
-set(roomId, userId, items) → store and return { roomId, userId, items }
-get(roomId, userId) → return the wishlist or undefined
-*/
+import { Wishlist } from './schemas/wishlist.schema';
 
 describe('WishlistService', () => {
   let service: WishlistService;
+  const exec = jest.fn();
+  const findOneAndUpdate = jest.fn(() => ({ exec }));
+  const findOne = jest.fn(() => ({ exec }));
 
   beforeEach(async () => {
+    jest.clearAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
-      providers: [WishlistService],
+      providers: [
+        WishlistService,
+        {
+          provide: getModelToken(Wishlist.name),
+          useValue: {
+            findOneAndUpdate,
+            findOne,
+          },
+        },
+      ],
     }).compile();
 
     service = module.get<WishlistService>(WishlistService);
@@ -23,96 +33,36 @@ describe('WishlistService', () => {
     expect(service).toBeDefined();
   });
 
-  it('should set wishlist items', () => {
-    const roomId = 'room1';
-    const userId = 'user1';
-    const items = ['item1', 'item2'];
+  it('should upsert wishlist items', async () => {
+    const roomId = new Types.ObjectId();
+    const userId = new Types.ObjectId();
+    const items = [{ name: 'book' }, { name: 'socks', priority: 1 }];
+    const savedWishlist = { roomId, userId, items };
+    exec.mockResolvedValue(savedWishlist);
 
-    const result = service.set(roomId, userId, items);
+    const result = await service.set(roomId, userId, items);
 
-    expect(result).toEqual({ roomId, userId, items });
+    expect(findOneAndUpdate).toHaveBeenCalledWith(
+      { userId, roomId },
+      { $set: { items } },
+      { upsert: true, new: true },
+    );
+    expect(result).toEqual(savedWishlist);
   });
 
-  it('should throw error if items is not an array', () => {
-    const roomId = 'room1';
-    const userId = 'user1';
-    const items = 'not-an-array';
+  it('should get wishlist by room and user', async () => {
+    const roomId = new Types.ObjectId();
+    const userId = new Types.ObjectId();
+    const wishlist = {
+      roomId,
+      userId,
+      items: [{ name: 'book' }],
+    };
+    exec.mockResolvedValue(wishlist);
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-    expect(() => service.set(roomId, userId, items as any)).toThrow();
-  });
+    const result = await service.get(roomId, userId);
 
-  it('should throw error if roomId is missing', () => {
-    const userId = 'user1';
-    const items = ['item1', 'item2'];
-
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-    expect(() => service.set(undefined as any, userId, items)).toThrow();
-  });
-
-  it('should throw error if userId is missing', () => {
-    const roomId = 'room1';
-    const items = ['item1', 'item2'];
-
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-    expect(() => service.set(roomId, undefined as any, items)).toThrow();
-  });
-
-  it('should get wishlist items', () => {
-    const roomId = 'room1';
-    const userId = 'user1';
-    const items = ['item1', 'item2'];
-
-    service.set(roomId, userId, items);
-    const result = service.get(roomId, userId);
-    expect(result).toEqual(items);
-  });
-
-  it('should handle multiple users and rooms', () => {
-    service.set('room1', 'user1', ['item1']);
-    service.set('room1', 'user2', ['item2']);
-    service.set('room2', 'user1', ['item3']);
-
-    expect(service.get('room1', 'user1')).toEqual(['item1']);
-    expect(service.get('room1', 'user2')).toEqual(['item2']);
-    expect(service.get('room2', 'user1')).toEqual(['item3']);
-    expect(service.get('room2', 'user2')).toBeUndefined();
-  });
-
-  it('should overwrite existing wishlist', () => {
-    const roomId = 'room1';
-    const userId = 'user1';
-    service.set(roomId, userId, ['item1']);
-    service.set(roomId, userId, ['item2']);
-    const result = service.get(roomId, userId);
-    expect(result).toEqual(['item2']);
-  });
-
-  it('should return undefined for non-existing wishlist', () => {
-    const result = service.get('non-existing-room', 'non-existing-user');
-    expect(result).toBeUndefined();
-  });
-
-  it('should return undefined for existing room but non-existing user', () => {
-    service.set('room1', 'user1', ['item1']);
-    const result = service.get('room1', 'non-existing-user');
-    expect(result).toBeUndefined();
-  });
-
-  it('should return undefined for non-existing room but existing user', () => {
-    service.set('room1', 'user1', ['item1']);
-    const result = service.get('non-existing-room', 'user1');
-    expect(result).toBeUndefined();
-  });
-
-  it('should return undefined for empty roomId and userId', () => {
-    const result = service.get('', '');
-    expect(result).toBeUndefined();
-  });
-
-  it('should return undefined for null roomId and userId', () => {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-    const result = service.get(null as any, null as any);
-    expect(result).toBeUndefined();
+    expect(findOne).toHaveBeenCalledWith({ userId, roomId });
+    expect(result).toEqual(wishlist);
   });
 });

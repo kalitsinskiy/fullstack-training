@@ -1,4 +1,5 @@
 import { buildApp } from './app';
+import { connectDb } from './db';
 
 (async () => {
   const app = await buildApp();
@@ -6,10 +7,11 @@ import { buildApp } from './app';
   const port = config.port || 3000;
 
   try {
+    await connectDb();
     await app.listen({ port });
-    console.log(`Server running at http://localhost:${port}`);
+    app.log.info(`Server running at http://localhost:${port}`);
   } catch (err) {
-    console.error(err);
+    app.log.error(err);
     process.exit(1);
   }
 })();

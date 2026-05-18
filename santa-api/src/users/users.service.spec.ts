@@ -1,12 +1,28 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { getModelToken } from '@nestjs/mongoose';
 import { UsersService } from './users.service';
+import { User } from './schemas/user.schema';
 
 describe('UsersService', () => {
   let service: UsersService;
+  const exec = jest.fn();
+  const findById = jest.fn(() => ({ exec }));
+  const create = jest.fn();
 
   beforeEach(async () => {
+    jest.clearAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
-      providers: [UsersService],
+      providers: [
+        UsersService,
+        {
+          provide: getModelToken(User.name),
+          useValue: {
+            create,
+            findById,
+          },
+        },
+      ],
     }).compile();
 
     service = module.get<UsersService>(UsersService);
@@ -16,24 +32,37 @@ describe('UsersService', () => {
     expect(service).toBeDefined();
   });
 
-  it('should create a new user', () => {
-    const createUserDto = { name: 'John Doe', email: 'john.doe@example.com' };
-    const user = service.create(createUserDto);
-    expect(user).toHaveProperty('id');
-    expect(user).toHaveProperty('createdAt');
-    expect(user.name).toBe(createUserDto.name);
-    expect(user.email).toBe(createUserDto.email);
+  it('should create a new user', async () => {
+    const createUserDto = {
+      displayName: 'John Doe',
+      email: 'john.doe@example.com',
+    };
+    const savedUser = {
+      _id: '64e000000000000000000001',
+      email: createUserDto.email,
+      displayName: createUserDto.displayName,
+      passwordHash: 'TODO_LESSON_08',
+    };
+    create.mockResolvedValue(savedUser);
+
+    const user = await service.create(createUserDto);
+
+    expect(create).toHaveBeenCalledWith({
+      email: createUserDto.email,
+      displayName: createUserDto.displayName,
+      passwordHash: 'TODO_LESSON_08',
+    });
+    expect(user).toEqual(savedUser);
   });
 
-  it('should find a user by id', () => {
-    const createUserDto = { name: 'Jane Doe', email: 'jane.doe@example.com' };
-    const user = service.create(createUserDto);
-    const foundUser = service.findById(user.id);
+  it('should find a user by id', async () => {
+    const userId = '64e000000000000000000001';
+    const user = { _id: userId, email: 'jane.doe@example.com' };
+    exec.mockResolvedValue(user);
+
+    const foundUser = await service.findById(userId);
+
+    expect(findById).toHaveBeenCalledWith(userId);
     expect(foundUser).toEqual(user);
-  });
-
-  it('should return undefined for non-existing user', () => {
-    const foundUser = service.findById('non-existing-id');
-    expect(foundUser).toBeUndefined();
   });
 });
