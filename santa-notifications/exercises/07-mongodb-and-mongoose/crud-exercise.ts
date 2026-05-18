@@ -10,7 +10,8 @@ export {};
 // pattern. The schema is given. Implement the repository methods, then run
 // the test scenario at the bottom.
 
-import mongoose, { Schema, model, Types, FilterQuery } from 'mongoose';
+import mongoose, { Schema, model, Types } from 'mongoose';
+import type { QueryFilter } from 'mongoose';
 
 // --- Pre-built schema (do not modify) ---
 
@@ -33,13 +34,17 @@ const bookSchema = new Schema<IBook>(
     title: { type: String, required: true, minlength: 1, maxlength: 300 },
     author: { type: String, required: true },
     isbn: { type: String, required: true, unique: true, match: /^\d{10}(\d{3})?$/ },
-    genre: { type: String, enum: ['fiction', 'non-fiction', 'sci-fi', 'biography', 'tech'], required: true },
+    genre: {
+      type: String,
+      enum: ['fiction', 'non-fiction', 'sci-fi', 'biography', 'tech'],
+      required: true,
+    },
     pages: { type: Number, required: true, min: 1 },
     publishedYear: { type: Number, required: true, min: 1000, max: new Date().getFullYear() },
     inStock: { type: Boolean, default: true },
     tags: { type: [String], default: [] },
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
 bookSchema.index({ author: 1, publishedYear: -1 });
@@ -93,6 +98,65 @@ const Book = model<IBook>('Book', bookSchema);
 
 class BookRepository {
   // TODO: implement methods listed above
+  async create(data: Partial<IBook>): Promise<IBook> {
+    return Book.create(data);
+  }
+
+  async findById(id: Types.ObjectId | string): Promise<IBook | null> {
+    return Book.findById(id).lean();
+  }
+
+  async findByIsbn(isbn: string): Promise<IBook | null> {
+    return Book.findOne({ isbn }).lean();
+  }
+
+  async list(
+    filter: QueryFilter<IBook> = {},
+    options: { page?: number; limit?: number; sortBy?: string; sortDir?: 'asc' | 'desc' } = {}
+  ): Promise<{ items: IBook[]; total: number }> {
+    const { page = 1, limit = 20, sortBy = 'createdAt', sortDir = 'desc' } = options;
+    const skip = (page - 1) * limit;
+    const sort = { [sortBy]: sortDir === 'asc' ? 1 : -1 } as Record<string, 1 | -1>;
+
+    const [items, total] = await Promise.all([
+      Book.find(filter).sort(sort).skip(skip).limit(limit).lean(),
+      Book.countDocuments(filter),
+    ]);
+
+    return { items, total };
+  }
+
+  async updateById(id: Types.ObjectId | string, patch: Partial<IBook>): Promise<IBook | null> {
+    return Book.findByIdAndUpdate(id, patch, {
+      returnDocument: 'after',
+      runValidators: true,
+    }).lean();
+  }
+
+  async addTag(id: Types.ObjectId | string, tag: string): Promise<IBook | null> {
+    return Book.findByIdAndUpdate(
+      id,
+      { $addToSet: { tags: tag } },
+      { returnDocument: 'after' }
+    ).lean();
+  }
+
+  async removeTag(id: Types.ObjectId | string, tag: string): Promise<IBook | null> {
+    return Book.findByIdAndUpdate(id, { $pull: { tags: tag } }, { returnDocument: 'after' }).lean();
+  }
+
+  async deleteById(id: Types.ObjectId | string): Promise<boolean> {
+    const result = await Book.deleteOne({ _id: id });
+    return result.deletedCount === 1;
+  }
+
+  async countByGenre(): Promise<Array<{ genre: string; count: number }>> {
+    return Book.aggregate([
+      { $group: { _id: '$genre', count: { $sum: 1 } } },
+      { $project: { _id: 0, genre: '$_id', count: 1 } },
+      { $sort: { count: -1 } },
+    ]);
+  }
 }
 
 // ============================================
@@ -111,20 +175,39 @@ async function main(): Promise<void> {
   // 1. CREATE
   console.log('--- 1. Create books ---');
   const dune = await (repo as any).create({
-    title: 'Dune', author: 'Frank Herbert', isbn: '9780441172719',
-    genre: 'sci-fi', pages: 688, publishedYear: 1965, tags: ['classic'],
+    title: 'Dune',
+    author: 'Frank Herbert',
+    isbn: '9780441172719',
+    genre: 'sci-fi',
+    pages: 688,
+    publishedYear: 1965,
+    tags: ['classic'],
   });
   const foundation = await (repo as any).create({
-    title: 'Foundation', author: 'Isaac Asimov', isbn: '9780553293357',
-    genre: 'sci-fi', pages: 244, publishedYear: 1951, tags: ['classic'],
+    title: 'Foundation',
+    author: 'Isaac Asimov',
+    isbn: '9780553293357',
+    genre: 'sci-fi',
+    pages: 244,
+    publishedYear: 1951,
+    tags: ['classic'],
   });
   await (repo as any).create({
-    title: 'The Pragmatic Programmer', author: 'Andy Hunt', isbn: '9780201616224',
-    genre: 'tech', pages: 352, publishedYear: 1999,
+    title: 'The Pragmatic Programmer',
+    author: 'Andy Hunt',
+    isbn: '9780201616224',
+    genre: 'tech',
+    pages: 352,
+    publishedYear: 1999,
   });
   await (repo as any).create({
-    title: 'Steve Jobs', author: 'Walter Isaacson', isbn: '9781451648539',
-    genre: 'biography', pages: 656, publishedYear: 2011, inStock: false,
+    title: 'Steve Jobs',
+    author: 'Walter Isaacson',
+    isbn: '9781451648539',
+    genre: 'biography',
+    pages: 656,
+    publishedYear: 2011,
+    inStock: false,
   });
   console.log('Created 4 books');
 
@@ -136,8 +219,13 @@ async function main(): Promise<void> {
 
   // 3. LIST with pagination + filter
   console.log('\n--- 3. List ---');
-  const page1 = await (repo as any).list({ genre: 'sci-fi' }, { page: 1, limit: 10, sortBy: 'publishedYear', sortDir: 'asc' });
-  console.log(`sci-fi books: total=${page1.total}, items=${page1.items.map((b: IBook) => b.title).join(', ')}`);
+  const page1 = await (repo as any).list(
+    { genre: 'sci-fi' },
+    { page: 1, limit: 10, sortBy: 'publishedYear', sortDir: 'asc' }
+  );
+  console.log(
+    `sci-fi books: total=${page1.total}, items=${page1.items.map((b: IBook) => b.title).join(', ')}`
+  );
   const inStock = await (repo as any).list({ inStock: true });
   console.log(`in-stock books: total=${inStock.total}`);
 

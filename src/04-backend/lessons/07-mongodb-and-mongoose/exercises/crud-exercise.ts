@@ -10,7 +10,8 @@ export {};
 // pattern. The schema is given. Implement the repository methods, then run
 // the test scenario at the bottom.
 
-import mongoose, { Schema, model, Types, FilterQuery } from 'mongoose';
+import mongoose, { Schema, model, Types } from 'mongoose';
+import type { QueryFilter } from 'mongoose';
 
 // --- Pre-built schema (do not modify) ---
 
@@ -69,7 +70,7 @@ const Book = model<IBook>('Book', bookSchema);
 //     Lookup by exact ISBN.
 //
 //   list(filter, options): Promise<{ items: IBook[]; total: number }>
-//     filter: optional FilterQuery (e.g., { genre: 'sci-fi', inStock: true })
+//     filter: optional QueryFilter (e.g., { genre: 'sci-fi', inStock: true })
 //     options: { page?: number; limit?: number; sortBy?: string; sortDir?: 'asc' | 'desc' }
 //     Return paginated results AND total count for that filter.
 //     Defaults: page=1, limit=20, sortBy='createdAt', sortDir='desc'.
@@ -92,7 +93,58 @@ const Book = model<IBook>('Book', bookSchema);
 // Your repository here:
 
 class BookRepository {
-  // TODO: implement methods listed above
+  async create(data: Partial<IBook>): Promise<IBook> {
+    return Book.create(data);
+  }
+
+  async findById(id: Types.ObjectId | string): Promise<IBook | null> {
+    return Book.findById(id).lean();
+  }
+
+  async findByIsbn(isbn: string): Promise<IBook | null> {
+    return Book.findOne({ isbn }).lean();
+  }
+
+  async list(
+    filter: QueryFilter<IBook> = {},
+    options: { page?: number; limit?: number; sortBy?: string; sortDir?: 'asc' | 'desc' } = {}
+  ): Promise<{ items: IBook[]; total: number }> {
+    const { page = 1, limit = 20, sortBy = 'createdAt', sortDir = 'desc' } = options;
+    const skip = (page - 1) * limit;
+    const sort = { [sortBy]: sortDir === 'asc' ? 1 : -1 } as Record<string, 1 | -1>;
+
+    const [items, total] = await Promise.all([
+      Book.find(filter).sort(sort).skip(skip).limit(limit).lean(),
+      Book.countDocuments(filter),
+    ]);
+
+    return { items, total };
+  }
+
+  async updateById(id: Types.ObjectId | string, patch: Partial<IBook>): Promise<IBook | null> {
+    return Book.findByIdAndUpdate(id, patch, { returnDocument: 'after', runValidators: true }).lean();
+  }
+
+  async addTag(id: Types.ObjectId | string, tag: string): Promise<IBook | null> {
+    return Book.findByIdAndUpdate(id, { $addToSet: { tags: tag } }, { returnDocument: 'after' }).lean();
+  }
+
+  async removeTag(id: Types.ObjectId | string, tag: string): Promise<IBook | null> {
+    return Book.findByIdAndUpdate(id, { $pull: { tags: tag } }, { returnDocument: 'after' }).lean();
+  }
+
+  async deleteById(id: Types.ObjectId | string): Promise<boolean> {
+    const result = await Book.deleteOne({ _id: id });
+    return result.deletedCount === 1;
+  }
+
+  async countByGenre(): Promise<Array<{ genre: string; count: number }>> {
+    return Book.aggregate([
+      { $group: { _id: '$genre', count: { $sum: 1 } } },
+      { $project: { _id: 0, genre: '$_id', count: 1 } },
+      { $sort: { count: -1 } },
+    ]);
+  }
 }
 
 // ============================================
