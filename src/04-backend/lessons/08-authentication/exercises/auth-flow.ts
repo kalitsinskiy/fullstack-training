@@ -61,9 +61,33 @@ interface AuthResult {
   accessToken: string;
 }
 
-async function register(_input: RegisterInput): Promise<AuthResult> {
-  // TODO: Rename _input back to input and implement this function
-  throw new Error('Not implemented');
+async function register(input: RegisterInput): Promise<AuthResult> {
+  const email = input.email.toLowerCase();
+
+  if (users.has(email)) {
+    throw new Error('Email already registered');
+  }
+
+  const passwordHash = await bcrypt.hash(input.password, SALT_ROUNDS);
+
+  const user: User = {
+    id: String(nextId),
+    email,
+    passwordHash,
+    displayName: input.displayName,
+    role: 'user',
+  };
+
+  users.set(email, user);
+
+  const accessToken = jwt.sign({ sub: user.id, email: user.email, role: user.role }, JWT_SECRET, {
+    expiresIn: JWT_EXPIRES_IN,
+  });
+
+  return {
+    user: { id: user.id, email: user.email, displayName: user.displayName, role: user.role },
+    accessToken,
+  };
 }
 
 // ============================================
@@ -83,9 +107,26 @@ interface LoginInput {
   password: string;
 }
 
-async function login(_input: LoginInput): Promise<AuthResult> {
-  // TODO: Rename _input back to input and implement this function
-  throw new Error('Not implemented');
+async function login(input: LoginInput): Promise<AuthResult> {
+  const user = users.get(input.email.toLowerCase());
+
+  if (!user) {
+    throw new Error('Invalid credentials');
+  }
+
+  const isPasswordValid = await bcrypt.compare(input.password, user.passwordHash);
+  if (!isPasswordValid) {
+    throw new Error('Invalid credentials');
+  }
+
+  const accessToken = jwt.sign({ sub: user.id, email: user.email, role: user.role }, JWT_SECRET, {
+    expiresIn: JWT_EXPIRES_IN,
+  });
+
+  return {
+    user: { id: user.id, email: user.email, displayName: user.displayName, role: user.role },
+    accessToken,
+  };
 }
 
 // ============================================
@@ -103,9 +144,13 @@ interface TokenPayload {
   role: string;
 }
 
-function verifyToken(_token: string): TokenPayload {
-  // TODO: Rename _token back to token and implement this function
-  throw new Error('Not implemented');
+function verifyToken(token: string): TokenPayload {
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as { sub: string; email: string; role: string };
+    return { id: decoded.sub, email: decoded.email, role: decoded.role };
+  } catch {
+    throw new Error('Invalid or expired token');
+  }
 }
 
 // ============================================
@@ -120,12 +165,24 @@ function verifyToken(_token: string): TokenPayload {
 //   Throw appropriate errors if user not found or old password is wrong.
 
 async function changePassword(
-  _email: string,
-  _oldPassword: string,
-  _newPassword: string
+  email: string,
+  oldPassword: string,
+  newPassword: string
 ): Promise<boolean> {
-  // TODO: Rename parameters (remove _ prefix) and implement this function
-  throw new Error('Not implemented');
+  const user = users.get(email.toLowerCase());
+
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  const isOldPasswordValid = await bcrypt.compare(oldPassword, user.passwordHash);
+  if (!isOldPasswordValid) {
+    throw new Error('Old password is incorrect');
+  }
+
+  const newHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+  user.passwordHash = newHash;
+  return true;
 }
 
 // --- Test your implementations ---
