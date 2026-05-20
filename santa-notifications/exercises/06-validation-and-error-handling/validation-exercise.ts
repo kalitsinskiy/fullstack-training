@@ -11,6 +11,7 @@ export {};
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
 import Fastify from 'fastify';
+import { randomUUID } from 'node:crypto';
 
 // ============================================
 // Part 1: AJV Standalone Validation
@@ -35,58 +36,65 @@ addFormats(ajv as unknown as Parameters<typeof addFormats>[0]);
 
 const userRegistrationSchema: Record<string, unknown> = {
   // Your JSON Schema here
+  type: 'object',
+  required: ['username', 'email', 'password'],
+  properties: {
+    username: {
+      type: 'string',
+      minLength: 3,
+      maxLength: 30,
+      pattern: '^[A-Za-z0-9_]+$',
+    },
+    email: {
+      type: 'string',
+      format: 'email',
+    },
+    password: {
+      type: 'string',
+      minLength: 8,
+      maxLength: 100,
+    },
+    age: {
+      type: 'integer',
+      minimum: 13,
+      maximum: 120,
+    },
+    role: {
+      type: 'string',
+      enum: ['user', 'moderator', 'admin'],
+      default: 'user',
+    },
+    interests: {
+      type: 'array',
+      maxItems: 10,
+      items: {
+        type: 'string',
+        minLength: 1,
+        maxLength: 50,
+      },
+    },
+    address: {
+      type: 'object',
+      required: ['street', 'city', 'zipCode'],
+      properties: {
+        street: {
+          type: 'string',
+          minLength: 1,
+        },
+        city: {
+          type: 'string',
+          minLength: 1,
+        },
+        zipCode: {
+          type: 'string',
+          pattern: '^\\d{5}$',
+        },
+        additionalProperties: false,
+      },
+    },
+    additionalProperties: false,
+  },
 };
-
-// Compile the schema
-// const validateUser = ajv.compile(userRegistrationSchema);
-
-// TODO 2: Test your schema with these payloads.
-// Uncomment each block, run the file, and verify the results.
-
-// Valid user:
-// console.log('--- Valid user ---');
-// console.log(validateUser({
-//   username: 'alice_123',
-//   email: 'alice@example.com',
-//   password: 'securePass1!',
-//   age: 25,
-//   interests: ['coding', 'gaming'],
-// }));
-
-// Invalid — missing required fields:
-// console.log('\n--- Missing fields ---');
-// console.log(validateUser({}));
-// console.log(validateUser.errors);
-
-// Invalid — username too short:
-// console.log('\n--- Username too short ---');
-// console.log(validateUser({ username: 'ab', email: 'a@b.com', password: '12345678' }));
-// console.log(validateUser.errors);
-
-// Invalid — bad email format:
-// console.log('\n--- Bad email ---');
-// console.log(validateUser({ username: 'alice', email: 'not-email', password: '12345678' }));
-// console.log(validateUser.errors);
-
-// Invalid — age below minimum:
-// console.log('\n--- Age too low ---');
-// console.log(validateUser({ username: 'alice', email: 'a@b.com', password: '12345678', age: 5 }));
-// console.log(validateUser.errors);
-
-// Invalid — extra field (additionalProperties: false):
-// console.log('\n--- Extra field ---');
-// console.log(validateUser({ username: 'alice', email: 'a@b.com', password: '12345678', hackField: true }));
-// console.log(validateUser.errors);
-
-// Invalid — bad address zipCode:
-// console.log('\n--- Bad zipCode ---');
-// console.log(validateUser({
-//   username: 'alice',
-//   email: 'a@b.com',
-//   password: '12345678',
-//   address: { street: '123 Main St', city: 'Kyiv', zipCode: 'ABCDE' },
-// }));
-// console.log(validateUser.errors);
 
 // ============================================
 // Part 2: Fastify Integration
@@ -117,11 +125,155 @@ const userRegistrationSchema: Record<string, unknown> = {
 //     -H "Content-Type: application/json" \
 //     -d '{"username":"x","email":"bad"}'
 
+const app = Fastify({
+  ajv: {
+    customOptions: {
+      removeAdditional: false,
+    },
+    plugins: [addFormats as never],
+  },
+  logger: {
+    level: 'warn',
+    transport: {
+      target: 'pino-pretty',
+      options: {
+        colorize: true,
+        translateTime: 'HH:MM:ss',
+        ignore: 'pid,hostname',
+      },
+    },
+  },
+});
+
+app.post(
+  '/register',
+  {
+    schema: {
+      body: userRegistrationSchema,
+    },
+  },
+  async (request, reply) => {
+    const user = request.body as Record<string, unknown>;
+    return reply.status(201).send({
+      success: true,
+      user: {
+        id: randomUUID(),
+        ...user,
+      },
+    });
+  }
+);
+
+app.get(
+  '/users',
+  {
+    schema: {
+      querystring: {
+        type: 'object',
+        properties: {
+          page: {
+            type: 'integer',
+            minimum: 1,
+            default: 1,
+          },
+          limit: {
+            type: 'integer',
+            minimum: 1,
+            maximum: 50,
+            default: 10,
+          },
+          role: {
+            type: 'string',
+            enum: ['user', 'moderator', 'admin'],
+          },
+          search: {
+            type: 'string',
+            minLength: 1,
+          },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  async (request) => {
+    const query = request.query as {
+      page: number;
+      limit: number;
+      role?: 'user' | 'moderator' | 'admin';
+      search?: string;
+    };
+
+    return {
+      page: query.page,
+      limit: query.limit,
+      role: query.role ?? 'all',
+      search: query.search ?? '',
+    };
+  }
+);
+
 async function main() {
   // Part 1 tests run here (uncomment above)
 
+  // Compile the schema
+  const validateUser = ajv.compile(userRegistrationSchema);
+
+  // Valid user:
+  console.log('--- Valid user ---');
+  console.log(
+    validateUser({
+      username: 'alice_123',
+      email: 'alice@example.com',
+      password: 'securePass1!',
+      age: 25,
+      interests: ['coding', 'gaming'],
+    })
+  );
+
+  // Invalid — missing required fields:
+  console.log('\n--- Missing fields ---');
+  console.log(validateUser({}));
+  console.log(validateUser.errors);
+
+  // Invalid — username too short:
+  console.log('\n--- Username too short ---');
+  console.log(validateUser({ username: 'ab', email: 'a@b.com', password: '12345678' }));
+  console.log(validateUser.errors);
+
+  // Invalid — bad email format:
+  console.log('\n--- Bad email ---');
+  console.log(validateUser({ username: 'alice', email: 'not-email', password: '12345678' }));
+  console.log(validateUser.errors);
+
+  // Invalid — age below minimum:
+  console.log('\n--- Age too low ---');
+  console.log(validateUser({ username: 'alice', email: 'a@b.com', password: '12345678', age: 5 }));
+  console.log(validateUser.errors);
+
+  // Invalid — extra field (additionalProperties: false):
+  console.log('\n--- Extra field ---');
+  console.log(
+    validateUser({ username: 'alice', email: 'a@b.com', password: '12345678', hackField: true })
+  );
+  console.log(validateUser.errors);
+
+  // Invalid — bad address zipCode:
+  console.log('\n--- Bad zipCode ---');
+  console.log(
+    validateUser({
+      username: 'alice',
+      email: 'a@b.com',
+      password: '12345678',
+      address: { street: '123 Main St', city: 'Kyiv', zipCode: 'ABCDE' },
+    })
+  );
+  console.log(validateUser.errors);
+
   // Part 2 — your Fastify app here
+  console.log('');
   console.log('Implement the TODOs and uncomment the test cases!');
+
+  await app.listen({ port: 3000, host: '0.0.0.0' });
 }
 
 main();
