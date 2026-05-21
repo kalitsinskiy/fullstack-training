@@ -1,24 +1,58 @@
-import Fastify, { FastifyInstance, FastifyError } from 'fastify';
+import Fastify, { FastifyError, FastifyInstance } from 'fastify';
 import healthRoutes from '../routes/health';
 import configPlugin from '../plugins/config';
 import timingPlugin from '../plugins/timing';
 import notificationRoutes from '../routes/notifications';
+import { AppError, ValidationError } from './errors';
 
 export async function buildApp(): Promise<FastifyInstance> {
-  const app = Fastify({ logger: false });
+  const app = Fastify({
+    logger: {
+      level: process.env.LOG_LEVEL ?? 'info',
+      transport:
+        process.env.NODE_ENV !== 'production'
+          ? {
+              target: 'pino-pretty',
+              options: { colorize: true, translateTime: 'HH:MM:ss', ignore: 'pid,hostname' },
+            }
+          : undefined,
+    },
+    ajv: {
+      customOptions: {
+        removeAdditional: false,
+      },
+    },
+  });
 
   app.setErrorHandler((error: FastifyError, request, reply) => {
-    if (error.validation) {
-      reply.code(400).send({
-        error: 'Validation Error',
-        details: error.validation.map((v: { message?: string }) => v.message),
+    if (error instanceof AppError) {
+      request.log.warn({ err: error, code: error.code }, error.message);
+      return reply.status(error.statusCode).send({
+        success: false,
+        error: {
+          code: error.code,
+          message: error.message,
+          ...(error instanceof ValidationError && { details: error.details }),
+        },
       });
-      return;
     }
 
-    request.log.error(error);
-    reply.code(error.statusCode ?? 500).send({
-      error: error.message ?? 'Internal Server Error',
+    if (error.validation) {
+      request.log.warn({ err: error }, 'Validation failed');
+      return reply.status(400).send({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Request validation failed',
+          details: error.validation,
+        },
+      });
+    }
+
+    request.log.error({ err: error }, 'Unhandled error');
+    return reply.status(500).send({
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: 'An unexpected error occurred' },
     });
   });
 

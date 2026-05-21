@@ -15,7 +15,11 @@ describe('notifications routes', () => {
 
   describe('POST /api/notifications', () => {
     test('creates a notification and returns 201', async () => {
-      const payload = { userId: 'user-123', type: 'room.created', message: 'Your room is ready' };
+      const payload = {
+        userId: 'a0000000-0000-0000-0000-000000000001',
+        type: 'room_invite',
+        message: 'Your room is ready',
+      };
       const res = await app.inject({ method: 'POST', url: '/api/notifications', payload });
 
       expect(res.statusCode).toBe(201);
@@ -31,7 +35,51 @@ describe('notifications routes', () => {
       const res = await app.inject({
         method: 'POST',
         url: '/api/notifications',
-        payload: { userId: 'only-id' },
+        payload: { userId: 'a0000000-0000-0000-0000-000000000001' },
+      });
+
+      expect(res.statusCode).toBe(400);
+    });
+
+    test('returns 400 when userId is not a UUID', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/notifications',
+        payload: { userId: 'not-a-uuid', type: 'system', message: 'hi' },
+      });
+
+      expect(res.statusCode).toBe(400);
+
+      const body = res.json();
+
+      expect(body.success).toBe(false);
+      expect(body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    test('returns 400 when message is empty', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/notifications',
+        payload: {
+          userId: 'a0000000-0000-0000-0000-000000000001',
+          type: 'system',
+          message: '',
+        },
+      });
+
+      expect(res.statusCode).toBe(400);
+    });
+
+    test('returns 400 when unknown property is send (additionalProperties)', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/notifications',
+        payload: {
+          userId: 'a0000000-0000-0000-0000-000000000001',
+          type: 'system',
+          message: 'm',
+          extra: 'hello',
+        },
       });
 
       expect(res.statusCode).toBe(400);
@@ -51,23 +99,31 @@ describe('notifications routes', () => {
     await app.inject({
       method: 'POST',
       url: '/api/notifications',
-      payload: { userId: 'target', type: 't', message: 'm' },
+      payload: {
+        userId: 'a0000000-0000-0000-0000-000000000001',
+        type: 'room_invite',
+        message: 'm',
+      },
     });
     await app.inject({
       method: 'POST',
       url: '/api/notifications',
-      payload: { userId: 'other', type: 't', message: 'm' },
+      payload: {
+        userId: 'a0000000-0000-0000-0000-000000000002',
+        type: 'room_invite',
+        message: 'm',
+      },
     });
 
     const res = await app.inject({
       method: 'GET',
       url: '/api/notifications',
-      query: { userId: 'target' },
+      query: { userId: 'a0000000-0000-0000-0000-000000000001' },
     });
 
     const list = res.json();
     expect(list).toHaveLength(1);
-    expect(list[0].userId).toBe('target');
+    expect(list[0].userId).toBe('a0000000-0000-0000-0000-000000000001');
   });
 
   describe('GET /api/notifications/:id', () => {
@@ -75,18 +131,31 @@ describe('notifications routes', () => {
       const created = await app.inject({
         method: 'POST',
         url: '/api/notifications',
-        payload: { userId: 'u1', type: 't', message: 'm' },
+        payload: {
+          userId: 'a0000000-0000-0000-0000-000000000001',
+          type: 'room_invite',
+          message: 'm',
+        },
       });
       const { id } = created.json();
 
       const res = await app.inject({ method: 'GET', url: `/api/notifications/${id}` });
       expect(res.statusCode).toBe(200);
-      expect(res.json()).toMatchObject({ id, userId: 'u1', type: 't', message: 'm' });
+      expect(res.json()).toMatchObject({
+        id,
+        userId: 'a0000000-0000-0000-0000-000000000001',
+        type: 'room_invite',
+        message: 'm',
+      });
     });
 
     test('returns 404 when not found', async () => {
       const res = await app.inject({ method: 'GET', url: '/api/notifications/9999' });
       expect(res.statusCode).toBe(404);
+
+      const body = res.json();
+      expect(body.success).toBe(false);
+      expect(body.error.code).toBe('NOT_FOUND');
     });
   });
 
@@ -95,7 +164,11 @@ describe('notifications routes', () => {
       const created = await app.inject({
         method: 'POST',
         url: '/api/notifications',
-        payload: { userId: 'u1', type: 't', message: 'm' },
+        payload: {
+          userId: 'a0000000-0000-0000-0000-000000000001',
+          type: 'room_invite',
+          message: 'm',
+        },
       });
       const { id } = created.json();
 
@@ -107,6 +180,10 @@ describe('notifications routes', () => {
     test('returns 404 when not found', async () => {
       const res = await app.inject({ method: 'PATCH', url: '/api/notifications/9999/read' });
       expect(res.statusCode).toBe(404);
+
+      const body = res.json();
+      expect(body.success).toBe(false);
+      expect(body.error.code).toBe('NOT_FOUND');
     });
   });
 
@@ -115,7 +192,11 @@ describe('notifications routes', () => {
       const created = await app.inject({
         method: 'POST',
         url: '/api/notifications',
-        payload: { userId: 'u1', type: 't', message: 'm' },
+        payload: {
+          userId: 'a0000000-0000-0000-0000-000000000001',
+          type: 'room_invite',
+          message: 'm',
+        },
       });
       const { id } = created.json();
 
@@ -130,6 +211,10 @@ describe('notifications routes', () => {
     test('returns 404 when not found', async () => {
       const res = await app.inject({ method: 'DELETE', url: '/api/notifications/9999' });
       expect(res.statusCode).toBe(404);
+
+      const body = res.json();
+      expect(body.success).toBe(false);
+      expect(body.error.code).toBe('NOT_FOUND');
     });
   });
 });

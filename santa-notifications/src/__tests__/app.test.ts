@@ -63,22 +63,34 @@ describe('buildApp', () => {
       });
     });
 
-    test('validation error returns { error: "Validation Error", details: [] }', async () => {
+    test('validation error returns the standard error envelope', async () => {
       const res = await app.inject({
         method: 'POST',
         url: '/api/notifications',
         payload: {},
       });
+
       expect(res.statusCode).toBe(400);
 
       const body = res.json();
-      expect(body).toEqual({
-        error: 'Validation Error',
-        details: expect.any(Array),
-      });
 
-      expect(body.details.length).toBeGreaterThan(0);
-      expect(typeof body.details[0]).toBe('string');
+      expect(body.success).toBe(false);
+      expect(body.error.code).toBe('VALIDATION_ERROR');
+      expect(body.error.message).toBe('Request validation failed');
+      expect(Array.isArray(body.error.details)).toBe(true);
+      expect(body.error.details.length).toBeGreaterThan(0);
+    });
+
+    test('NotFoundError returns 404 with NOT_FOUND code', async () => {
+      const res = await app.inject({ method: 'GET', url: '/api/notifications/9999' });
+
+      expect(res.statusCode).toBe(404);
+
+      const body = res.json();
+
+      expect(body.success).toBe(false);
+      expect(body.error.code).toBe('NOT_FOUND');
+      expect(typeof body.error.message).toBe('string');
     });
   });
 
