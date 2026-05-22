@@ -90,13 +90,67 @@ async function seedData(): Promise<void> {
   const eve = users[4]!;
 
   const posts = await Post.insertMany([
-    { title: 'Intro to MongoDB', authorId: alice._id, category: 'database', status: 'published', viewCount: 1500, tags: ['mongodb', 'nosql', 'database'], publishedAt: new Date('2025-01-15') },
-    { title: 'Advanced Mongoose', authorId: alice._id, category: 'database', status: 'published', viewCount: 980, tags: ['mongoose', 'mongodb', 'orm'], publishedAt: new Date('2025-02-20') },
-    { title: 'REST API Best Practices', authorId: bob._id, category: 'api', status: 'published', viewCount: 2200, tags: ['rest', 'api', 'backend'], publishedAt: new Date('2025-01-10') },
-    { title: 'GraphQL vs REST', authorId: bob._id, category: 'api', status: 'published', viewCount: 1800, tags: ['graphql', 'rest', 'api'], publishedAt: new Date('2025-03-05') },
-    { title: 'Testing with Jest', authorId: alice._id, category: 'testing', status: 'published', viewCount: 3100, tags: ['jest', 'testing', 'tdd'], publishedAt: new Date('2025-02-01') },
-    { title: 'Docker for Devs', authorId: bob._id, category: 'devops', status: 'draft', viewCount: 200, tags: ['docker', 'devops'] },
-    { title: 'TypeScript Tips', authorId: alice._id, category: 'typescript', status: 'archived', viewCount: 500, tags: ['typescript', 'tips'] },
+    {
+      title: 'Intro to MongoDB',
+      authorId: alice._id,
+      category: 'database',
+      status: 'published',
+      viewCount: 1500,
+      tags: ['mongodb', 'nosql', 'database'],
+      publishedAt: new Date('2025-01-15'),
+    },
+    {
+      title: 'Advanced Mongoose',
+      authorId: alice._id,
+      category: 'database',
+      status: 'published',
+      viewCount: 980,
+      tags: ['mongoose', 'mongodb', 'orm'],
+      publishedAt: new Date('2025-02-20'),
+    },
+    {
+      title: 'REST API Best Practices',
+      authorId: bob._id,
+      category: 'api',
+      status: 'published',
+      viewCount: 2200,
+      tags: ['rest', 'api', 'backend'],
+      publishedAt: new Date('2025-01-10'),
+    },
+    {
+      title: 'GraphQL vs REST',
+      authorId: bob._id,
+      category: 'api',
+      status: 'published',
+      viewCount: 1800,
+      tags: ['graphql', 'rest', 'api'],
+      publishedAt: new Date('2025-03-05'),
+    },
+    {
+      title: 'Testing with Jest',
+      authorId: alice._id,
+      category: 'testing',
+      status: 'published',
+      viewCount: 3100,
+      tags: ['jest', 'testing', 'tdd'],
+      publishedAt: new Date('2025-02-01'),
+    },
+    {
+      title: 'Docker for Devs',
+      authorId: bob._id,
+      category: 'devops',
+      status: 'draft',
+      viewCount: 200,
+      tags: ['docker', 'devops'],
+    },
+    {
+      title: 'TypeScript Tips',
+      authorId: alice._id,
+      category: 'typescript',
+      status: 'archived',
+      viewCount: 500,
+      tags: ['typescript', 'tips'],
+    },
   ]);
 
   const introMongo = posts[0]!;
@@ -136,6 +190,17 @@ async function main(): Promise<void> {
   // Sort by viewCount descending.
   console.log('--- TODO 1: Published posts by Alice ---');
   // Your query here:
+  const alice = await User.findOne({ firstName: 'Alice' }).select('_id').lean();
+
+  const alicePosts = await Post.find({
+    authorId: alice!._id,
+    status: 'published',
+  })
+    .select('title category viewCount -_id')
+    .sort({ viewCount: -1 })
+    .lean();
+
+  console.log(alicePosts);
 
   // ============================================
   // TODO 2: Find posts with high engagement
@@ -145,6 +210,15 @@ async function main(): Promise<void> {
   // Sort by viewCount descending.
   console.log('\n--- TODO 2: High engagement posts ---');
   // Your query here:
+  const highEngagementPosts = await Post.find({
+    status: 'published',
+    viewCount: { $gte: 1000 },
+  })
+    .populate('authorId', 'firstName lastName')
+    .sort({ viewCount: -1 })
+    .lean();
+
+  console.log(highEngagementPosts);
 
   // ============================================
   // TODO 3: Count comments per post
@@ -155,6 +229,33 @@ async function main(): Promise<void> {
   // Expected output: [{ title: '...', commentCount: N }, ...]
   console.log('\n--- TODO 3: Comments per post ---');
   // Your aggregation here:
+  const commentsPerPost = await Comment.aggregate([
+    {
+      $group: {
+        _id: '$postId',
+        commentCount: { $sum: 1 },
+      },
+    },
+    {
+      $lookup: {
+        from: 'posts',
+        localField: '_id',
+        foreignField: '_id',
+        as: 'post',
+      },
+    },
+    { $unwind: '$post' },
+    {
+      $project: {
+        _id: 0,
+        title: '$post.title',
+        commentCount: 1,
+      },
+    },
+    { $sort: { commentCount: -1 } },
+  ]);
+
+  console.log(commentsPerPost);
 
   // ============================================
   // TODO 4: Find the most active commenters
@@ -165,6 +266,36 @@ async function main(): Promise<void> {
   // Sort by comment count descending. Limit to top 3.
   console.log('\n--- TODO 4: Most active commenters ---');
   // Your aggregation here:
+  const mostActiveCommenters = await Comment.aggregate([
+    {
+      $group: {
+        _id: '$authorId',
+        commentCount: { $sum: 1 },
+        totalLikes: { $sum: 'likes' },
+      },
+    },
+    { $sort: { commentCount: -1 } },
+    { $limit: 3 },
+    {
+      $lookup: {
+        from: 'users',
+        localField: '_id',
+        foreignField: '_id',
+        as: 'user',
+      },
+    },
+    { $unwind: '$user' },
+    {
+      $project: {
+        _id: 0,
+        fullName: { $concat: ['$user.firstName', ' ', '$user.lastName'] },
+        commentCount: 1,
+        totalLikes: 1,
+      },
+    },
+  ]);
+
+  console.log(mostActiveCommenters);
 
   // ============================================
   // TODO 5: Category statistics
@@ -177,6 +308,33 @@ async function main(): Promise<void> {
   // Sort by total views descending.
   console.log('\n--- TODO 5: Category statistics ---');
   // Your aggregation here:
+  const categoryStats = await Post.aggregate([
+    {
+      $match: { status: 'published' },
+    },
+    {
+      $group: {
+        _id: '$category',
+        postCount: { $sum: 1 },
+        totaViews: { $sum: '$viewCount' },
+        avgViews: { $avg: '$viewCount' },
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        category: '$_id',
+        postCount: 1,
+        totalViews: 1,
+        avgViews: { $round: ['$avgViews', 0] },
+      },
+    },
+    {
+      $sort: { totalViews: -1 },
+    },
+  ]);
+
+  console.log(categoryStats);
 
   // ============================================
   // TODO 6: Find posts that have the "api" tag
@@ -185,6 +343,14 @@ async function main(): Promise<void> {
   // Return title and tags only.
   console.log('\n--- TODO 6: Posts with "api" tag ---');
   // Your query here:
+  const apiTeaggedPosts = await Post.find({
+    status: 'published',
+    tags: 'api',
+  })
+    .select('title tags -_id')
+    .lean();
+
+  console.log(apiTeaggedPosts);
 
   // ============================================
   // TODO 7: Most liked comments with post and author info
@@ -194,6 +360,43 @@ async function main(): Promise<void> {
   // You will need two $lookup stages (one for posts, one for users).
   console.log('\n--- TODO 7: Top liked comments ---');
   // Your aggregation here:
+  const topLikedComments = await Comment.aggregate([
+    {
+      $sort: { likes: -1 },
+    },
+    { $limit: 5 },
+    {
+      $lookup: {
+        from: 'posts',
+        localField: 'postId',
+        foreignField: '_id',
+        as: 'post',
+      },
+    },
+    { $unwind: '$post' },
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'authorId',
+        foreignField: '_id',
+        as: 'author',
+      },
+    },
+    { $unwind: '$author' },
+    {
+      $project: {
+        _id: 0,
+        content: 1,
+        likes: 1,
+        postTitle: '$post.title',
+        authorName: {
+          $concat: ['$author.firstName', ' ', '$author.lastName'],
+        },
+      },
+    },
+  ]);
+
+  console.log(topLikedComments);
 
   await mongoose.disconnect();
   console.log('\nDone.');

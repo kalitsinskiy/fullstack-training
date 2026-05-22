@@ -8,6 +8,6 @@
     "rootDir": "./src",
     "types": ["jest"]
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "examples/**/*", "exercises/**/*"],
   "exclude": ["node_modules", "dist", "examples"]
 }
