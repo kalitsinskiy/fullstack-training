@@ -1,14 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { getModelToken } from '@nestjs/mongoose';
 import { Types } from 'mongoose';
 import { WishlistService } from './wishlist.service';
-import { Wishlist } from './schemas/wishlist.schema';
+import { WishlistRepository } from './repositories/wishlist.repository';
 
 describe('WishlistService', () => {
   let service: WishlistService;
-  const exec = jest.fn();
-  const findOneAndUpdate = jest.fn(() => ({ exec }));
-  const findOne = jest.fn(() => ({ exec }));
+  const set = jest.fn();
+  const get = jest.fn();
+  const remove = jest.fn();
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -17,10 +16,11 @@ describe('WishlistService', () => {
       providers: [
         WishlistService,
         {
-          provide: getModelToken(Wishlist.name),
+          provide: WishlistRepository,
           useValue: {
-            findOneAndUpdate,
-            findOne,
+            set,
+            get,
+            delete: remove,
           },
         },
       ],
@@ -38,15 +38,11 @@ describe('WishlistService', () => {
     const userId = new Types.ObjectId();
     const items = [{ name: 'book' }, { name: 'socks', priority: 1 }];
     const savedWishlist = { roomId, userId, items };
-    exec.mockResolvedValue(savedWishlist);
+    set.mockResolvedValue(savedWishlist);
 
     const result = await service.set(roomId, userId, items);
 
-    expect(findOneAndUpdate).toHaveBeenCalledWith(
-      { userId, roomId },
-      { $set: { items } },
-      { upsert: true, new: true },
-    );
+    expect(set).toHaveBeenCalledWith(roomId, userId, items);
     expect(result).toEqual(savedWishlist);
   });
 
@@ -58,11 +54,11 @@ describe('WishlistService', () => {
       userId,
       items: [{ name: 'book' }],
     };
-    exec.mockResolvedValue(wishlist);
+    get.mockResolvedValue(wishlist);
 
     const result = await service.get(roomId, userId);
 
-    expect(findOne).toHaveBeenCalledWith({ userId, roomId });
+    expect(get).toHaveBeenCalledWith(roomId, userId);
     expect(result).toEqual(wishlist);
   });
 });

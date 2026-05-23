@@ -6,6 +6,7 @@ import { RoomsModule } from './rooms/rooms.module';
 import { WishlistModule } from './wishlist/wishlist.module';
 import { LoggerModule } from 'nestjs-pino';
 import { MongooseModule } from '@nestjs/mongoose';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { MongooseModule } from '@nestjs/mongoose';
     UsersModule,
     RoomsModule,
     WishlistModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

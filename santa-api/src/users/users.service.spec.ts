@@ -1,12 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { getModelToken } from '@nestjs/mongoose';
 import { UsersService } from './users.service';
+import { UsersRepository } from './repositories/users.repository';
 import { User } from './schemas/user.schema';
 
 describe('UsersService', () => {
   let service: UsersService;
-  const exec = jest.fn();
-  const findById = jest.fn(() => ({ exec }));
+  const findById = jest.fn();
   const create = jest.fn();
 
   beforeEach(async () => {
@@ -16,7 +15,7 @@ describe('UsersService', () => {
       providers: [
         UsersService,
         {
-          provide: getModelToken(User.name),
+          provide: UsersRepository,
           useValue: {
             create,
             findById,
@@ -36,12 +35,13 @@ describe('UsersService', () => {
     const createUserDto = {
       displayName: 'John Doe',
       email: 'john.doe@example.com',
+      passwordHash: 'hashed-password',
     };
     const savedUser = {
-      _id: '64e000000000000000000001',
+      id: '64e000000000000000000001',
       email: createUserDto.email,
       displayName: createUserDto.displayName,
-      passwordHash: 'TODO_LESSON_08',
+      passwordHash: createUserDto.passwordHash,
     };
     create.mockResolvedValue(savedUser);
 
@@ -50,15 +50,15 @@ describe('UsersService', () => {
     expect(create).toHaveBeenCalledWith({
       email: createUserDto.email,
       displayName: createUserDto.displayName,
-      passwordHash: 'TODO_LESSON_08',
+      passwordHash: createUserDto.passwordHash,
     });
     expect(user).toEqual(savedUser);
   });
 
   it('should find a user by id', async () => {
     const userId = '64e000000000000000000001';
-    const user = { _id: userId, email: 'jane.doe@example.com' };
-    exec.mockResolvedValue(user);
+    const user = { id: userId, email: 'jane.doe@example.com' };
+    findById.mockResolvedValue(user);
 
     const foundUser = await service.findById(userId);
 

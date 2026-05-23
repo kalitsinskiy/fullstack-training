@@ -11,6 +11,8 @@ describe('RoomsController', () => {
     findById: jest.fn(),
     findByCode: jest.fn(),
     addMember: jest.fn(),
+    updateById: jest.fn(),
+    deleteById: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -33,7 +35,7 @@ describe('RoomsController', () => {
       name: 'Test Room',
       ownerId: 'a4883b3e-4f49-4b99-9d34-6bfc8fda0ce5',
     };
-    const fakeRoom = { _id: '64e000000000000000000001', ...dto };
+    const fakeRoom = { id: '64e000000000000000000001', ...dto };
     mockRoomsService.create.mockResolvedValue(fakeRoom);
 
     await expect(controller.create(dto)).resolves.toEqual(fakeRoom);
@@ -43,14 +45,14 @@ describe('RoomsController', () => {
   it('should call service.findAll', async () => {
     const fakeRooms = [
       {
-        _id: '1',
+        id: '1',
         name: 'Room 1',
         ownerId: '1',
         inviteCode: '123ABC',
         participants: ['1', '4'],
       },
       {
-        _id: '2',
+        id: '2',
         name: 'Room 2',
         ownerId: '2',
         inviteCode: '456DEF',
@@ -66,7 +68,7 @@ describe('RoomsController', () => {
   it('should call service.findById', async () => {
     const id = '1';
     const fakeRoom = {
-      _id: id,
+      id: id,
       name: 'Room 1',
       ownerId: '1',
       inviteCode: '123ABC',
@@ -90,7 +92,7 @@ describe('RoomsController', () => {
     const code = '123';
     const userId = '8ad26f7f-b1a5-4e90-8e74-79f4f34b0d9c';
     const fakeRoom = {
-      _id: '1',
+      id: '1',
       name: 'Room 1',
       ownerId: '1',
       inviteCode: code,
@@ -113,5 +115,23 @@ describe('RoomsController', () => {
       NotFoundException,
     );
     expect(mockRoomsService.findByCode).toHaveBeenCalledWith(code);
+  });
+
+  it('should call service.updateById when patching a room', async () => {
+    const id = '64e000000000000000000001';
+    const updates = { name: 'Updated room name' };
+    const updatedRoom = { id: id, name: 'Updated room name' };
+    mockRoomsService.updateById.mockResolvedValue(updatedRoom);
+
+    await expect(controller.update(id, updates)).resolves.toEqual(updatedRoom);
+    expect(mockRoomsService.updateById).toHaveBeenCalledWith(id, updates);
+  });
+
+  it('should call service.deleteById when deleting a room', async () => {
+    const id = '64e000000000000000000001';
+    mockRoomsService.deleteById.mockResolvedValue(true);
+
+    await expect(controller.remove(id)).resolves.toEqual({ success: true });
+    expect(mockRoomsService.deleteById).toHaveBeenCalledWith(id);
   });
 });

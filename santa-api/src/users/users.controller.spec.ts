@@ -8,6 +8,8 @@ describe('UsersController', () => {
   const mockUsersService = {
     create: jest.fn(),
     findById: jest.fn(),
+    updateById: jest.fn(),
+    deleteById: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -22,7 +24,7 @@ describe('UsersController', () => {
 
   it('should call service.create with the dto', async () => {
     const dto = { displayName: 'John', email: 'john@example.com' };
-    const fakeUser = { _id: '64e000000000000000000001', ...dto };
+    const fakeUser = { id: '64e000000000000000000001', ...dto };
     mockUsersService.create.mockResolvedValue(fakeUser);
 
     await expect(controller.create(dto)).resolves.toEqual(fakeUser);
@@ -31,7 +33,7 @@ describe('UsersController', () => {
 
   it('should call service.findById', async () => {
     const fakeUser = {
-      _id: '64e000000000000000000001',
+      id: '64e000000000000000000001',
       displayName: 'John',
       email: 'john@example.com',
     };
@@ -48,5 +50,29 @@ describe('UsersController', () => {
       NotFoundException,
     );
     expect(mockUsersService.findById).toHaveBeenCalledWith('non-existing-id');
+  });
+
+  it('should call service.updateById when updating current user', async () => {
+    const id = '64e000000000000000000001';
+    const updates = { displayName: 'Jane Updated' };
+    const updatedUser = {
+      id: id,
+      email: 'jane@example.com',
+      displayName: 'Jane Updated',
+    };
+    mockUsersService.updateById.mockResolvedValue(updatedUser);
+
+    await expect(controller.updateMe(id, updates)).resolves.toEqual(
+      updatedUser,
+    );
+    expect(mockUsersService.updateById).toHaveBeenCalledWith(id, updates);
+  });
+
+  it('should call service.deleteById when deleting current user', async () => {
+    const id = '64e000000000000000000001';
+    mockUsersService.deleteById.mockResolvedValue(true);
+
+    await expect(controller.deleteMe(id)).resolves.toEqual({ success: true });
+    expect(mockUsersService.deleteById).toHaveBeenCalledWith(id);
   });
 });

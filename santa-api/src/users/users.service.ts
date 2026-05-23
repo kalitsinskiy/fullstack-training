@@ -1,24 +1,35 @@
 import { Injectable } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
-import { InjectModel } from '@nestjs/mongoose';
-import { User } from './schemas/user.schema';
-import { Model } from 'mongoose';
+import { UserResponseDto } from './dto/user-response.dto';
+import { UsersRepository } from './repositories/users.repository';
 
 @Injectable()
 export class UsersService {
-  constructor(
-    @InjectModel(User.name) private readonly userModel: Model<User>,
-  ) {}
+  constructor(private readonly usersRepository: UsersRepository) {}
 
-  create(user: CreateUserDto) {
-    return this.userModel.create({
-      email: user.email,
-      displayName: user.displayName,
-      passwordHash: 'TODO_LESSON_08',
-    });
+  create(user: CreateUserDto): Promise<UserResponseDto> {
+    return this.usersRepository.create(user);
   }
 
-  findById(id: string) {
-    return this.userModel.findById(id).exec();
+  findById(id: string): Promise<UserResponseDto | null> {
+    return this.usersRepository.findById(id);
+  }
+
+  findByEmail(
+    email: string,
+    opts: { withPassword?: boolean } = {},
+  ): Promise<UserResponseDto | null> {
+    return this.usersRepository.findByEmail(email, opts);
+  }
+
+  updateById(
+    id: string,
+    updates: Partial<Pick<CreateUserDto, 'displayName' | 'email'>>,
+  ): Promise<UserResponseDto | null> {
+    return this.usersRepository.updateById(id, updates);
+  }
+
+  deleteById(id: string): Promise<boolean> {
+    return this.usersRepository.deleteById(id);
   }
 }

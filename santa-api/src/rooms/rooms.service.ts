@@ -1,49 +1,44 @@
 import { Injectable } from '@nestjs/common';
 import CreateRoomDto from './dto/create-room.dto';
 import JoinRoomDto from './dto/join-room.dto';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { Room } from './schemas/room.schema';
+import { RoomResponseDto } from './dto/room-response.dto';
+import { RoomsRepository } from './repositories/rooms.repository';
 
 @Injectable()
 export class RoomsService {
-  constructor(
-    @InjectModel(Room.name) private readonly roomModel: Model<Room>,
-  ) {}
+  constructor(private readonly roomsRepository: RoomsRepository) {}
 
-  create(room: CreateRoomDto) {
-    const code = Math.random().toString(36).slice(2, 8).toUpperCase();
-    return this.roomModel.create({
-      name: room.name,
-      creatorId: room.ownerId,
-      inviteCode: code,
-      participants: [room.ownerId],
-    });
+  create(room: CreateRoomDto): Promise<RoomResponseDto> {
+    return this.roomsRepository.create(room);
   }
 
-  findAll() {
-    return this.roomModel.find().exec();
+  findAll(): Promise<RoomResponseDto[]> {
+    return this.roomsRepository.findAll();
   }
 
-  findById(id: string) {
-    return this.roomModel.findById(id).exec();
+  findById(id: string): Promise<RoomResponseDto | null> {
+    return this.roomsRepository.findById(id);
   }
 
-  findByCode(code: string) {
-    return this.roomModel.findOne({ inviteCode: code }).exec();
+  findByCode(code: string): Promise<RoomResponseDto | null> {
+    return this.roomsRepository.findByCode(code);
   }
 
-  addMember(code: string, joinData: JoinRoomDto) {
-    const { userId } = joinData;
+  addMember(
+    code: string,
+    joinData: JoinRoomDto,
+  ): Promise<RoomResponseDto | null> {
+    return this.roomsRepository.addMember(code, joinData);
+  }
 
-    return this.roomModel
-      .findOneAndUpdate(
-        { inviteCode: code },
-        {
-          $addToSet: { participants: userId },
-        },
-        { new: true },
-      )
-      .exec();
+  updateById(
+    id: string,
+    updates: Partial<Pick<CreateRoomDto, 'name'>>,
+  ): Promise<RoomResponseDto | null> {
+    return this.roomsRepository.updateById(id, updates);
+  }
+
+  deleteById(id: string): Promise<boolean> {
+    return this.roomsRepository.deleteById(id);
   }
 }

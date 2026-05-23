@@ -43,9 +43,11 @@ const regularUser: User = { id: '3', email: 'user@example.com', role: 'user' };
 // - If req.user is undefined/null, return { status: 401, body: { error: 'Authentication required' } }
 // - Otherwise, call next() and return its result
 
-function requireAuth(_req: Request, _next: NextFunction): Response {
-  // TODO: Rename parameters (remove _ prefix) and implement this middleware
-  throw new Error('Not implemented');
+function requireAuth(req: Request, _next: NextFunction): Response {
+  if (!req.user) {
+    return { status: 401, body: { error: 'Authentication required' } };
+  }
+  return _next();
 }
 
 // ============================================
@@ -58,9 +60,16 @@ function requireAuth(_req: Request, _next: NextFunction): Response {
 //   - If yes, call next() and return its result
 //   - If no, return { status: 403, body: { error: 'Forbidden: insufficient permissions' } }
 
-function requireRoles(..._allowedRoles: string[]): Middleware {
-  // TODO: Rename _allowedRoles back to allowedRoles and implement this factory function
-  throw new Error('Not implemented');
+function requireRoles(...allowedRoles: string[]): Middleware {
+  return (req: Request, next: NextFunction): Response => {
+    if (!req.user) {
+      return { status: 401, body: { error: 'Authentication required' } };
+    }
+    if (!allowedRoles.includes(req.user.role)) {
+      return { status: 403, body: { error: 'Forbidden: insufficient permissions' } };
+    }
+    return next();
+  };
 }
 
 // ============================================
@@ -81,14 +90,37 @@ function requireRoles(..._allowedRoles: string[]): Middleware {
 type Permission = string;
 
 const rolePermissions: Record<string, Permission[]> = {
-  // TODO: Define permissions for each role
+  admin: [
+    'rooms:create', 'rooms:read', 'rooms:update', 'rooms:delete',
+    'users:read', 'users:manage',
+    'wishlists:read', 'wishlists:write',
+  ],
+  editor: [
+    'rooms:create', 'rooms:read', 'rooms:update',
+    'users:read',
+    'wishlists:read', 'wishlists:write',
+  ],
+  user: [
+    'rooms:read',
+    'users:read',
+    'wishlists:read', 'wishlists:write',
+  ],
 };
-// Used in TODO implementations below
+
 void rolePermissions;
 
-function requirePermissions(..._permissions: Permission[]): Middleware {
-  // TODO: Rename _permissions back to permissions and implement this factory function
-  throw new Error('Not implemented');
+function requirePermissions(...permissions: Permission[]): Middleware {
+  return (req: Request, next: NextFunction): Response => {
+    if (!req.user) {
+      return { status: 401, body: { error: 'Authentication required' } };
+    }
+    const userPerms = rolePermissions[req.user.role] || [];
+    const hasAllPermissions = permissions.every(perm => userPerms.includes(perm));
+    if (!hasAllPermissions) {
+      return { status: 403, body: { error: 'Forbidden: insufficient permissions' } };
+    }
+    return next();
+  };
 }
 
 // ============================================
@@ -101,9 +133,20 @@ function requirePermissions(..._permissions: Permission[]): Middleware {
 // - Allows access if user.id === ownerId (the user owns the resource)
 // - Returns 403 otherwise
 
-function isOwnerOrAdmin(_getOwnerId: (req: Request) => string): Middleware {
-  // TODO: Rename _getOwnerId back to getOwnerId and implement this factory function
-  throw new Error('Not implemented');
+function isOwnerOrAdmin(getOwnerId: (req: Request) => string): Middleware {
+  return (req: Request, next: NextFunction): Response => {
+    if (!req.user) {
+      return { status: 401, body: { error: 'Authentication required' } };
+    }
+    if (req.user.role === 'admin') {
+      return next();
+    }
+    const ownerId = getOwnerId(req);
+    if (req.user.id === ownerId) {
+      return next();
+    }
+    return { status: 403, body: { error: 'Forbidden: insufficient permissions' } };
+  };
 }
 
 // --- Test helpers ---

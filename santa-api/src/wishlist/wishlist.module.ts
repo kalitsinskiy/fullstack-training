@@ -5,9 +5,10 @@ import { UsersModule } from 'src/users/users.module';
 import { RoomsModule } from 'src/rooms/rooms.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Wishlist, WishlistSchema } from './schemas/wishlist.schema';
+import { WishlistRepository } from './repositories/wishlist.repository';
 
 @Module({
-  providers: [WishlistService],
+  providers: [WishlistRepository, WishlistService],
   controllers: [WishlistController],
   imports: [
     MongooseModule.forFeature([
