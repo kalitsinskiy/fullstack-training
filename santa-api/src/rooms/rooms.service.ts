@@ -3,6 +3,11 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Room } from './schemas/room.schema';
 import { CreateRoomDto } from './dto/create-room.dto';
+import {
+  paginate,
+  PaginationQuery,
+  PaginatedResponse,
+} from '../common/pagination';
 
 @Injectable()
 export class RoomsService {
@@ -22,6 +27,13 @@ export class RoomsService {
 
   findAll() {
     return this.roomModel.find().exec();
+  }
+
+  findByUser(
+    userId: string,
+    query: PaginationQuery,
+  ): Promise<PaginatedResponse<Room>> {
+    return paginate(this.roomModel, { participants: userId }, query);
   }
 
   findById(id: string) {
