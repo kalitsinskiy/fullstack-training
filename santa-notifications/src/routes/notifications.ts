@@ -1,6 +1,7 @@
 import { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import { NotFoundError } from '../errors';
 import { NotificationModel } from '../models/notification';
+import { paginate } from '../pagination';
 
 type NotificationType = 'room_invite' | 'assignment' | 'wishlist_update' | 'system';
 
@@ -30,7 +31,7 @@ async function notificationsRoutes(fastify: FastifyInstance, _opts: FastifyPlugi
   };
 
   fastify.get<{
-    Querystring: { userId?: string };
+    Querystring: { userId?: string; page?: number; limit?: number };
   }>(
     '/',
     {
@@ -42,20 +43,22 @@ async function notificationsRoutes(fastify: FastifyInstance, _opts: FastifyPlugi
               type: 'string',
               pattern: OBJECT_ID_PATTERN,
             },
+            page: { type: 'integer', minimum: 1, default: 1 },
+            limit: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
           },
           additionalProperties: false,
         },
       },
     },
     async (request) => {
-      const { userId } = request.query;
+      const { userId, page, limit } = request.query;
       const query: { userId?: string } = {};
 
       if (userId !== undefined) {
         query.userId = userId;
       }
 
-      return NotificationModel.find(query).sort({ createdAt: -1 });
+      return paginate(NotificationModel, query, { page, limit }, { createdAt: -1 });
     }
   );
 

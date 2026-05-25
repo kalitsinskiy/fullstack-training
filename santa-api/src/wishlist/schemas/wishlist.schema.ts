@@ -30,7 +30,7 @@ WishlistSchema.index({ userId: 1, roomId: 1 }, { unique: true });
 // Convert _id -> id and remove __v when serializing
 WishlistSchema.set('toJSON', {
   virtuals: true,
-  transform: (_doc, ret) => {
+  transform: (_doc, ret: any) => {
     ret.id = ret._id?.toString?.() || ret.id;
     if (ret.userId) ret.userId = ret.userId.toString();
     if (ret.roomId) ret.roomId = ret.roomId.toString();

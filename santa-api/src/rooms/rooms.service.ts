@@ -3,6 +3,7 @@ import CreateRoomDto from './dto/create-room.dto';
 import JoinRoomDto from './dto/join-room.dto';
 import { RoomResponseDto } from './dto/room-response.dto';
 import { RoomsRepository } from './repositories/rooms.repository';
+import { PaginatedResponse } from 'src/common/pagination';
 
 @Injectable()
 export class RoomsService {
@@ -12,8 +13,11 @@ export class RoomsService {
     return this.roomsRepository.create(room);
   }
 
-  findAll(): Promise<RoomResponseDto[]> {
-    return this.roomsRepository.findAll();
+  findAll(
+    page?: number,
+    limit?: number,
+  ): Promise<PaginatedResponse<RoomResponseDto>> {
+    return this.roomsRepository.findAll(page, limit);
   }
 
   findById(id: string): Promise<RoomResponseDto | null> {

@@ -5,6 +5,7 @@ import { Room } from '../schemas/room.schema';
 import { RoomResponseDto } from '../dto/room-response.dto';
 import CreateRoomDto from '../dto/create-room.dto';
 import JoinRoomDto from '../dto/join-room.dto';
+import { paginate, PaginatedResponse } from 'src/common/pagination';
 
 @Injectable()
 export class RoomsRepository {
@@ -23,9 +24,15 @@ export class RoomsRepository {
     return new RoomResponseDto(doc as any);
   }
 
-  async findAll(): Promise<RoomResponseDto[]> {
-    const docs = await this.roomModel.find().exec();
-    return docs.map((doc) => new RoomResponseDto(doc as any));
+  async findAll(
+    page?: number,
+    limit?: number,
+  ): Promise<PaginatedResponse<RoomResponseDto>> {
+    const rooms = await paginate(this.roomModel, {}, { page, limit });
+    return {
+      data: rooms.data.map((doc) => new RoomResponseDto(doc as any)),
+      meta: rooms.meta,
+    };
   }
 
   async findById(id: string): Promise<RoomResponseDto | null> {

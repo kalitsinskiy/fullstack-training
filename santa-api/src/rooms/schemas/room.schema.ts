@@ -27,7 +27,7 @@ export const RoomSchema = SchemaFactory.createForClass(Room);
 // Convert _id -> id and remove __v when serializing
 RoomSchema.set('toJSON', {
   virtuals: true,
-  transform: (_doc, ret) => {
+  transform: (_doc, ret: any) => {
     ret.id = ret._id?.toString?.() || ret.id;
     // convert ObjectId arrays to strings
     if (Array.isArray(ret.participants)) {

@@ -16,7 +16,15 @@ import { UpdateWishlistItemsDto } from './dto/update-wishlist-items.dto';
 import { RoomsService } from 'src/rooms/rooms.service';
 import { UsersService } from 'src/users/users.service';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
 
+@ApiTags('wishlist')
+@ApiBearerAuth('JWT')
 @UseGuards(JwtAuthGuard)
 @Controller('/rooms/:roomCode/wishlist')
 export class WishlistController {
@@ -26,6 +34,17 @@ export class WishlistController {
     private readonly usersService: UsersService,
   ) {}
 
+  @ApiOperation({ summary: 'Set or replace the wishlist for a user in a room' })
+  @ApiParam({
+    name: 'roomCode',
+    required: true,
+    description: 'The code of the room',
+  })
+  @ApiParam({
+    name: 'wishlist',
+    description: 'The wishlist data including userId and items',
+    type: UpdateWishlistDto,
+  })
   @Post()
   async setWishlist(
     @Param('roomCode') roomCode: string,
@@ -41,12 +60,28 @@ export class WishlistController {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
     return this.wishlistService.set(
-      new Types.ObjectId(room.id ?? room._id),
-      new Types.ObjectId(user.id ?? user._id),
+      new Types.ObjectId(room.id),
+      new Types.ObjectId(user.id),
       items,
     );
   }
 
+  @ApiOperation({ summary: 'Update the wishlist items for a user in a room' })
+  @ApiParam({
+    name: 'roomCode',
+    required: true,
+    description: 'The code of the room',
+  })
+  @ApiParam({
+    name: 'userId',
+    required: true,
+    description: 'The ID of the user',
+  })
+  @ApiParam({
+    name: 'updates',
+    description: 'The list of wishlist items to update',
+    type: UpdateWishlistItemsDto,
+  })
   @Patch('/:userId')
   async updateWishlist(
     @Param('roomCode') roomCode: string,
@@ -62,12 +97,23 @@ export class WishlistController {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
     return this.wishlistService.set(
-      new Types.ObjectId(room.id ?? room._id),
-      new Types.ObjectId(user.id ?? user._id),
+      new Types.ObjectId(room.id),
+      new Types.ObjectId(user.id),
       updates.items,
     );
   }
 
+  @ApiOperation({ summary: 'Delete the wishlist for a user in a room' })
+  @ApiParam({
+    name: 'roomCode',
+    required: true,
+    description: 'The code of the room',
+  })
+  @ApiParam({
+    name: 'userId',
+    required: true,
+    description: 'The ID of the user',
+  })
   @Delete('/:userId')
   async removeWishlist(
     @Param('roomCode') roomCode: string,
@@ -82,8 +128,8 @@ export class WishlistController {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
     const deleted = await this.wishlistService.delete(
-      new Types.ObjectId(room.id ?? room._id),
-      new Types.ObjectId(user.id ?? user._id),
+      new Types.ObjectId(room.id),
+      new Types.ObjectId(user.id),
     );
     if (!deleted) {
       throw new NotFoundException(
@@ -92,7 +138,17 @@ export class WishlistController {
     }
     return { success: true };
   }
-
+  @ApiOperation({ summary: 'Get the wishlist for a user in a room' })
+  @ApiParam({
+    name: 'roomCode',
+    required: true,
+    description: 'The code of the room',
+  })
+  @ApiParam({
+    name: 'userId',
+    required: true,
+    description: 'The ID of the user',
+  })
   @Get('/:userId')
   async getWishlist(
     @Param('roomCode') roomCode: string,
@@ -107,8 +163,8 @@ export class WishlistController {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
     return this.wishlistService.get(
-      new Types.ObjectId(room.id ?? room._id),
-      new Types.ObjectId(user.id ?? user._id),
+      new Types.ObjectId(room.id),
+      new Types.ObjectId(user.id),
     );
   }
 }
