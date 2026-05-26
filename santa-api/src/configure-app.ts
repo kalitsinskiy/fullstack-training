@@ -1,14 +1,23 @@
 import { ValidationPipe } from '@nestjs/common';
+import cors from '@fastify/cors';
+import helmet from '@fastify/helmet';
 import { RawServerDefault } from 'fastify';
 import { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 
-export function configureApp(
+export async function configureApp(
   app: NestFastifyApplication<RawServerDefault>,
-): void {
+): Promise<void> {
   app.setGlobalPrefix('api');
+  await app.register(cors, {
+    origin: ['http://localhost:3000'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+    maxAge: 86400,
+  });
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -19,9 +28,22 @@ export function configureApp(
   app.useGlobalInterceptors(app.get(LoggingInterceptor));
   app.useGlobalFilters(new AllExceptionsFilter());
 
+  await app.register(helmet, {
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:'],
+      },
+    },
+  });
+
   const swaggerConfig = new DocumentBuilder()
-    .setTitle('Secret Santa')
-    .setDescription('API for rooms and wishlists')
+    .setTitle('Secret Santa API')
+    .setDescription(
+      'API for managing Secret Santa rooms, wishlists, and assignments',
+    )
     .setVersion('1.0')
     .addBearerAuth(
       { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },

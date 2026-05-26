@@ -1,5 +1,10 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { MongooseModule } from '@nestjs/mongoose';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 import { AppController } from './app.controller';
 import { AuthModule } from './auth/auth.module';
@@ -14,6 +19,7 @@ import { WishlistModule } from './wishlist/wishlist.module';
     MongooseModule.forRoot(
       process.env.MONGO_URL ?? 'mongodb://localhost:27017/santa-api',
     ),
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
     LoggerModule.forRoot({
       pinoHttp: {
         level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
@@ -36,6 +42,10 @@ import { WishlistModule } from './wishlist/wishlist.module';
     WishlistModule,
   ],
   controllers: [AppController],
-  providers: [AppService, LoggingInterceptor],
+  providers: [
+    AppService,
+    LoggingInterceptor,
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+  ],
 })
 export class AppModule {}

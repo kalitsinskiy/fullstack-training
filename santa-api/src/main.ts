@@ -16,7 +16,7 @@ async function bootstrap() {
   );
   app.useLogger(app.get(Logger));
 
-  configureApp(app);
+  await configureApp(app);
 
   await app.listen(
     process.env.PORT ? Number(process.env.PORT) : 3001,

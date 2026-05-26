@@ -2,10 +2,14 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { UsersService } from '../users/users.service';
+import {
+  paginate,
+  PaginatedResponse,
+  PaginationQuery,
+} from '../common/pagination';
 import { CreateRoomDto } from './dto/create-room.dto';
-import { JoinRoomDto } from './dto/join-room.dto';
 import { Room } from './room.types';
-import { Room as RoomModel } from './schemas/room.schema';
+import { Room as RoomModel, RoomDocument } from './schemas/room.schema';
 
 @Injectable()
 export class RoomsService {
@@ -28,9 +32,20 @@ export class RoomsService {
     return this.toRoom(room);
   }
 
-  async findAll(): Promise<Room[]> {
-    const rooms = await this.roomModel.find().exec();
-    return rooms.map((room) => this.toRoom(room));
+  async findByUser(
+    userId: string,
+    query: PaginationQuery,
+  ): Promise<PaginatedResponse<Room>> {
+    const result = await paginate(
+      this.roomModel,
+      { participants: userId },
+      query,
+    );
+
+    return {
+      data: result.data.map((room) => this.toRoom(room as RoomDocument)),
+      meta: result.meta,
+    };
   }
 
   async findById(id: string): Promise<Room> {
@@ -86,15 +101,7 @@ export class RoomsService {
     }
   }
 
-  private toRoom(room: {
-    _id: Types.ObjectId;
-    name: string;
-    creatorId: Types.ObjectId;
-    inviteCode: string;
-    participants: Types.ObjectId[];
-    status: 'pending' | 'drawn';
-    drawDate?: Date;
-  }): Room {
+  private toRoom(room: RoomDocument): Room {
     return {
       id: room._id.toString(),
       name: room.name,

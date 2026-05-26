@@ -8,6 +8,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
+  ApiBody,
   ApiBearerAuth,
   ApiOperation,
   ApiParam,
@@ -17,6 +18,7 @@ import {
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UpdateWishlistDto } from './dto/update-wishlist.dto';
+import { WishlistResponseDto } from './dto/wishlist-response.dto';
 import { WishlistService } from './wishlist.service';
 import type { Wishlist } from './wishlist.types';
 
@@ -37,9 +39,11 @@ export class WishlistController {
     description: 'Room identifier that owns wishlist',
     example: '665f0c2ab7d13a5e8b1c4d9f',
   })
+  @ApiBody({ type: UpdateWishlistDto })
   @ApiResponse({
     status: 201,
     description: 'Wishlist saved successfully',
+    type: WishlistResponseDto,
   })
   @ApiResponse({
     status: 400,
@@ -70,6 +74,7 @@ export class WishlistController {
   @ApiResponse({
     status: 200,
     description: 'Wishlist returned successfully',
+    type: WishlistResponseDto,
   })
   @ApiResponse({
     status: 401,
