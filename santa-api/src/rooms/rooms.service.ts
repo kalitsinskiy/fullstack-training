@@ -2,6 +2,11 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Room, RoomDocument } from './schemas/room.schema';
+import {
+  paginate,
+  PaginationQuery,
+  PaginatedResponse,
+} from '../common/pagination';
 
 @Injectable()
 export class RoomsService {
@@ -21,6 +26,17 @@ export class RoomsService {
 
   findAll() {
     return this.roomModel.find().exec();
+  }
+
+  findByUser(
+    userId: string,
+    query: PaginationQuery,
+  ): Promise<PaginatedResponse<RoomDocument>> {
+    return paginate<RoomDocument>(
+      this.roomModel as any,
+      { participants: userId },
+      query,
+    );
   }
 
   async findById(id: string) {
