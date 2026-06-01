@@ -1,5 +1,5 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { IsUUID } from 'class-validator';
-import { ApiProperty } from 'node_modules/@nestjs/swagger/dist/decorators/api-property.decorator';
 
 export default class JoinRoomDto {
   @ApiProperty({

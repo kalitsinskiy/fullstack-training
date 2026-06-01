@@ -13,9 +13,11 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 @Module({
   imports: [
     ThrottlerModule.forRoot([{ ttl: 60, limit: 100 }]),
-    MongooseModule.forRoot(
-      process.env.MONGO_URL ?? 'mongodb://localhost:27017/santa-api',
-    ),
+    MongooseModule.forRootAsync({
+      useFactory: () => ({
+        uri: process.env.MONGO_URL ?? 'mongodb://localhost:27017/santa-api',
+      }),
+    }),
     LoggerModule.forRoot({
       pinoHttp: {
         level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',

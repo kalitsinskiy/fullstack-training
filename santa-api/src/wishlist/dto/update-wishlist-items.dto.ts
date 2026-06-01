@@ -1,3 +1,4 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsArray,
@@ -9,10 +10,6 @@ import {
   MinLength,
   ValidateNested,
 } from 'class-validator';
-import {
-  ApiProperty,
-  ApiPropertyOptional,
-} from 'node_modules/@nestjs/swagger/dist/decorators/api-property.decorator';
 
 export class WishlistItemDto {
   @ApiProperty({

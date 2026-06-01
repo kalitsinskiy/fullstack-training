@@ -5,6 +5,7 @@
 // Install: npm install supertest @types/supertest fastify
 
 import Fastify, { FastifyInstance } from 'fastify';
+import { afterEach } from 'node:test';
 import request from 'supertest'; // used in TODO implementations below
 
 // --- App to test (given to you — do not modify) ---
@@ -145,12 +146,12 @@ function buildApp(): FastifyInstance {
 describe('Items API', () => {
   let app: FastifyInstance;
 
-  beforeAll(async () => {
+  beforeEach(async () => {
     app = buildApp();
     await app.ready();
   });
 
-  afterAll(async () => {
+  afterEach(async () => {
     await app.close();
   });
 
@@ -162,51 +163,294 @@ describe('Items API', () => {
   // Group 1: POST /items
   // ============================================
   describe('POST /items', () => {
-    it.todo('creates an item successfully with status 201; body has id, name, description, price, category, inStock: true');
-    it.todo('returns 400 when name is missing');
-    it.todo('returns 400 when price is negative');
-    it.todo('returns 400 when description is missing');
-    it.todo('returns 409 when creating an item with a duplicate name (create one first, then try a second with the same name)');
+    it('creates an item successfully with status 201; body has id, name, description, price, category, inStock: true', async () => {
+      const newItem = {
+        name: 'Test Item',
+        description: 'A test item for our API',
+        price: 19.99,
+        category: 'test',
+      };
+
+      const response = await request(app.server)
+        .post('/items')
+        .send(newItem)
+        .expect(201);
+
+      expect(response.body).toMatchObject({
+        id: expect.any(String),
+        name: newItem.name,
+        description: newItem.description,
+        price: newItem.price,
+        category: newItem.category,
+        inStock: true,
+      });
+    });
+    it('returns 400 when name is missing', async () => {
+      const newItem = {
+        description: 'A test item for our API',
+        price: 19.99,
+        category: 'test',
+      };
+
+      await request(app.server)
+        .post('/items')
+        .send(newItem)
+        .expect(400);
+    });
+    it('returns 400 when price is negative', async () => {
+      const newItem = {
+        name: 'Test Item',
+        description: 'A test item for our API',
+        price: -19.99,
+        category: 'test',
+      };
+
+      await request(app.server)
+        .post('/items')
+        .send(newItem)
+        .expect(400);
+    });
+    it('returns 400 when description is missing', async () => {
+      const newItem = {
+        name: 'Test Item',
+        price: 19.99,
+        category: 'test',
+      };
+
+      await request(app.server)
+        .post('/items')
+        .send(newItem)
+        .expect(400);
+    });
+    it('returns 409 when creating an item with a duplicate name (create one first, then try a second with the same name)', async () => {
+      const newItem = {
+        name: 'Test Item',
+        description: 'A test item for our API',
+        price: 19.99,
+        category: 'test',
+      };
+
+      await request(app.server)
+        .post('/items')
+        .send(newItem)
+        .expect(201);
+
+      await request(app.server)
+        .post('/items')
+        .send(newItem)
+        .expect(409);
+    });
   });
 
   // ============================================
   // Group 2: GET /items/:id
   // ============================================
   describe('GET /items/:id', () => {
-    it.todo('retrieves an existing item by ID (POST first, then GET by the returned id)');
-    it.todo('returns 404 for a non-existent ID');
+    it('retrieves an existing item by ID (POST first, then GET by the returned id)', async () => {
+      const newItem = {
+        name: 'Test Item',
+        description: 'A test item for our API',
+        price: 19.99,
+        category: 'test',
+      };
+
+      const postResponse = await request(app.server)
+        .post('/items')
+        .send(newItem)
+        .expect(201);
+
+      const getItemResponse = await request(app.server)
+        .get(`/items/${postResponse.body.id}`)
+        .expect(200);
+
+      expect(getItemResponse.body).toMatchObject(postResponse.body);
+    });
+    it('returns 404 for a non-existent ID', async () => {
+      await request(app.server)
+        .get('/items/non-existent-id')
+        .expect(404);
+    });
   });
 
   // ============================================
   // Group 3: GET /items (list with filters and pagination)
   // ============================================
   describe('GET /items', () => {
-    it.todo('returns all items with correct pagination meta (data array + meta object)');
-    it.todo('filters by category (?category=electronics returns only matching items)');
-    it.todo('paginates correctly (?page=1&limit=2 — correct data length + meta total/page/limit/totalPages)');
+    it('returns all items with correct pagination meta (data array + meta object)', async () => {
+      const items = [
+        { name: 'Item 1', description: 'Description 1', price: 19.99, category: 'test' },
+        { name: 'Item 2', description: 'Description 2', price: 29.99, category: 'test' },
+      ];
+
+      items.forEach(async (item) => {
+        await request(app.server)
+          .post('/items')
+          .send(item)
+          .expect(201);
+      });
+
+      const response = await request(app.server)
+        .get('/items')
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        data: items,
+        meta: {
+          total: items.length,
+          page: 1,
+          limit: 10,
+          totalPages: 1,
+        },
+      });
+    });
+    it('filters by category (?category=electronics returns only matching items)', async () => {
+      const items = [
+        { name: 'Item 1', description: 'Description 1', price: 19.99, category: 'electronics' },
+        { name: 'Item 2', description: 'Description 2', price: 29.99, category: 'test' },
+      ];
+
+      items.forEach(async (item) => {
+        await request(app.server)
+          .post('/items')
+          .send(item)
+          .expect(201);
+      });
+
+      const response = await request(app.server)
+        .get('/items?category=electronics')
+        .expect(200);
+
+      expect(response.body.data).toMatchObject([items[0]]);
+    });
+    it('paginates correctly (?page=1&limit=2 — correct data length + meta total/page/limit/totalPages)', async () => {
+      const items = [
+        { name: 'Item 1', description: 'Description 1', price: 19.99, category: 'test' },
+        { name: 'Item 2', description: 'Description 2', price: 29.99, category: 'test' },
+      ];
+
+      items.forEach(async (item) => {
+        await request(app.server)
+          .post('/items')
+          .send(item)
+          .expect(201);
+      });
+
+      const response = await request(app.server)
+        .get('/items?page=1&limit=2')
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        data: items,
+        meta: {
+          total: items.length,
+          page: 1,
+          limit: 2,
+          totalPages: 1,
+        },
+      });
+    });
   });
 
   // ============================================
   // Group 4: PATCH /items/:id
   // ============================================
   describe('PATCH /items/:id', () => {
-    it.todo('partially updates an item (PATCH { name: "New Name" } — name updated, other fields unchanged)');
-    it.todo('returns 400 for invalid price (negative number)');
-    it.todo('returns 404 for non-existent ID');
+    it('partially updates an item (PATCH { name: "New Name" } — name updated, other fields unchanged)', async () => {
+      const item = { name: 'Item 1', description: 'Description 1', price: 19.99, category: 'test' };
+      const updatedItem = { ...item, name: 'New Name' };
+
+      const postResponse = await request(app.server)
+        .post('/items')
+        .send(item)
+        .expect(201);
+
+      const response = await request(app.server)
+        .patch(`/items/${postResponse.body.id}`)
+        .send({ name: 'New Name' })
+        .expect(200);
+
+      expect(response.body).toMatchObject(updatedItem);
+    });
+    it('returns 400 for invalid price (negative number)', async () => {
+      const item = { name: 'Item 1', description: 'Description 1', price: 19.99, category: 'test' };
+
+      const postResponse = await request(app.server)
+        .post('/items')
+        .send(item)
+        .expect(201);
+
+      await request(app.server)
+        .patch(`/items/${postResponse.body.id}`)
+        .send({ price: -5 })
+        .expect(400);
+    });
+    it('returns 404 for non-existent ID', async () => {
+      await request(app.server)
+        .patch('/items/non-existent-id')
+        .send({ name: 'New Name' })
+        .expect(404);
+    });
   });
 
   // ============================================
   // Group 5: DELETE /items/:id
   // ============================================
   describe('DELETE /items/:id', () => {
-    it.todo('deletes an item and verifies it is gone (DELETE then GET returns 404)');
-    it.todo('returns 404 for non-existent ID');
+    it('deletes an item and verifies it is gone (DELETE then GET returns 404)', async () => {
+      const item = { name: 'Item 1', description: 'Description 1', price: 19.99, category: 'test' };
+
+      const postResponse = await request(app.server)
+        .post('/items')
+        .send(item)
+        .expect(201);
+
+      await request(app.server)
+        .delete(`/items/${postResponse.body.id}`)
+        .expect(204);
+
+      await request(app.server)
+        .get(`/items/${postResponse.body.id}`)
+        .expect(404);
+    });
+    it('returns 404 for non-existent ID', async () => {
+      await request(app.server)
+        .delete('/items/non-existent-id')
+        .expect(404);
+    });
   });
 
   // ============================================
   // Group 6: Full CRUD flow
   // ============================================
   describe('Full CRUD flow', () => {
-    it.todo('full lifecycle: POST → GET → PATCH price → GET (verify update) → DELETE → GET (404)');
+    it('full lifecycle: POST → GET → PATCH price → GET (verify update) → DELETE → GET (404)', async () => {
+      const item = { name: 'Item 1', description: 'Description 1', price: 19.99, category: 'test' };
+
+      const postResponse = await request(app.server)
+        .post('/items')
+        .send(item)
+        .expect(201);
+
+      const getResponse = await request(app.server)
+        .get(`/items/${postResponse.body.id}`)
+        .expect(200);
+
+      const patchResponse = await request(app.server)
+        .patch(`/items/${postResponse.body.id}`)
+        .send({ price: 29.99 })
+        .expect(200);
+
+      const updatedItem = { ...item, price: 29.99 };
+
+      expect(patchResponse.body).toMatchObject(updatedItem);
+
+      await request(app.server)
+        .delete(`/items/${postResponse.body.id}`)
+        .expect(204);
+
+      await request(app.server)
+        .get(`/items/${postResponse.body.id}`)
+        .expect(404);
+    });
   });
 });

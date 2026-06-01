@@ -1,6 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { RoomsService } from './rooms.service';
-import { Room } from './schemas/room.schema';
 import { RoomsRepository } from './repositories/rooms.repository';
 
 describe('RoomsService', () => {
@@ -10,6 +9,8 @@ describe('RoomsService', () => {
   const findById = jest.fn();
   const findByCode = jest.fn();
   const addMember = jest.fn();
+  const updateById = jest.fn();
+  const deleteById = jest.fn();
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -25,6 +26,8 @@ describe('RoomsService', () => {
             findById,
             findByCode,
             addMember,
+            updateById,
+            deleteById,
           },
         },
       ],
@@ -37,64 +40,78 @@ describe('RoomsService', () => {
     expect(service).toBeDefined();
   });
 
-  it('should create a room', async () => {
-    const dto = {
-      name: 'Test Room',
-      ownerId: 'a4883b3e-4f49-4b99-9d34-6bfc8fda0ce5',
-    };
-    const savedRoom = { id: '64e000000000000000000001', ...dto };
+  it('should delegate create to the repository', async () => {
+    const dto = { name: 'Test Room', ownerId: 'creator-id' };
+    const savedRoom = { id: 'room-id', ...dto };
     create.mockResolvedValue(savedRoom);
 
-    const room = await service.create(dto);
+    const result = await service.create(dto);
 
     expect(create).toHaveBeenCalledWith(dto);
-    expect(room).toEqual(savedRoom);
+    expect(result).toEqual(savedRoom);
   });
 
-  it('should find all rooms', async () => {
-    const roomList = [{ id: '1' }, { id: '2' }];
-    findAll.mockResolvedValue(roomList);
+  it('should delegate findAll to the repository', async () => {
+    const response = {
+      data: [{ id: 'room1' }],
+      meta: { total: 1, page: 1, limit: 10, totalPages: 1 },
+    };
+    findAll.mockResolvedValue(response);
 
-    const rooms = await service.findAll();
+    const result = await service.findAll(1, 10);
 
-    expect(findAll).toHaveBeenCalled();
-    expect(rooms).toEqual(roomList);
+    expect(findAll).toHaveBeenCalledWith(1, 10);
+    expect(result).toBe(response);
   });
 
-  it('should find a room by id', async () => {
-    const id = '64e000000000000000000001';
-    const room = { id: id, name: 'Test Room' };
+  it('should delegate findById to the repository', async () => {
+    const room = { id: 'room-id', name: 'Test Room' };
     findById.mockResolvedValue(room);
 
-    const foundRoom = await service.findById(id);
+    const result = await service.findById('room-id');
 
-    expect(findById).toHaveBeenCalledWith(id);
-    expect(foundRoom).toEqual(room);
+    expect(findById).toHaveBeenCalledWith('room-id');
+    expect(result).toEqual(room);
   });
 
-  it('should find a room by code', async () => {
-    const code = 'ABC123';
-    const room = { id: '64e000000000000000000001', inviteCode: code };
+  it('should delegate findByCode to the repository', async () => {
+    const room = { id: 'room-id', inviteCode: 'ABC123' };
     findByCode.mockResolvedValue(room);
 
-    const foundRoom = await service.findByCode(code);
+    const result = await service.findByCode('ABC123');
 
-    expect(findByCode).toHaveBeenCalledWith(code);
-    expect(foundRoom).toEqual(room);
+    expect(findByCode).toHaveBeenCalledWith('ABC123');
+    expect(result).toEqual(room);
   });
 
-  it('should add a member to a room', async () => {
-    const code = 'ABC123';
-    const joinData = { userId: '8ad26f7f-b1a5-4e90-8e74-79f4f34b0d9c' };
-    const updatedRoom = {
-      id: '64e000000000000000000001',
-      participants: ['x'],
-    };
+  it('should delegate addMember to the repository', async () => {
+    const updatedRoom = { id: 'room-id', participants: ['user-id'] };
     addMember.mockResolvedValue(updatedRoom);
 
-    const result = await service.addMember(code, joinData);
+    const result = await service.addMember('ABC123', {
+      userId: 'user-id',
+    });
 
-    expect(addMember).toHaveBeenCalledWith(code, joinData);
+    expect(addMember).toHaveBeenCalledWith('ABC123', { userId: 'user-id' });
     expect(result).toEqual(updatedRoom);
+  });
+
+  it('should delegate updateById to the repository', async () => {
+    const updatedRoom = { id: 'room-id', name: 'New Name' };
+    updateById.mockResolvedValue(updatedRoom);
+
+    const result = await service.updateById('room-id', { name: 'New Name' });
+
+    expect(updateById).toHaveBeenCalledWith('room-id', { name: 'New Name' });
+    expect(result).toEqual(updatedRoom);
+  });
+
+  it('should delegate deleteById to the repository', async () => {
+    deleteById.mockResolvedValue(true);
+
+    const result = await service.deleteById('room-id');
+
+    expect(deleteById).toHaveBeenCalledWith('room-id');
+    expect(result).toBe(true);
   });
 });

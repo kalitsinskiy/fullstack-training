@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Post, HttpCode } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import RegisterDto from './dto/register.dto';
 import LoginDto from './dto/login.dto';
@@ -22,7 +22,7 @@ export class AuthController {
     description: 'Registration data (username, password, etc.)',
     type: RegisterDto,
   })
-  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @Post('register')
   async register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
@@ -44,7 +44,8 @@ export class AuthController {
     description: 'Login data (username and password)',
     type: LoginDto,
   })
-  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Throttle({ default: { limit: 50, ttl: 60_000 } })
+  @HttpCode(200)
   @Post('login')
   async login(@Body() dto: LoginDto) {
     return this.authService.login(dto);

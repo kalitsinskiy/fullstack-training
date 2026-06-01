@@ -123,8 +123,18 @@ describe('UserService', () => {
     // TODO: Create mock model with jest.fn() for each method
     // Hint: mockModel = { create: jest.fn(), findById: jest.fn(), ... }
     //
+    mockModel = {
+      create: jest.fn(),
+      findById: jest.fn(),
+      findOne: jest.fn(),
+      findByIdAndUpdate: jest.fn(),
+      findByIdAndDelete: jest.fn(),
+      countDocuments: jest.fn(),
+    };
+
     // TODO: Instantiate UserService with the mock model
     //   service = new UserService(mockModel);
+    service = new UserService(mockModel);
   });
 
   // Each `it.todo(...)` shows up in jest output as a pending test.
@@ -134,37 +144,154 @@ describe('UserService', () => {
   // Group 1: create
   // ============================================
   describe('create', () => {
-    it.todo('calls findOne to check for duplicate email and forwards lowercased data to userModel.create');
-    it.todo('throws "Email already registered" when findOne returns a user; userModel.create is NOT called');
-    it.todo('lowercases the email before storing (input "ALICE@EXAMPLE.COM" → stored "alice@example.com")');
+    it('calls findOne to check for duplicate email and forwards lowercased data to userModel.create', async () => {
+      const email = 'alice@example.com';
+      const displayName = 'Alice';
+      const passwordHash = '$2b$10$hashed';
+      const createdUser = mockUser({ email, displayName, passwordHash });
+      mockModel.findOne.mockResolvedValue(null);
+      mockModel.create.mockResolvedValue(createdUser);
+
+      const result = await service.create(email, displayName, passwordHash);
+
+      expect(mockModel.findOne).toHaveBeenCalledWith({ email: email.toLowerCase() });
+      expect(mockModel.create).toHaveBeenCalledWith({
+        email: email.toLowerCase(),
+        displayName,
+        passwordHash,
+        role: 'user',
+        isActive: true,
+      });
+      expect(result).toEqual(createdUser);
+    });
+    it('throws "Email already registered" when findOne returns a user; userModel.create is NOT called', async () => {
+      const email = 'alice@example.com';
+      const displayName = 'Alice';
+      const passwordHash = '$2b$10$hashed';
+      mockModel.findOne.mockResolvedValue(mockUser({ email }));
+
+      await expect(service.create(email, displayName, passwordHash)).rejects.toThrow(
+        'Email already registered',
+      );
+      expect(mockModel.create).not.toHaveBeenCalled();
+    });
+    it('lowercases the email before storing (input "ALICE@EXAMPLE.COM" → stored "alice@example.com")', async () => {
+      const email = 'ALICE@EXAMPLE.COM';
+      const displayName = 'Alice';
+      const passwordHash = '$2b$10$hashed';
+      const createdUser = mockUser({ email: email.toLowerCase(), displayName, passwordHash });
+      mockModel.findOne.mockResolvedValue(null);
+      mockModel.create.mockResolvedValue(createdUser);
+
+      const result = await service.create(email, displayName, passwordHash);
+
+      expect(mockModel.findOne).toHaveBeenCalledWith({ email: email.toLowerCase() });
+      expect(mockModel.create).toHaveBeenCalledWith({
+        email: email.toLowerCase(),
+        displayName,
+        passwordHash,
+        role: 'user',
+        isActive: true,
+      });
+      expect(result).toEqual(createdUser);
+    });
   });
 
   // ============================================
   // Group 2: findById
   // ============================================
   describe('findById', () => {
-    it.todo('returns the user when found and active');
-    it.todo('throws "User not found" when findById returns null');
-    it.todo('throws "User account is deactivated" when the user exists but isActive is false');
+    it('returns the user when found and active' , async () => {
+      const user = mockUser({ _id: 'user-1', isActive: true });
+      mockModel.findById.mockResolvedValue(user);
+
+      const result = await service.findById('user-1');
+
+      expect(mockModel.findById).toHaveBeenCalledWith('user-1');
+      expect(result).toEqual(user);
+    });
+    it('throws "User not found" when findById returns null', async () => {
+      mockModel.findById.mockResolvedValue(null);
+
+      await expect(service.findById('user-1')).rejects.toThrow('User not found');
+    });
+    it('throws "User account is deactivated" when the user exists but isActive is false', async () => {
+      const user = mockUser({ _id: 'user-1', isActive: false });
+      mockModel.findById.mockResolvedValue(user);
+
+      await expect(service.findById('user-1')).rejects.toThrow('User account is deactivated');
+    });
   });
 
   // ============================================
   // Group 3: updateProfile
   // ============================================
   describe('updateProfile', () => {
-    it.todo('successfully updates displayName');
-    it.todo('throws "Display name must be at least 2 characters" when displayName is too short (e.g. "A")');
-    it.todo('successfully updates email and lowercases it');
-    it.todo('throws "Email already in use" when the new email belongs to a different user (findOne returns a user with a different _id)');
-    it.todo('throws "User not found" when findByIdAndUpdate returns null');
+    it('successfully updates displayName', async () => {
+      const user = mockUser({ _id: 'user-1', displayName: 'Alice' });
+      mockModel.findById.mockResolvedValue(user);
+      mockModel.findByIdAndUpdate.mockResolvedValue({ ...user, displayName: 'Bob' });
+
+      const result = await service.updateProfile('user-1', { displayName: 'Bob' });
+
+      expect(mockModel.findByIdAndUpdate).toHaveBeenCalledWith('user-1', { displayName: 'Bob' }, { new: true });
+      expect(result).toEqual({ ...user, displayName: 'Bob' });
+    });
+    it('throws "Display name must be at least 2 characters" when displayName is too short (e.g. "A")', async () => {
+      await expect(service.updateProfile('user-1', { displayName: 'A' })).rejects.toThrow(
+        'Display name must be at least 2 characters',
+      );
+    });
+    it('successfully updates email and lowercases it', async () => {
+      const user = mockUser({ _id: 'user-1', email: 'alice@example.com' });
+      const newEmail = 'bob@example.com';
+      mockModel.findOne.mockResolvedValue(null);
+      mockModel.findByIdAndUpdate.mockResolvedValue({ ...user, email: newEmail.toLowerCase() });
+
+      const result = await service.updateProfile('user-1', { email: newEmail });
+
+      expect(mockModel.findOne).toHaveBeenCalledWith({ email: newEmail.toLowerCase() });
+      expect(mockModel.findByIdAndUpdate).toHaveBeenCalledWith(
+        'user-1',
+        { email: newEmail.toLowerCase() },
+        { new: true },
+      );
+      expect(result).toEqual({ ...user, email: newEmail.toLowerCase() });
+    });
+    it('throws "Email already in use" when the new email belongs to a different user (findOne returns a user with a different _id)', async () => {
+      const user = mockUser({ _id: 'user-1', email: 'alice@example.com' });
+      const newEmail = 'bob@example.com';
+      mockModel.findOne.mockResolvedValue({ ...user, _id: 'user-2', email: newEmail.toLowerCase() });
+
+      await expect(service.updateProfile('user-1', { email: newEmail })).rejects.toThrow('Email already in use');
+    });
+    it('throws "User not found" when findByIdAndUpdate returns null', async () => {
+      const newEmail = 'bob@example.com';
+      mockModel.findOne.mockResolvedValue(null);
+      mockModel.findByIdAndUpdate.mockResolvedValue(null);
+
+      await expect(service.updateProfile('user-1', { email: newEmail })).rejects.toThrow('User not found');
+    });
   });
 
   // ============================================
   // Group 4: deactivate
   // ============================================
   describe('deactivate', () => {
-    it.todo('deactivates a user (sets isActive to false via findByIdAndUpdate)');
-    it.todo('throws "User not found" when the user does not exist');
+    it('deactivates a user (sets isActive to false via findByIdAndUpdate)', async () => {
+      const user = mockUser({ _id: 'user-1', isActive: true });
+      mockModel.findById.mockResolvedValue(user);
+      mockModel.findByIdAndUpdate.mockResolvedValue({ ...user, isActive: false });
+
+      await service.deactivate('user-1');
+
+      expect(mockModel.findByIdAndUpdate).toHaveBeenCalledWith('user-1', { isActive: false }, { new: true });
+    });
+    it('throws "User not found" when the user does not exist', async () => {
+      mockModel.findById.mockResolvedValue(null);
+
+      await expect(service.deactivate('user-1')).rejects.toThrow('User not found');
+    });
   });
 
   // ============================================
@@ -173,6 +300,20 @@ describe('UserService', () => {
   describe('getStats', () => {
     // Hint: mockModel.countDocuments.mockImplementation((filter) => { ... })
     // or use mockResolvedValueOnce for the three sequential calls (Promise.all).
-    it.todo('returns correct stats: total / active (isActive: true) / admins (role: "admin")');
+    it('returns correct stats: total / active (isActive: true) / admins (role: "admin")', async () => {
+      mockModel.countDocuments.mockImplementation((filter) => {
+        if (filter && filter.isActive === true) {
+          return Promise.resolve(10);
+        }
+        if (filter && filter.role === 'admin') {
+          return Promise.resolve(2);
+        }
+        return Promise.resolve(100);
+      });
+
+      const stats = await service.getStats();
+
+      expect(stats).toEqual({ total: 100, active: 10, admins: 2 });
+    });
   });
 });

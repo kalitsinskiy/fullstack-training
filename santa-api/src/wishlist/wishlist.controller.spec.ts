@@ -55,8 +55,10 @@ describe('WishlistController', () => {
     const userObjectId = new Types.ObjectId(userId);
     const items = [{ name: 'item1' }, { name: 'item2', priority: 1 }];
 
-    mockRoomsService.findByCode.mockResolvedValue({ id: roomId.toString() });
-    mockUserService.findById.mockResolvedValue({ id: userObjectId.toString() });
+    mockRoomsService.findByCode.mockResolvedValue({ _id: roomId.toString() });
+    mockUserService.findById.mockResolvedValue({
+      _id: userObjectId.toString(),
+    });
 
     await controller.setWishlist(roomCode, { userId, items });
 
@@ -84,7 +86,7 @@ describe('WishlistController', () => {
     const userId = '64e000000000000000000002';
     const items = [{ name: 'item1' }];
 
-    mockRoomsService.findByCode.mockResolvedValue({ id: roomId.toString() });
+    mockRoomsService.findByCode.mockResolvedValue({ _id: roomId.toString() });
     mockUserService.findById.mockResolvedValue(undefined);
 
     await expect(
@@ -100,8 +102,10 @@ describe('WishlistController', () => {
     const wishlist = { userId, roomId, items: [{ name: 'item1' }] };
 
     mockWishlistService.get.mockResolvedValue(wishlist);
-    mockRoomsService.findByCode.mockResolvedValue({ id: roomId.toString() });
-    mockUserService.findById.mockResolvedValue({ id: userObjectId.toString() });
+    mockRoomsService.findByCode.mockResolvedValue({ _id: roomId.toString() });
+    mockUserService.findById.mockResolvedValue({
+      _id: userObjectId.toString(),
+    });
 
     const result = await controller.getWishlist(roomCode, userId);
 
@@ -124,7 +128,7 @@ describe('WishlistController', () => {
     const roomId = new Types.ObjectId();
     const userId = '64e000000000000000000002';
 
-    mockRoomsService.findByCode.mockResolvedValue({ id: roomId.toString() });
+    mockRoomsService.findByCode.mockResolvedValue({ _id: roomId.toString() });
     mockUserService.findById.mockResolvedValue(undefined);
 
     await expect(controller.getWishlist(roomCode, userId)).rejects.toThrow(
@@ -140,8 +144,10 @@ describe('WishlistController', () => {
     const items = [{ name: 'item1', priority: 2 }];
     const updatedWishlist = { roomId, userId: userObjectId, items };
 
-    mockRoomsService.findByCode.mockResolvedValue({ id: roomId.toString() });
-    mockUserService.findById.mockResolvedValue({ id: userObjectId.toString() });
+    mockRoomsService.findByCode.mockResolvedValue({ _id: roomId.toString() });
+    mockUserService.findById.mockResolvedValue({
+      _id: userObjectId.toString(),
+    });
     mockWishlistService.set.mockResolvedValue(updatedWishlist);
 
     await expect(
@@ -160,8 +166,10 @@ describe('WishlistController', () => {
     const userId = '64e000000000000000000002';
     const userObjectId = new Types.ObjectId(userId);
 
-    mockRoomsService.findByCode.mockResolvedValue({ id: roomId.toString() });
-    mockUserService.findById.mockResolvedValue({ id: userObjectId.toString() });
+    mockRoomsService.findByCode.mockResolvedValue({ _id: roomId.toString() });
+    mockUserService.findById.mockResolvedValue({
+      _id: userObjectId.toString(),
+    });
     mockWishlistService.delete.mockResolvedValue(true);
 
     await expect(controller.removeWishlist(roomCode, userId)).resolves.toEqual({
