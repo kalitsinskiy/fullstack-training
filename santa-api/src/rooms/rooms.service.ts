@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Room, RoomDocument } from './schemas/room.schema';
@@ -57,5 +62,37 @@ export class RoomsService {
         { new: true },
       )
       .exec();
+  }
+
+  async join(roomId: string, userId: string): Promise<RoomDocument> {
+    const room = await this.findById(roomId);
+    if (room.status === 'drawn') {
+      throw new ForbiddenException(
+        'Cannot join a room that has already been drawn',
+      );
+    }
+    return this.roomModel
+      .findByIdAndUpdate(
+        roomId,
+        { $addToSet: { participants: userId } },
+        { new: true },
+      )
+      .exec() as Promise<RoomDocument>;
+  }
+
+  async draw(roomId: string): Promise<RoomDocument> {
+    const room = await this.findById(roomId);
+    if (room.participants.length < 3) {
+      throw new BadRequestException(
+        'At least 3 participants are required to draw',
+      );
+    }
+    return this.roomModel
+      .findByIdAndUpdate(
+        roomId,
+        { status: 'drawn', drawDate: new Date() },
+        { new: true },
+      )
+      .exec() as Promise<RoomDocument>;
   }
 }

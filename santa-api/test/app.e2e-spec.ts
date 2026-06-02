@@ -1,29 +1,7 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
-import request from 'supertest';
-import { App } from 'supertest/types';
-import { AppModule } from './../src/app.module';
-
-describe('AppController (e2e)', () => {
-  let app: INestApplication<App>;
-
-  beforeEach(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    await app.init();
-  });
-
-  it('/ (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/')
-      .expect(200)
-      .expect('Hello World!');
-  });
-
-  afterEach(async () => {
-    await app.close();
+// This file is superseded by auth.e2e-spec.ts and rooms.e2e-spec.ts.
+// Kept as a placeholder to avoid removing the NestJS scaffold entry point.
+describe('App bootstrap (e2e placeholder)', () => {
+  it('placeholder — real tests are in auth.e2e-spec.ts and rooms.e2e-spec.ts', () => {
+    expect(true).toBe(true);
   });
 });

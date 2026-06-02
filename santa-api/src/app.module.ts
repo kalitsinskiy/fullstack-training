@@ -12,9 +12,11 @@ import { APP_GUARD } from '@nestjs/core';
 
 @Module({
   imports: [
-    MongooseModule.forRoot(
-      process.env.MONGO_URL ?? 'mongodb://localhost:27017/santa-api',
-    ),
+    MongooseModule.forRootAsync({
+      useFactory: () => ({
+        uri: process.env.MONGO_URL ?? 'mongodb://localhost:27017/santa-api',
+      }),
+    }),
     LoggerModule.forRoot({
       pinoHttp: {
         level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',

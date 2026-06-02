@@ -1,5 +1,6 @@
 import {
   Controller,
+  ForbiddenException,
   Get,
   Post,
   Param,
@@ -60,11 +61,15 @@ export class RoomsController {
   @ApiParam({ name: 'id', description: 'Room MongoDB ObjectId' })
   @ApiResponse({ status: 200, description: 'Returns the room' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - not a member of this room',
+  })
   @ApiResponse({ status: 404, description: 'Room not found' })
-  findById(@Param('id') id: string) {
-    const room = this.roomsService.findById(id);
-    if (!room) {
-      throw new NotFoundException(`Room with id "${id}" not found`);
+  async findById(@Param('id') id: string, @CurrentUser('id') userId: string) {
+    const room = await this.roomsService.findById(id);
+    if (!room.participants.map((p) => p.toString()).includes(userId)) {
+      throw new ForbiddenException('You are not a member of this room');
     }
     return room;
   }
