@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Secret Santa - Register</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="header">
+      <h1>Secret Santa</h1>
+    </header>
+
+    <main>
+      <h2 class="page-title">Create Account</h2>
+      <form action="/auth/login" method="POST">
+        <fieldset>
+          <legend>Account details:</legend>
+          <label for="nameField">Name</label>
+          <input
+            type="text"
+            name="displayName"
+            id="nameField"
+            placeholder="Display Name"
+            required
+          />
+          <label for="emailField">Email</label>
+          <input type="email" name="email" id="emailField" placeholder="Valid Email" required />
+          <label for="passwordField">Password</label>
+          <input
+            type="password"
+            name="password"
+            id="passwordField"
+            placeholder="Password"
+            minlength="8"
+            required
+          />
+          <label for="passwordConfirmField">Confirm Password</label>
+          <input
+            type="password"
+            name="passwordConfirm"
+            id="passwordConfirmField"
+            placeholder="Password"
+            minlength="8"
+            required
+          />
+        </fieldset>
+        <button type="submit" class="btn">Create Account</button>
+        <p>Already have an account? <a href="/public/mockups/login.html">Sign in</a></p>
+      </form>
+    </main>
+
+    <footer class="footer">
+      <p class="copyright">
+        &copy; 2026 Secret Santa App &middot; <a href="#privacy">Privacy</a> &middot;
+        <a href="#terms">Terms</a>
+      </p>
+    </footer>
+  </body>
+</html>

@@ -1,54 +1,73 @@
-# Santa App
+# React + TypeScript + Vite
 
-Secret Santa frontend SPA built with React + Vite + TypeScript.
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-## Tech Stack
+Currently, two official plugins are available:
 
-- **React 18** + TypeScript
-- **Vite** (build tool)
-- **React Router v6** (routing)
-- **Material UI** (component library)
-- **Styled Components** / CSS Modules (styling)
-- **Socket.IO Client** (real-time)
-- **React Testing Library** (testing)
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
 
-## Pages
+## React Compiler
 
-| Route | Component | Auth | Description |
-|-------|-----------|------|-------------|
-| /login | LoginPage | No | Login form |
-| /register | RegisterPage | No | Registration form |
-| /rooms | RoomListPage | Yes | Dashboard with room list |
-| /rooms/:id | RoomDetailPage | Yes | Room detail (participants, wishlist, draw) |
-| /rooms/:id/messages | MessagesPage | Yes | Anonymous messaging |
-| /notifications | NotificationsPage | Yes | Notification list |
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-## Getting Started
+## Expanding the ESLint configuration
 
-```bash
-cd santa-app
-npm install
-cp .env.example .env
-npm run dev
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+
+```js
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+
+      // Remove tseslint.configs.recommended and replace with this
+      tseslint.configs.recommendedTypeChecked,
+      // Alternatively, use this for stricter rules
+      tseslint.configs.strictTypeChecked,
+      // Optionally, add this for stylistic rules
+      tseslint.configs.stylisticTypeChecked,
+
+      // Other configs...
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
 ```
 
-## Scripts
+You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
 
-```bash
-npm run dev      # Development server (port 5173)
-npm run build    # Production build
-npm run preview  # Preview production build
-npm run test     # Run tests
-npm run lint     # Lint
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
+
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+      // Enable lint rules for React
+      reactX.configs['recommended-typescript'],
+      // Enable lint rules for React DOM
+      reactDom.configs.recommended,
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
 ```
-
-## Environment Variables
-
-```env
-VITE_API_URL=http://localhost:3001
-VITE_WS_URL=http://localhost:3002
-```
-
-## Port
-
-Runs on **port 5173** by default (Vite dev server).

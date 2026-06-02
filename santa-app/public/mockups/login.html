@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Secret Santa - Login</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="header">
+      <h1>Secret Santa</h1>
+    </header>
+
+    <main>
+      <h2 class="page-title">Welcome Back</h2>
+      <form action="/auth/login" method="POST">
+        <fieldset>
+          <legend>Sign in</legend>
+          <label for="emailField">Email</label>
+          <input type="email" name="email" id="emailField" placeholder="Valid Email" required />
+          <label for="passwordField">Password</label>
+          <input
+            type="password"
+            name="password"
+            id="passwordField"
+            placeholder="Your Password"
+            minlength="8"
+            required
+          />
+        </fieldset>
+        <button type="submit" class="btn">Sign In</button>
+        <p>Don't have an account? <a href="/public/mockups/register.html">Register</a></p>
+      </form>
+    </main>
+
+    <footer class="footer">
+      <p class="copyright">
+        &copy; 2026 Secret Santa App &middot; <a href="#privacy">Privacy</a> &middot;
+        <a href="#terms">Terms</a>
+      </p>
+    </footer>
+  </body>
+</html>
