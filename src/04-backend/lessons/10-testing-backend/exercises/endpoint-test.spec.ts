@@ -87,7 +87,7 @@ function buildApp(): FastifyInstance {
           totalPages: Math.ceil(filtered.length / limit) || 1,
         },
       });
-    },
+    }
   );
 
   // GET /items/:id — get item by ID
@@ -162,51 +162,303 @@ describe('Items API', () => {
   // Group 1: POST /items
   // ============================================
   describe('POST /items', () => {
-    it.todo('creates an item successfully with status 201; body has id, name, description, price, category, inStock: true');
-    it.todo('returns 400 when name is missing');
-    it.todo('returns 400 when price is negative');
-    it.todo('returns 400 when description is missing');
-    it.todo('returns 409 when creating an item with a duplicate name (create one first, then try a second with the same name)');
+    it('creates an item successfully with status 201; body has id, name, description, price, category, inStock: true', async () => {
+      const res = await request(app.server)
+        .post('/items')
+        .send({
+          name: 'Widget Alpha',
+          description: 'A fine widget',
+          price: 9.99,
+          category: 'tools',
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body).toMatchObject({
+        id: expect.any(String),
+        name: 'Widget Alpha',
+        description: 'A fine widget',
+        price: 9.99,
+        category: 'tools',
+        inStock: true,
+      });
+    });
+    it('returns 400 when name is missing', async () => {
+      const res = await request(app.server)
+        .post('/items')
+        .send({ description: 'No name', price: 5, category: 'misc' });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toHaveProperty('error');
+    });
+    it('returns 400 when price is negative', async () => {
+      const res = await request(app.server)
+        .post('/items')
+        .send({
+          name: 'Negative Price Item',
+          description: 'Bad price',
+          price: -1,
+          category: 'misc',
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toHaveProperty('error');
+    });
+    it('returns 400 when description is missing', async () => {
+      const res = await request(app.server)
+        .post('/items')
+        .send({ name: 'No Description Item', price: 5, category: 'misc' });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toHaveProperty('error');
+    });
+    it('returns 409 when creating an item with a duplicate name (create one first, then try a second with the same name)', async () => {
+      await request(app.server)
+        .post('/items')
+        .send({ name: 'Duplicate Item', description: 'First one', price: 10, category: 'test' });
+
+      const res = await request(app.server)
+        .post('/items')
+        .send({ name: 'Duplicate Item', description: 'Second one', price: 10, category: 'test' });
+
+      expect(res.status).toBe(409);
+      expect(res.body).toHaveProperty('error');
+    });
   });
 
   // ============================================
   // Group 2: GET /items/:id
   // ============================================
   describe('GET /items/:id', () => {
-    it.todo('retrieves an existing item by ID (POST first, then GET by the returned id)');
-    it.todo('returns 404 for a non-existent ID');
+    it('retrieves an existing item by ID (POST first, then GET by the returned id)', async () => {
+      const createRes = await request(app.server)
+        .post('/items')
+        .send({
+          name: 'Get By ID Item',
+          description: 'Fetchable item',
+          price: 15,
+          category: 'fetch',
+        });
+
+      const { id } = createRes.body;
+
+      const res = await request(app.server).get(`/items/${id}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.id).toBe(id);
+      expect(res.body.name).toBe('Get By ID Item');
+    });
+    it('returns 404 for a non-existent ID', async () => {
+      const res = await request(app.server).get('/items/nonexistent-9999');
+
+      expect(res.status).toBe(404);
+      expect(res.body).toHaveProperty('error');
+    });
   });
 
   // ============================================
   // Group 3: GET /items (list with filters and pagination)
   // ============================================
   describe('GET /items', () => {
-    it.todo('returns all items with correct pagination meta (data array + meta object)');
-    it.todo('filters by category (?category=electronics returns only matching items)');
-    it.todo('paginates correctly (?page=1&limit=2 — correct data length + meta total/page/limit/totalPages)');
+    it('returns all items with correct pagination meta (data array + meta object)', async () => {
+      const res = await request(app.server).get('/items');
+
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.body.data)).toBe(true);
+      expect(res.body.meta).toMatchObject({
+        page: 1,
+        limit: 10,
+        total: expect.any(Number),
+        totalPages: expect.any(Number),
+      });
+    });
+    it('filters by category (?category=electronics returns only matching items)', async () => {
+      await request(app.server)
+        .post('/items')
+        .send({
+          name: 'Electronics Item A',
+          description: 'Gadget',
+          price: 99,
+          category: 'electronics',
+        });
+      await request(app.server)
+        .post('/items')
+        .send({
+          name: 'Electronics Item B',
+          description: 'Another gadget',
+          price: 49,
+          category: 'electronics',
+        });
+      await request(app.server)
+        .post('/items')
+        .send({
+          name: 'Non-Electronics Item',
+          description: 'Not a gadget',
+          price: 5,
+          category: 'books',
+        });
+
+      const res = await request(app.server).get('/items?category=electronics');
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.length).toBeGreaterThanOrEqual(2);
+      expect(res.body.data.every((item: Item) => item.category === 'electronics')).toBe(true);
+    });
+    it('paginates correctly (?page=1&limit=2 — correct data length + meta total/page/limit/totalPages)', async () => {
+      await request(app.server)
+        .post('/items')
+        .send({
+          name: 'Pagination Item 1',
+          description: 'p1',
+          price: 1,
+          category: 'pagination-test',
+        });
+      await request(app.server)
+        .post('/items')
+        .send({
+          name: 'Pagination Item 2',
+          description: 'p2',
+          price: 2,
+          category: 'pagination-test',
+        });
+      await request(app.server)
+        .post('/items')
+        .send({
+          name: 'Pagination Item 3',
+          description: 'p3',
+          price: 3,
+          category: 'pagination-test',
+        });
+
+      const res = await request(app.server).get('/items?category=pagination-test&page=1&limit=2');
+
+      expect(res.status).toBe(200);
+      expect(res.body.data).toHaveLength(2);
+      expect(res.body.meta).toMatchObject({
+        page: 1,
+        limit: 2,
+        total: 3,
+        totalPages: 2,
+      });
+    });
   });
 
   // ============================================
   // Group 4: PATCH /items/:id
   // ============================================
   describe('PATCH /items/:id', () => {
-    it.todo('partially updates an item (PATCH { name: "New Name" } — name updated, other fields unchanged)');
-    it.todo('returns 400 for invalid price (negative number)');
-    it.todo('returns 404 for non-existent ID');
+    it('partially updates an item (PATCH { name: "New Name" } — name updated, other fields unchanged)', async () => {
+      const createRes = await request(app.server)
+        .post('/items')
+        .send({
+          name: 'Patch Test Item',
+          description: 'Original description',
+          price: 25,
+          category: 'patchable',
+        });
+
+      const { id, description, price, category } = createRes.body;
+
+      const res = await request(app.server)
+        .patch(`/items/${id}`)
+        .send({ name: 'Updated Patch Item' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.name).toBe('Updated Patch Item');
+      expect(res.body.description).toBe(description);
+      expect(res.body.price).toBe(price);
+      expect(res.body.category).toBe(category);
+    });
+    it('returns 400 for invalid price (negative number)', async () => {
+      const createRes = await request(app.server)
+        .post('/items')
+        .send({ name: 'Patch Price Item', description: 'desc', price: 10, category: 'test' });
+
+      const { id } = createRes.body;
+
+      const res = await request(app.server).patch(`/items/${id}`).send({ price: -5 });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toHaveProperty('error');
+    });
+    it('returns 404 for non-existent ID', async () => {
+      const res = await request(app.server)
+        .patch('/items/nonexistent-9999')
+        .send({ name: 'Whatever' });
+
+      expect(res.status).toBe(404);
+      expect(res.body).toHaveProperty('error');
+    });
   });
 
   // ============================================
   // Group 5: DELETE /items/:id
   // ============================================
   describe('DELETE /items/:id', () => {
-    it.todo('deletes an item and verifies it is gone (DELETE then GET returns 404)');
-    it.todo('returns 404 for non-existent ID');
+    it('deletes an item and verifies it is gone (DELETE then GET returns 404)', async () => {
+      const createRes = await request(app.server)
+        .post('/items')
+        .send({
+          name: 'Delete Me Item',
+          description: 'Temporary',
+          price: 1,
+          category: 'disposable',
+        });
+
+      const { id } = createRes.body;
+
+      const deleteRes = await request(app.server).delete(`/items/${id}`);
+      expect(deleteRes.status).toBe(204);
+
+      const getRes = await request(app.server).get(`/items/${id}`);
+      expect(getRes.status).toBe(404);
+    });
+    it('returns 404 for non-existent ID', async () => {
+      const res = await request(app.server).delete('/items/nonexistent-9999');
+
+      expect(res.status).toBe(404);
+      expect(res.body).toHaveProperty('error');
+    });
   });
 
   // ============================================
   // Group 6: Full CRUD flow
   // ============================================
   describe('Full CRUD flow', () => {
-    it.todo('full lifecycle: POST → GET → PATCH price → GET (verify update) → DELETE → GET (404)');
+    it('full lifecycle: POST → GET → PATCH price → GET (verify update) → DELETE → GET (404)', async () => {
+      // POST
+      const createRes = await request(app.server)
+        .post('/items')
+        .send({
+          name: 'Lifecycle Item',
+          description: 'Full lifecycle test',
+          price: 50,
+          category: 'lifecycle',
+        });
+      expect(createRes.status).toBe(201);
+      const { id } = createRes.body;
+
+      // GET
+      const getRes = await request(app.server).get(`/items/${id}`);
+      expect(getRes.status).toBe(200);
+      expect(getRes.body.price).toBe(50);
+
+      // PATCH price
+      const patchRes = await request(app.server).patch(`/items/${id}`).send({ price: 75 });
+      expect(patchRes.status).toBe(200);
+      expect(patchRes.body.price).toBe(75);
+
+      // GET to verify update
+      const getUpdatedRes = await request(app.server).get(`/items/${id}`);
+      expect(getUpdatedRes.status).toBe(200);
+      expect(getUpdatedRes.body.price).toBe(75);
+
+      // DELETE
+      const deleteRes = await request(app.server).delete(`/items/${id}`);
+      expect(deleteRes.status).toBe(204);
+
+      // GET → 404
+      const getDeletedRes = await request(app.server).get(`/items/${id}`);
+      expect(getDeletedRes.status).toBe(404);
+    });
   });
 });
