@@ -7,6 +7,40 @@
      - Apply box-sizing: border-box to all elements
      - Remove default margin/padding from body
      - Set font-family to system-ui, sans-serif
+*/
+:root {
+  --color-bg: #f5f5f5;
+  --color-bg-light: #fff;
+  --color-primary: #2d5a27;
+  --color-primary-dark: #1d3b19;
+  --color-secondary: #cde6ca;
+  --color-tertiary: #c0392b;
+  --color-text: #666;
+  --color-text-light: #fff;
+  --box-shadow: rgba(51, 51, 51, 0.3);
+  --box-shadow-hover: rgba(51, 51, 51, 0.6);
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 1rem;
+  --space-4: 1.5rem;
+  --space-5: 2rem;
+  --width-content: 1280px;
+  --transition: all 0.3 ease-in;
+}
+
+*,
+*:before,
+*:after {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: system-ui, sans-serif;
+  font-size: 16px;
+  background-color: var(--color-bg);
+  margin: 0;
+}
+/*
 
   2. NAVBAR (.navbar)
      - Background: dark green (#2d5a27)
@@ -16,20 +50,42 @@
      - Position: sticky, top: 0 (stays at top on scroll)
      - z-index: 100 (above other content)
      - Flex-wrap: wrap (so links can drop below on mobile)
-
+*/
+.navbar {
+  background-color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  padding-inline: var(--space-4);
+}
+/*
   3. LOGO (.navbar-logo)
      - Color: white
      - Font-size: 1.25rem
      - Font-weight: bold
      - Text-decoration: none
      - Padding: 1rem 0
-
+*/
+.navbar-logo {
+  color: var(--color-text-light);
+  font-size: 1.25rem;
+  font-weight: bold;
+  text-decoration: none;
+  padding: var(--space-3) 0;
+}
+/*
   4. NAV LINKS (.navbar-links)
      - List-style: none
      - Display: flex
      - Gap: 0.25rem
      - Margin-left: auto (pushes links to the right)
-
+*/
+.navbar-links {
+  list-style: none;
+  display: flex;
+  gap: 0.25rem;
+  margin-left: auto;
+}
+/*
   5. INDIVIDUAL LINKS (.nav-link)
      - Color: #cde6ca (light green)
      - Text-decoration: none
@@ -37,12 +93,35 @@
      - Border-radius: 4px
      - Transition: background-color and color
      - On hover: background rgba(255,255,255,0.1), color white
+*/
+.nav-link {
+  color: var(--color-secondary);
+  text-decoration: none;
+  padding: var(--space-2) var(--space-3);
+  border-radius: 4px;
+  transition: var(--transition);
+}
 
+.nav-link:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--color-text-light);
+}
+/*
   6. CTA LINK (.nav-link-cta)
      - Background: #c0392b (red)
      - Color: white
      - On hover: background #e74c3c
+*/
+.nav-link-cta {
+  background-color: var(--color-tertiary);
+  color: var(--color-text-light);
+  transition: var(--transition);
+}
 
+.nav-link-cta:hover {
+  background-color: #e74c3c;
+}
+/*
   7. HAMBURGER TOGGLE (CSS-only, no JavaScript)
      - The <input type="checkbox"> (.nav-toggle) should be hidden (display: none)
      - The <label> (.nav-toggle-label) should also be hidden on desktop (display: none)
@@ -51,7 +130,54 @@
        for the top and bottom bars.
      - Each bar: width 24px, height 2px, background white
      - Space the bars vertically using transform: translateY()
+*/
+.nav-toggle,
+.nav-toggle-label {
+  display: none;
+  position: relative;
+  width: 24px;
+  height: 24px;
+}
 
+.hamburger {
+  display: flex;
+  position: absolute;
+  width: 24px;
+  height: 2px;
+  top: 50%;
+  left: 50%;
+  margin-top: -1px;
+  margin-left: -50%;
+  aspect-ratio: 1;
+}
+
+.hamburger:before,
+.hamburger:after {
+  content: '';
+  height: 2px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  margin-left: -12px;
+  margin-top: -1px;
+}
+
+.hamburger,
+.hamburger:before,
+.hamburger:after {
+  display: block;
+  background-color: var(--color-bg-light);
+}
+
+.hamburger:before {
+  margin-top: -10px;
+}
+
+.hamburger:after {
+  margin-top: 8px;
+}
+/*
   8. MOBILE LAYOUT (max-width: 768px)
      - Show the hamburger label (display: block)
      - .navbar-links:
@@ -63,7 +189,52 @@
        .nav-toggle:checked ~ .navbar-links { max-height: 300px; }
        This reveals the links menu
      - Each .nav-link on mobile should be full-width with more padding
+*/
+@media (max-width: 768px) {
+  .navbar {
+    position: relative;
+  }
 
+  .nav-toggle-label {
+    display: block;
+    margin-left: auto;
+  }
+
+  .navbar-links {
+    flex-basis: 100%;
+    flex-direction: column;
+    gap: 1rem;
+    max-height: 0;
+    overflow: hidden;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100vw;
+    margin: 0;
+    padding: var(--space-3);
+    background-color: var(--color-primary);
+  }
+
+  .nav-toggle:checked ~ .navbar-links {
+    max-height: 300px;
+    animation: slide-in 0.3s linear;
+  }
+
+  .nav-link {
+    display: block;
+    width: 100%;
+  }
+}
+
+@keyframes slide-in {
+  from {
+    height: 0px;
+  }
+  to {
+    height: 300px;
+  }
+}
+/*
   Hints:
   - The checkbox hack: a hidden <input type="checkbox"> + <label for="...">
     lets you toggle state with pure CSS using the :checked pseudo-class
