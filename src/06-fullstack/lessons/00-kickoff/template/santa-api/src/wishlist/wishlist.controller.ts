@@ -4,7 +4,7 @@ import {
   Get,
   NotFoundException,
   Param,
-  Post,
+  Put,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -29,31 +29,25 @@ import type { Wishlist } from './wishlist.types';
 export class WishlistController {
   constructor(private readonly wishlistService: WishlistService) {}
 
-  @Post()
+  @Put()
   @ApiOperation({
-    summary: 'Replace user wishlist',
-    description: 'Creates or replaces user wishlist items for selected room.',
+    summary: "Set the current user's wishlist for a room",
+    description: 'Creates or replaces the authenticated user wishlist items.',
   })
   @ApiParam({
     name: 'roomId',
-    description: 'Room identifier that owns wishlist',
+    description: 'Room identifier that owns the wishlist',
     example: '665f0c2ab7d13a5e8b1c4d9f',
   })
   @ApiBody({ type: UpdateWishlistDto })
   @ApiResponse({
-    status: 201,
+    status: 200,
     description: 'Wishlist saved successfully',
     type: WishlistResponseDto,
   })
-  @ApiResponse({
-    status: 400,
-    description: 'Validation failed for one or more wishlist items',
-  })
-  @ApiResponse({
-    status: 401,
-    description: 'Unauthorized',
-  })
-  update(
+  @ApiResponse({ status: 400, description: 'Validation failed' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  set(
     @Param('roomId') roomId: string,
     @CurrentUser('id') userId: string,
     @Body() body: UpdateWishlistDto,
@@ -61,32 +55,23 @@ export class WishlistController {
     return this.wishlistService.set(roomId, userId, body.items);
   }
 
-  @Get('me')
+  @Get(':userId')
   @ApiOperation({
-    summary: 'Get the current user wishlist for a room',
-    description: 'Returns authenticated user wishlist items for selected room.',
+    summary: "Get a user's wishlist for a room",
+    description: 'Returns the wishlist items for the given user in the room.',
   })
-  @ApiParam({
-    name: 'roomId',
-    description: 'Room identifier that owns wishlist',
-    example: '665f0c2ab7d13a5e8b1c4d9f',
-  })
+  @ApiParam({ name: 'roomId', example: '665f0c2ab7d13a5e8b1c4d9f' })
+  @ApiParam({ name: 'userId', example: '665f0c2ab7d13a5e8b1c4d1a' })
   @ApiResponse({
     status: 200,
     description: 'Wishlist returned successfully',
     type: WishlistResponseDto,
   })
-  @ApiResponse({
-    status: 401,
-    description: 'Unauthorized',
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Wishlist was not found for current user in this room',
-  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Wishlist not found' })
   async findOne(
     @Param('roomId') roomId: string,
-    @CurrentUser('id') userId: string,
+    @Param('userId') userId: string,
   ): Promise<Wishlist> {
     const wishlist = await this.wishlistService.get(roomId, userId);
 

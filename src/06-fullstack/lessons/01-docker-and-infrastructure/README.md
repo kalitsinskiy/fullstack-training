@@ -49,7 +49,7 @@ A Dockerfile is a text file with instructions that tell Docker how to build an i
 
 ```dockerfile
 # Base image
-FROM node:20-alpine
+FROM node:22-alpine
 
 # Set working directory inside the container
 WORKDIR /app
@@ -77,7 +77,7 @@ CMD ["node", "dist/main.js"]
 
 | Instruction | Purpose |
 |-------------|---------|
-| `FROM` | Sets the base image (e.g., `node:20-alpine` for a slim Node.js image) |
+| `FROM` | Sets the base image (e.g., `node:22-alpine` for a slim Node.js image) |
 | `WORKDIR` | Sets the working directory for subsequent instructions |
 | `COPY` | Copies files from host into the image |
 | `RUN` | Executes a command during the build (e.g., `npm ci`) |
@@ -107,7 +107,7 @@ A multi-stage build uses multiple `FROM` instructions. Each stage starts fresh, 
 
 ```dockerfile
 # ---------- Stage 1: Build ----------
-FROM node:20-alpine AS build
+FROM node:22-alpine AS build
 
 WORKDIR /app
 COPY package.json package-lock.json ./
@@ -116,11 +116,11 @@ COPY . .
 RUN npm run build
 
 # ---------- Stage 2: Production ----------
-FROM node:20-alpine AS production
+FROM node:22-alpine AS production
 
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci --only=production
+RUN npm ci --omit=dev
 COPY --from=build /app/dist ./dist
 
 EXPOSE 3001
@@ -159,7 +159,7 @@ services:
       mongo:
         condition: service_healthy
     environment:
-      - MONGO_URI=mongodb://mongo:27017/santa
+      - MONGO_URL=mongodb://mongo:27017/santa
 
 volumes:
   mongo-data:
@@ -202,17 +202,17 @@ The volume `mongo-data` persists even when the container is destroyed. When you 
 
 Create `santa-api/Dockerfile` with a multi-stage build:
 
-1. **Build stage** (`node:20-alpine AS build`):
+1. **Build stage** (`node:22-alpine AS build`):
    - Set `WORKDIR /app`
    - Copy `package.json` and `package-lock.json`
    - Run `npm ci` to install all dependencies (including dev)
    - Copy the rest of the source code
    - Run `npm run build` to compile TypeScript
 
-2. **Production stage** (`node:20-alpine`):
+2. **Production stage** (`node:22-alpine`):
    - Set `WORKDIR /app`
    - Copy `package.json` and `package-lock.json`
-   - Run `npm ci --only=production` (only production dependencies)
+   - Run `npm ci --omit=dev` (only production dependencies)
    - Copy the compiled `dist/` folder from the build stage
    - Expose port `3001`
    - Set `CMD` to `["node", "dist/main.js"]`
@@ -270,7 +270,7 @@ fastify.get('/health', async () => {
 Create `docker-compose.yml` at the **repository root** with three services:
 
 1. **mongo**
-   - Image: `mongo:7`
+   - Image: `mongo:8`
    - Port: `27017:27017`
    - Named volume: `mongo-data:/data/db`
    - Healthcheck: use `mongosh --quiet` to ping the database
@@ -278,16 +278,16 @@ Create `docker-compose.yml` at the **repository root** with three services:
 2. **santa-api**
    - Build from `./santa-api/Dockerfile`
    - Port: `3001:3001`
-   - Environment: `MONGO_URI=mongodb://mongo:27017/santa`, `PORT=3001`, `NODE_ENV=production`
+   - Environment: `MONGO_URL=mongodb://mongo:27017/santa`, `PORT=3001`, `NODE_ENV=production`
    - Depends on `mongo` (with `condition: service_healthy`)
-   - Healthcheck: `curl -f http://localhost:3001/health || exit 1`
+   - Healthcheck: `wget -qO- http://localhost:3001/health || exit 1`
 
 3. **santa-notifications**
    - Build from `./santa-notifications/Dockerfile`
    - Port: `3002:3002`
-   - Environment: `MONGO_URI=mongodb://mongo:27017/santa`, `PORT=3002`, `NODE_ENV=production`
+   - Environment: `MONGO_URL=mongodb://mongo:27017/santa`, `PORT=3002`, `NODE_ENV=production`
    - Depends on `mongo` (with `condition: service_healthy`)
-   - Healthcheck: `curl -f http://localhost:3002/health || exit 1`
+   - Healthcheck: `wget -qO- http://localhost:3002/health || exit 1`
 
 4. **Volumes section**: define `mongo-data`
 
@@ -338,6 +338,6 @@ docker-compose down -v
 
 **Troubleshooting tips:**
 
-- If a service fails to connect to MongoDB, make sure you are using `mongo` (the service name) not `localhost` in the `MONGO_URI`.
+- If a service fails to connect to MongoDB, make sure you are using `mongo` (the service name) not `localhost` in the `MONGO_URL`.
 - If the build is slow, check that `.dockerignore` excludes `node_modules`.
 - If ports are already in use, stop local instances of the services first.

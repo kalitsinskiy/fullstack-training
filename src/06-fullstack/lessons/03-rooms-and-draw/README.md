@@ -4,13 +4,13 @@
 
 The heart of Secret Santa is the **draw** -- randomly assigning each participant to another participant such that nobody draws themselves. This is a classic computer science problem called a **derangement** (a permutation with no fixed points).
 
-Beyond the algorithm, the draw must be **atomic**: either all assignments are saved to the database, or none are. If the server crashes mid-save, you should not end up with half the participants assigned and half not. MongoDB transactions give you this guarantee.
+Beyond the algorithm, the draw must be **atomic**: either all assignments are saved to the database, or none are. If the server crashes mid-save, you should not end up with half the participants assigned and half not. A single-document update gives you this guarantee for free: store the assignments **inside the Room document** and save them in one write — a single-document write in MongoDB is atomic, with no transaction or replica set needed.
 
 By the end of this lesson you will have:
 
-- An Assignment schema in MongoDB
+- An `assignments` array on the Room schema
 - A draw endpoint that uses a derangement algorithm
-- Atomic saving of all assignments using a MongoDB transaction
+- Atomic saving of all assignments via a single-document update (no transaction needed)
 - Frontend UI for triggering the draw and viewing your assignment
 
 ---
@@ -111,9 +111,28 @@ function generateAssignments(participantIds: string[], roomId: string): Assignme
 }
 ```
 
-### 5. MongoDB Transactions
+### 5. Atomicity — the simple way (single-document write)
 
-MongoDB supports multi-document transactions (on replica sets). A transaction groups multiple operations into an atomic unit: either all succeed, or all are rolled back.
+The draw must be all-or-nothing. The simplest way to get that: store the
+assignments **as an array on the Room document** and write them with one
+`findByIdAndUpdate` (set `status` and `assignments` in the same call). A
+single-document update in MongoDB is **atomic by definition** — no transaction,
+no replica set needed. This is what the reference does:
+
+```typescript
+await this.roomModel.findByIdAndUpdate(
+  roomId,
+  { status: 'drawn', drawDate: new Date(), assignments },
+  { new: true },
+);
+```
+
+#### (Optional) When you'd reach for a transaction
+
+If you stored assignments in a *separate* collection instead, you'd write
+multiple documents and would need a multi-document **transaction** (which
+requires a replica set) to keep them atomic. Worth knowing — shown below — but
+**not needed for this lesson**.
 
 ```typescript
 const session = await mongoose.startSession();
@@ -146,9 +165,9 @@ try {
 - If any operation fails, `abortTransaction()` undoes all changes.
 - MongoDB transactions require a **replica set**. For local development, you can use `mongodb-memory-server` with `--replSet` or run a single-node replica set in Docker.
 
-### 6. Running MongoDB as a Replica Set in Docker
+### 6. (Optional) Running MongoDB as a Replica Set in Docker
 
-Transactions require a replica set. Update your Docker Compose mongo service:
+*Only needed if you took the optional transaction route above.* Transactions require a replica set — update your Docker Compose mongo service:
 
 ```yaml
 mongo:
@@ -196,21 +215,20 @@ if (room.createdBy.toString() !== userId) {
 
 ## Task
 
-### Step 1: Create the Assignment schema
+### Step 1: Add assignments to the Room schema
 
-In **santa-api**, create a new Mongoose schema and module for assignments:
+In **santa-api**, store the draw result **on the Room document** — an
+`assignments` array of `{ giverId, receiverId }` pairs (both `ObjectId`, ref
+`User`), plus a `status` field and an optional `drawDate`. Writing the whole
+array in one update keeps the draw atomic without a separate collection or a
+transaction.
 
 ```typescript
-// Schema fields:
-// - giverId:    ObjectId (ref: 'User'), required
-// - receiverId: ObjectId (ref: 'User'), required
-// - roomId:     ObjectId (ref: 'Room'), required
-// - timestamps: true
+// Room schema additions:
+// - status:      'pending' | 'drawn'  (default 'pending')
+// - drawDate?:   Date
+// - assignments: [{ giverId: ObjectId<User>, receiverId: ObjectId<User> }]
 ```
-
-Create the corresponding NestJS module (`AssignmentModule`), service, and controller. Register it in `AppModule`.
-
-Add a compound index on `{ roomId, giverId }` to ensure one assignment per giver per room.
 
 ### Step 2: Implement the derangement algorithm
 
@@ -233,13 +251,12 @@ Create the draw endpoint in your rooms or assignments controller:
    - Room must have at least 3 participants
    - Room status must not be "drawn" already
 3. **Generate assignments** using the derangement function.
-4. **Save atomically** using a MongoDB transaction:
-   - Insert all assignment documents
-   - Update room status to "drawn"
-   - If anything fails, abort the transaction
-5. **Return** the created assignments (or just a success message).
+4. **Save atomically** with one `findByIdAndUpdate` — set `status: 'drawn'`,
+   `drawDate`, and the `assignments` array in the same call. A single-document
+   write is atomic, so there is nothing to roll back.
+5. **Return** the updated room (or just a success message).
 
-Update your Room schema to include a `status` field if it does not have one already (`'open' | 'drawn'`, default `'open'`).
+Make sure your Room schema has a `status` field (`'pending' | 'drawn'`, default `'pending'`).
 
 ### Step 4: Implement GET /rooms/:id/assignment
 
@@ -279,13 +296,12 @@ In **santa-app**, on the room detail page:
 
 4. **Handle errors**: Show user-friendly messages for cases like "not enough participants" or "draw already performed."
 
-### Step 6: Ensure MongoDB replica set for transactions
+### Step 6: Verify the draw is atomic
 
-Update your `docker-compose.yml` to run MongoDB as a replica set (see Key Concepts section 6). This is required for transactions to work.
-
-If you are developing locally without Docker, you can:
-- Use `mongodb-memory-server` with replica set mode in tests
-- Or run `mongosh` and execute `rs.initiate()` on a local MongoDB started with `--replSet rs0`
+No replica set needed — the single `findByIdAndUpdate` is atomic on a standalone
+MongoDB. Sanity-check: trigger the draw, confirm `status` flips to `drawn` and
+every participant has exactly one assignment (and nobody draws themselves);
+trigger it again and confirm it is rejected (already drawn).
 
 ---
 

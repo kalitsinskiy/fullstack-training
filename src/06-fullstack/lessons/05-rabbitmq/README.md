@@ -230,7 +230,7 @@ Add a RabbitMQ service with the management plugin (provides a web UI):
 
 ```yaml
 rabbitmq:
-  image: rabbitmq:3-management-alpine
+  image: rabbitmq:4-management-alpine
   ports:
     - '5672:5672'    # AMQP protocol
     - '15672:15672'  # Management UI
