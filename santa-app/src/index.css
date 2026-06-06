@@ -1,111 +1,88 @@
-:root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+@import 'tailwindcss';
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+@theme {
+  /* Brand palette — light-theme defaults */
+  /* Darker greens: better contrast on white surfaces */
+  --color-brand: #16a34a; /* green-600  →  bg-brand, text-brand */
+  --color-brand-dark: #15803d; /* green-700  →  gradient start */
+  --color-brand-warm: #22c55e; /* green-500  →  gradient end */
+  --color-brand-soft: #16a34a; /* green-600  →  legend text, links */
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  /* Page & card surfaces */
+  --color-page: #f4f7f4; /* very light green-tinted white  →  bg-page */
+  --color-surface: #ffffff; /* card face  →  bg-surface */
 
-  @media (max-width: 1024px) {
-    font-size: 16px;
+  /* Border */
+  /* border-white/8 was invisible on white; this flips to a subtle dark edge */
+  --color-edge: rgba(0, 0, 0, 0.09); /*  →  border-edge, border-b-edge */
+
+  /* Text */
+  --color-fg: #111827; /* body / heading text  →  text-fg */
+  --color-muted: #6b7280; /* labels, meta  →  text-muted */
+  --color-dim: #9ca3af; /* placeholders  →  text-dim */
+  --color-subdued: #9ca3af; /* footer / helper text →  text-subdued */
+
+  /* h2 gradient endpoint — dark text keeps gradient visible on light bg */
+  --color-gradient-end: #111827; /*  →  to-gradient-end */
+
+  /* Status badges — light theme (accessible contrast on white) */
+  --color-pending-bg: rgba(163, 230, 53, 0.18);
+  --color-pending-text: #4d7c0f; /* lime-700 */
+  --color-drawn-bg: rgba(74, 222, 128, 0.18);
+  --color-drawn-text: #15803d; /* green-700 */
+  --color-closed-bg: rgba(113, 113, 122, 0.12);
+  --color-closed-text: #52525b; /* zinc-600 */
+
+  /* Radiuses */
+  --radius-card: 1rem;
+  --radius-base: 0.625rem;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-page);
+    background-image: var(--body-bg-gradient, none); /* glow injected by dark mode */
+    color: var(--color-fg);
+    font-family: -apple-system, BlinkMacSystemFont, 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+    line-height: 1.6;
   }
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
+  /* Dark mode — toggle by adding data-theme="dark" to <html> */
+  [data-theme='dark'] {
+    /* Brand — brighter neon reads well on dark surfaces */
+    --color-brand: #4ade80; /* green-400 */
+    --color-brand-dark: #16a34a; /* green-600 */
+    --color-brand-warm: #a3e635; /* lime-400  */
+    --color-brand-soft: #86efac; /* green-300 */
+
+    --color-page: #060e06;
+    --color-surface: rgba(255, 255, 255, 0.02);
+    --color-edge: rgba(255, 255, 255, 0.08);
+
+    --color-fg: #ffffff;
+    --color-muted: #b8c4b8;
+    --color-dim: #3d5a3d;
+    --color-subdued: #6b8a6b;
+
+    --color-gradient-end: #ffffff;
+
+    /* Badges — neon on dark bg */
+    --color-pending-bg: rgba(163, 230, 53, 0.12);
+    --color-pending-text: #a3e635;
+    --color-drawn-bg: rgba(74, 222, 128, 0.12);
+    --color-drawn-text: #4ade80;
+    --color-closed-bg: rgba(113, 113, 122, 0.12);
+    --color-closed-text: #71717a;
+
+    /* Decorative green glow behind the page in dark mode */
+    --body-bg-gradient: radial-gradient(
+      ellipse 80% 50% at 50% -10%,
+      rgba(74, 222, 128, 0.15),
+      transparent 60%
+    );
   }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
-}
-
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-}
-
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
-}
-
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
-p {
-  margin: 0;
-}
-
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
-}
-
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
 }
