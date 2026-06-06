@@ -46,7 +46,6 @@ A complete Secret Santa application with two backend microservices, a React fron
 
 Each lesson contains:
 - **README.md** — Theory for new concepts + step-by-step app task
-- **QUESTIONS.md** — Evaluation questions
 
 Unlike blocks 04-05, there are no separate exercises — the app **is** the exercise. You implement features directly in the three app projects.
 
@@ -54,6 +53,7 @@ Unlike blocks 04-05, there are no separate exercises — the app **is** the exer
 
 | #  | Topic | New Technology | What You Build |
 |----|-------|---------------|----------------|
+| 00 | [Kickoff](lessons/00-kickoff/) | — (onboarding) | Whole stack running locally, mockups reviewed, starting point chosen |
 | 01 | [Docker & Infrastructure](lessons/01-docker-and-infrastructure/) | Docker, Dockerfile, docker-compose | Dockerfiles for both backends, docker-compose with MongoDB |
 | 02 | [Environment & Config](lessons/02-environment-and-config/) | dotenv, config validation, 12-factor | EnvService for both backends, .env files, Vite env vars |
 | 03 | [Rooms & Draw](lessons/03-rooms-and-draw/) | Derangement algorithm, MongoDB transactions | Draw endpoint, assignments, atomic transaction, draw UI |
@@ -109,5 +109,4 @@ santa-app     — port 5173 (Vite dev server, runs locally)
 1. Read the lesson **README.md** — understand the new concept
 2. Follow the **step-by-step task** — implement the feature in the real apps
 3. Test your implementation — run the apps, verify with curl/Postman/browser
-4. Answer **QUESTIONS.md** for self-evaluation
-5. Commit your progress
+4. Commit your progress
