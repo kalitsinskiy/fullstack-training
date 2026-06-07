@@ -8,6 +8,12 @@ interface JwtPayload {
   role: string;
 }
 
+interface UserPayload {
+  id: string;
+  email: string;
+  role: string;
+}
+
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor() {
@@ -22,11 +28,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: JwtPayload) {
+  async validate(payload: JwtPayload): Promise<UserPayload> {
+    // in a real app, you might want to validate the user exists in the database here
+    // const user = await this.usersService.findById(payload.sub);
+    await new Promise((resolve) => setTimeout(resolve, 1));
+
     if (!payload.sub) {
       throw new UnauthorizedException('Invalid token payload');
     }
-    // This object becomes request.user for the duration of the request
     return { id: payload.sub, email: payload.email, role: payload.role };
   }
 }

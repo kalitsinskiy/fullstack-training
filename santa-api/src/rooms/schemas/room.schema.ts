@@ -22,6 +22,9 @@ export class Room {
 
   @Prop()
   drawDate?: Date;
+
+  @Prop({ type: Map, of: String })
+  assignments?: Map<string, string>;
 }
 
 export const RoomSchema = SchemaFactory.createForClass(Room);

@@ -9,6 +9,12 @@ import { UsersService } from '../users/users.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 
+export interface IUser {
+  _id: any;
+  email: string;
+  role: string;
+}
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -23,6 +29,7 @@ export class AuthService {
     }
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
+
     const user = await this.usersService.create({
       email: dto.email.toLowerCase(),
       passwordHash,
@@ -30,8 +37,9 @@ export class AuthService {
     });
 
     const accessToken = this.sign(user);
+
     return {
-      id: (user._id as object).toString(),
+      id: String(user._id),
       email: user.email,
       displayName: user.displayName,
       accessToken,
@@ -39,12 +47,10 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
-    // withPassword: true overrides schema's select: false for this query only
     const user = await this.usersService.findByEmail(dto.email, {
       withPassword: true,
     });
 
-    // Same error for "no account" and "wrong password" — prevents email enumeration
     const isValid =
       user && (await bcrypt.compare(dto.password, user.passwordHash));
     if (!isValid) {
@@ -54,9 +60,11 @@ export class AuthService {
     return { accessToken: this.sign(user) };
   }
 
-  private sign(user: { _id: unknown; email: string; role: string }): string {
+  private sign(user: IUser): string {
+    const sub = String(user._id);
+
     return this.jwtService.sign({
-      sub: (user._id as object).toString(),
+      sub,
       email: user.email,
       role: user.role,
     });

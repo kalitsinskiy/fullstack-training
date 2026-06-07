@@ -32,10 +32,11 @@ describe('WishlistController', () => {
       };
       mockService.set.mockResolvedValue(mockWishlist);
 
-      const result = await controller.set('507f1f77bcf86cd799439011', {
-        userId: '507f1f77bcf86cd799439012',
-        items: [{ name: 'toy car' }, { name: 'book' }],
-      });
+      const result = await controller.set(
+        '507f1f77bcf86cd799439011',
+        '507f1f77bcf86cd799439012',
+        { items: [{ name: 'toy car' }, { name: 'book' }] },
+      );
 
       expect(result).toEqual(mockWishlist);
     });

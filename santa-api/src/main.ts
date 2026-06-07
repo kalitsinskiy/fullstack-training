@@ -34,6 +34,8 @@ async function bootstrap() {
     }),
   );
 
+  app.setGlobalPrefix('api');
+
   await app.register(helmet, {
     contentSecurityPolicy: {
       directives: {
@@ -76,4 +78,5 @@ async function bootstrap() {
 
   await app.listen(process.env.PORT ?? 3001, '0.0.0.0');
 }
+
 bootstrap();

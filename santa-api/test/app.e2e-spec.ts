@@ -1,29 +1,37 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
-import request from 'supertest';
-import { App } from 'supertest/types';
-import { AppModule } from './../src/app.module';
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  beforeEach,
+  afterEach,
+} from '@jest/globals';
+import { NestFastifyApplication } from '@nestjs/platform-fastify';
+import { Connection } from 'mongoose';
+import { createTestApp } from './helpers/test-app.helper';
+import { get } from './helpers/api-request.helper';
 
 describe('AppController (e2e)', () => {
-  let app: INestApplication<App>;
+  let app: NestFastifyApplication;
+  let connection: Connection;
 
-  beforeEach(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    await app.init();
+  beforeAll(() => {
+    process.env.JWT_SECRET = 'app-e2e-test-secret';
   });
 
-  it('/ (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/')
-      .expect(200)
-      .expect('Hello World!');
+  beforeEach(async () => {
+    ({ app, connection } = await createTestApp());
+    await connection.dropDatabase();
   });
 
   afterEach(async () => {
     await app.close();
+  });
+
+  it('/ (GET)', async () => {
+    const res = await get(app, '/');
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toBe('Hello World!');
   });
 });

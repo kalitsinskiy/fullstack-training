@@ -5,8 +5,8 @@ import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 
 const mockService = {
-  create: jest.fn<() => Promise<any>>(),
   findById: jest.fn<() => Promise<any>>(),
+  updateById: jest.fn<() => Promise<any>>(),
 };
 
 describe('UsersController', () => {
@@ -23,21 +23,39 @@ describe('UsersController', () => {
     controller = module.get<UsersController>(UsersController);
   });
 
-  describe('create', () => {
-    it('should create and return a new user', async () => {
+  describe('getMe', () => {
+    it('should return the current user by id', async () => {
       const mockUser = {
         _id: '507f1f77bcf86cd799439011',
         email: 'alice@example.com',
-        displayName: 'Alice',
-        role: 'user',
       };
-      mockService.create.mockResolvedValue(mockUser);
+      mockService.findById.mockResolvedValue(mockUser);
 
-      const result = await controller.create({
-        name: 'Alice',
-        email: 'alice@example.com',
+      const result = await controller.getMe('507f1f77bcf86cd799439011');
+
+      expect(mockService.findById).toHaveBeenCalledWith(
+        '507f1f77bcf86cd799439011',
+      );
+      expect(result).toEqual(mockUser);
+    });
+  });
+
+  describe('updateMe', () => {
+    it('should update and return the current user', async () => {
+      const mockUser = {
+        _id: '507f1f77bcf86cd799439011',
+        displayName: 'Alice Updated',
+      };
+      mockService.updateById.mockResolvedValue(mockUser);
+
+      const result = await controller.updateMe('507f1f77bcf86cd799439011', {
+        displayName: 'Alice Updated',
       });
 
+      expect(mockService.updateById).toHaveBeenCalledWith(
+        '507f1f77bcf86cd799439011',
+        { displayName: 'Alice Updated' },
+      );
       expect(result).toEqual(mockUser);
     });
   });

@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  ForbiddenException,
   Get,
   NotFoundException,
   Param,
@@ -52,10 +53,15 @@ export class RoomsController {
   @ApiOperation({ summary: 'Get room by ID' })
   @ApiParam({ name: 'id', description: 'Room MongoDB ID' })
   @ApiResponse({ status: 200, description: 'Room found' })
+  @ApiResponse({ status: 403, description: 'Not a member of this room' })
   @ApiResponse({ status: 404, description: 'Room not found' })
-  async findOne(@Param('id') id: string) {
+  async findOne(@Param('id') id: string, @CurrentUser('id') userId: string) {
     const room = await this.roomsService.findById(id);
     if (!room) throw new NotFoundException('Room not found');
+    const isMember =
+      room.creatorId.toString() === userId ||
+      room.participants.some((p) => p.toString() === userId);
+    if (!isMember) throw new ForbiddenException('Access denied');
     return room;
   }
 
@@ -63,10 +69,28 @@ export class RoomsController {
   @ApiOperation({ summary: 'Join a room by invite code' })
   @ApiParam({ name: 'code', description: '6-character invite code' })
   @ApiResponse({ status: 201, description: 'Joined room successfully' })
+  @ApiResponse({ status: 403, description: 'Room is already drawn' })
   @ApiResponse({ status: 404, description: 'Room not found' })
-  async join(@Param('code') code: string, @CurrentUser('id') userId: string) {
-    const room = await this.roomsService.addMember(code, userId);
-    if (!room) throw new NotFoundException('Room not found');
-    return room;
+  join(@Param('code') code: string, @CurrentUser('id') userId: string) {
+    return this.roomsService.join(code, userId);
+  }
+
+  @Post(':id/draw')
+  @ApiOperation({
+    summary: 'Run the Secret Santa draw for a room (owner only)',
+  })
+  @ApiParam({ name: 'id', description: 'Room MongoDB ID' })
+  @ApiResponse({ status: 201, description: 'Draw completed' })
+  @ApiResponse({
+    status: 400,
+    description: 'Room already drawn or fewer than 3 participants',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Only the room owner can run the draw',
+  })
+  @ApiResponse({ status: 404, description: 'Room not found' })
+  draw(@Param('id') id: string, @CurrentUser('id') userId: string) {
+    return this.roomsService.draw(id, userId);
   }
 }
