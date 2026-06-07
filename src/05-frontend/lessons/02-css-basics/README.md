@@ -46,10 +46,18 @@ tag selectors    →  0,0,0,1    (lowest)
 Examples:
 
 ```css
-p { color: black; }                /* specificity: 0,0,0,1 */
-.intro { color: blue; }           /* specificity: 0,0,1,0 — wins over p */
-#hero { color: green; }           /* specificity: 0,1,0,0 — wins over .intro */
-p.intro { color: red; }           /* specificity: 0,0,1,1 — wins over .intro alone */
+p {
+  color: black;
+} /* specificity: 0,0,0,1 */
+.intro {
+  color: blue;
+} /* specificity: 0,0,1,0 — wins over p */
+#hero {
+  color: green;
+} /* specificity: 0,1,0,0 — wins over .intro */
+p.intro {
+  color: red;
+} /* specificity: 0,0,1,1 — wins over .intro alone */
 ```
 
 Rules at the **same specificity**: the last one in the source wins.
@@ -59,13 +67,14 @@ Rules at the **same specificity**: the last one in the source wins.
 ### Inheritance
 
 Some properties are inherited from parent to child (mostly text-related):
+
 - **Inherited**: `color`, `font-family`, `font-size`, `line-height`, `text-align`
 - **Not inherited**: `margin`, `padding`, `border`, `background`, `display`, `width`, `height`
 
 ```css
 body {
-  font-family: system-ui, sans-serif;  /* all children inherit this */
-  color: #333;                          /* most text inherits this color */
+  font-family: system-ui, sans-serif; /* all children inherit this */
+  color: #333; /* most text inherits this color */
 }
 ```
 
@@ -92,7 +101,11 @@ Every element is a box with four layers:
 
 ```css
 /* Default: box-sizing: content-box */
-.box { width: 200px; padding: 20px; border: 2px solid; }
+.box {
+  width: 200px;
+  padding: 20px;
+  border: 2px solid;
+}
 /*
    Rendered width = content + padding-left + padding-right + border-left + border-right
                   = 200       + 20           + 20            + 2            + 2
@@ -100,14 +113,21 @@ Every element is a box with four layers:
 */
 
 /* Fix: box-sizing: border-box — width INCLUDES padding and border */
-.box { width: 200px; padding: 20px; border: 2px solid; box-sizing: border-box; }
+.box {
+  width: 200px;
+  padding: 20px;
+  border: 2px solid;
+  box-sizing: border-box;
+}
 /* Rendered width: 200px  (padding + border are subtracted from content area) */
 ```
 
 Always use this reset at the top of your CSS:
 
 ```css
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 ```
@@ -117,13 +137,13 @@ Always use this reset at the top of your CSS:
 `display` decides **what kind of box** an element generates and **how its children are laid out**.
 
 ```css
-display: block;        /* full-width box, starts on a new line (div, p, h1) */
-display: inline;       /* flows with text, ignores width/height (span, a, strong) */
+display: block; /* full-width box, starts on a new line (div, p, h1) */
+display: inline; /* flows with text, ignores width/height (span, a, strong) */
 display: inline-block; /* sits inline like text, but respects width/height/padding */
-display: none;         /* removed from layout AND accessibility tree */
-display: flex;         /* turns this element into a flex container — see Flexbox section */
-display: grid;         /* turns this element into a grid container — see Grid section */
-display: contents;     /* element disappears as a box, but children stay in flow (rare, advanced) */
+display: none; /* removed from layout AND accessibility tree */
+display: flex; /* turns this element into a flex container — see Flexbox section */
+display: grid; /* turns this element into a grid container — see Grid section */
+display: contents; /* element disappears as a box, but children stay in flow (rare, advanced) */
 ```
 
 **`inline-block` use case** — buttons in a paragraph of text, badges next to a heading. You want it to flow with text but to respect `padding: 8px 16px`. Don't use it for layout — flex/grid are the modern answer.
@@ -133,37 +153,56 @@ display: contents;     /* element disappears as a box, but children stay in flow
 ### Positioning
 
 ```css
-position: static;    /* default — normal document flow, top/left/etc are IGNORED */
-position: relative;  /* offset from normal position via top/right/bottom/left — still takes its old space */
-position: absolute;  /* removed from flow; positioned relative to nearest positioned ancestor */
-position: fixed;     /* removed from flow; positioned relative to the viewport (stays on scroll) */
-position: sticky;    /* normal flow until scroll threshold, then "sticks" to that offset */
+position: static; /* default — normal document flow, top/left/etc are IGNORED */
+position: relative; /* offset from normal position via top/right/bottom/left — still takes its old space */
+position: absolute; /* removed from flow; positioned relative to nearest positioned ancestor */
+position: fixed; /* removed from flow; positioned relative to the viewport (stays on scroll) */
+position: sticky; /* normal flow until scroll threshold, then "sticks" to that offset */
 ```
 
 **`top` / `right` / `bottom` / `left` only work when `position` is something other than `static`.** They specify the distance from that edge of the **containing block** (the reference frame).
 
-| `position` | What is the reference? | What `top: 0` does |
-|---|---|---|
-| `relative` | The element's own normal position | Shift the element 0 from where it would naturally sit (so: same place, but `absolute` children can now anchor to it) |
-| `absolute` | Nearest **positioned ancestor** (or `<html>` if none) | Stick to the top edge of that ancestor |
-| `fixed` | The viewport | Stick to the top edge of the screen |
-| `sticky` | The nearest scroll container | When the element is about to scroll out, glue it `0` from the top of the scroll area |
+| `position` | What is the reference?                                | What `top: 0` does                                                                                                   |
+| ---------- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `relative` | The element's own normal position                     | Shift the element 0 from where it would naturally sit (so: same place, but `absolute` children can now anchor to it) |
+| `absolute` | Nearest **positioned ancestor** (or `<html>` if none) | Stick to the top edge of that ancestor                                                                               |
+| `fixed`    | The viewport                                          | Stick to the top edge of the screen                                                                                  |
+| `sticky`   | The nearest scroll container                          | When the element is about to scroll out, glue it `0` from the top of the scroll area                                 |
 
 **Common patterns:**
 
 ```css
 /* "Badge" in the corner of a card */
-.card { position: relative; }
-.card .badge { position: absolute; top: 8px; right: 8px; }
+.card {
+  position: relative;
+}
+.card .badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
 
 /* Modal overlay covering the screen */
-.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); }
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+}
 
 /* Sticky table header — stays visible while scrolling the table body */
-.table thead th { position: sticky; top: 0; background: white; z-index: 1; }
+.table thead th {
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 1;
+}
 
 /* Sticky page header — stays at top of viewport on long pages */
-.site-header { position: sticky; top: 0; z-index: 100; }
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
 ```
 
 > `inset: 0` is shorthand for `top: 0; right: 0; bottom: 0; left: 0` — the element fills its containing block.
@@ -176,38 +215,55 @@ Flexbox is a **one-dimensional** layout system — either a row or a column.
 /* Container properties */
 .container {
   display: flex;
-  flex-direction: row;           /* row (default) | column */
-  justify-content: center;       /* main axis: flex-start | center | flex-end | space-between | space-around | space-evenly */
-  align-items: center;           /* cross axis: flex-start | center | flex-end | stretch | baseline */
-  gap: 1rem;                     /* space between items */
-  flex-wrap: wrap;               /* allow items to wrap to next line */
+  flex-direction: row; /* row (default) | column */
+  justify-content: center; /* main axis: flex-start | center | flex-end | space-between | space-around | space-evenly */
+  align-items: center; /* cross axis: flex-start | center | flex-end | stretch | baseline */
+  gap: 1rem; /* space between items */
+  flex-wrap: wrap; /* allow items to wrap to next line */
 }
 
 /* Item properties */
 .item {
-  flex-grow: 1;     /* how much extra space this item absorbs (0 = don't grow) */
-  flex-shrink: 0;   /* how much this item shrinks when space is tight (0 = don't shrink) */
+  flex-grow: 1; /* how much extra space this item absorbs (0 = don't grow) */
+  flex-shrink: 0; /* how much this item shrinks when space is tight (0 = don't shrink) */
   flex-basis: 200px; /* initial size before growing/shrinking */
-  order: 2;         /* visual order (default 0) */
+  order: 2; /* visual order (default 0) */
 }
 
 /* Shorthand */
-.item { flex: 1; }            /* grow: 1, shrink: 1, basis: 0 */
-.item { flex: 0 0 200px; }    /* fixed 200px, no grow, no shrink */
+.item {
+  flex: 1;
+} /* grow: 1, shrink: 1, basis: 0 */
+.item {
+  flex: 0 0 200px;
+} /* fixed 200px, no grow, no shrink */
 ```
 
 Common patterns:
 
 ```css
 /* Center anything */
-.center { display: flex; justify-content: center; align-items: center; }
+.center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
 
 /* Space items evenly in a navbar */
-.navbar { display: flex; justify-content: space-between; align-items: center; }
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
 
 /* Equal-width columns */
-.columns { display: flex; gap: 1rem; }
-.columns > * { flex: 1; }
+.columns {
+  display: flex;
+  gap: 1rem;
+}
+.columns > * {
+  flex: 1;
+}
 ```
 
 ### CSS Grid
@@ -217,9 +273,9 @@ Grid is a **two-dimensional** layout system — rows and columns at the same tim
 ```css
 .grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);  /* 3 equal columns */
-  grid-template-rows: auto;               /* rows size to content */
-  gap: 1rem;                              /* space between cells */
+  grid-template-columns: repeat(3, 1fr); /* 3 equal columns */
+  grid-template-rows: auto; /* rows size to content */
+  gap: 1rem; /* space between cells */
 }
 ```
 
@@ -227,31 +283,40 @@ Key concepts:
 
 ```css
 /* Fixed + flexible columns */
-grid-template-columns: 250px 1fr;         /* sidebar(250px) + main(rest) */
+grid-template-columns: 250px 1fr; /* sidebar(250px) + main(rest) */
 
 /* Repeat with minmax for responsive grids */
 grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
 
 /* Place an item across multiple cells */
 .item {
-  grid-column: 1 / 3;  /* spans columns 1 and 2 */
-  grid-row: 1 / 2;     /* just row 1 */
+  grid-column: 1 / 3; /* spans columns 1 and 2 */
+  grid-row: 1 / 2; /* just row 1 */
 }
 
 /* Named areas */
 .layout {
   grid-template-areas:
-    "header header"
-    "sidebar main"
-    "footer footer";
+    'header header'
+    'sidebar main'
+    'footer footer';
 }
-.header  { grid-area: header; }
-.sidebar { grid-area: sidebar; }
-.main    { grid-area: main; }
-.footer  { grid-area: footer; }
+.header {
+  grid-area: header;
+}
+.sidebar {
+  grid-area: sidebar;
+}
+.main {
+  grid-area: main;
+}
+.footer {
+  grid-area: footer;
+}
 ```
 
 **Flexbox vs Grid:**
+
 - Use **Flexbox** for one-dimensional layouts (navbar, card row, centering)
 - Use **Grid** for two-dimensional layouts (page layout, dashboards, galleries)
 - They work well **together** — Grid for the page layout, Flexbox for components inside
@@ -288,17 +353,22 @@ max(50vw, 320px)                /* whichever is bigger */
 **em vs rem — the practical difference:**
 
 ```css
-html { font-size: 16px; }
-.parent { font-size: 20px; }
+html {
+  font-size: 16px;
+}
+.parent {
+  font-size: 20px;
+}
 .child {
-  padding-left: 2em;    /* 40px (2 × parent's 20px) */
-  margin-left: 2rem;    /* 32px (2 × root's 16px) — predictable everywhere */
+  padding-left: 2em; /* 40px (2 × parent's 20px) */
+  margin-left: 2rem; /* 32px (2 × root's 16px) — predictable everywhere */
 }
 ```
 
 Use `em` for things that should scale **with the local element** (e.g. button padding that scales with button text). Use `rem` for almost everything else — spacing, font-size, gaps — because it's not affected by parent font-size and stays consistent across the app.
 
 **Rule of thumb:**
+
 - `rem` — font sizes, padding, margins, gaps, border-radius (anything spacing-like)
 - `px` — borders (1px, 2px) and shadow blur radius
 - `%` or `fr` — layout widths inside a container
@@ -311,26 +381,37 @@ Centering used to be a meme. Now there are clean answers:
 
 ```css
 /* Horizontal center of a fixed-width block */
-.container { max-width: 1200px; margin-inline: auto; }
+.container {
+  max-width: 1200px;
+  margin-inline: auto;
+}
 
 /* Center text */
-.title { text-align: center; }
+.title {
+  text-align: center;
+}
 
 /* Center one item in both axes (FLEX) */
 .center {
   display: flex;
-  justify-content: center;   /* main axis */
-  align-items: center;       /* cross axis */
-  min-height: 100dvh;        /* fill viewport */
+  justify-content: center; /* main axis */
+  align-items: center; /* cross axis */
+  min-height: 100dvh; /* fill viewport */
 }
 
 /* Center one item in both axes (GRID — shorter) */
-.center { display: grid; place-items: center; min-height: 100dvh; }
+.center {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+}
 
 /* Absolute centering (used for modals, overlays) */
 .modal {
-  position: fixed; inset: 0;
-  display: grid; place-items: center;
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
 }
 ```
 
@@ -342,15 +423,15 @@ Define a value once, reuse it everywhere — and override it for theming. CSS va
 /* Define on :root (the <html> element) so they're inherited everywhere */
 :root {
   --color-primary: #2d5a27;
-  --color-danger:  #c0392b;
-  --color-bg:      #ffffff;
-  --color-text:    #333333;
+  --color-danger: #c0392b;
+  --color-bg: #ffffff;
+  --color-text: #333333;
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 1rem;
   --space-4: 1.5rem;
   --space-5: 2rem;
-  --radius:  0.5rem;
+  --radius: 0.5rem;
 }
 
 /* Use with var() */
@@ -362,13 +443,15 @@ Define a value once, reuse it everywhere — and override it for theming. CSS va
 }
 
 /* Theme switch — override on a different selector. All children update. */
-[data-theme="dark"] {
-  --color-bg:   #1a1a1a;
+[data-theme='dark'] {
+  --color-bg: #1a1a1a;
   --color-text: #f0f0f0;
 }
 
 /* Optional fallback if the variable isn't defined */
-.card { padding: var(--space-3, 1rem); }
+.card {
+  padding: var(--space-3, 1rem);
+}
 ```
 
 Then in HTML: `<html data-theme="dark">` flips the whole page. No JS needed (other than to toggle the attribute).
@@ -387,14 +470,20 @@ A "raw" button that doesn't react to hover or focus feels broken. Three primitiv
   border-radius: var(--radius);
   border: none;
   cursor: pointer;
-  transition: background-color 0.15s, transform 0.15s;
+  transition:
+    background-color 0.15s,
+    transform 0.15s;
 }
 
 /* Mouse hover */
-.button:hover { background: #1e3d1a; }
+.button:hover {
+  background: #1e3d1a;
+}
 
 /* Click — quick visual feedback */
-.button:active { transform: translateY(1px); }
+.button:active {
+  transform: translateY(1px);
+}
 
 /* Keyboard focus — only when navigating via keyboard, NOT on click */
 .button:focus-visible {
@@ -403,35 +492,55 @@ A "raw" button that doesn't react to hover or focus feels broken. Three primitiv
 }
 
 /* Disabled */
-.button:disabled { opacity: 0.5; cursor: not-allowed; }
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 ```
 
-**`:focus-visible` over `:focus`** — `:focus` highlights the element *every time* it gets focus, including after a mouse click. Most users find this ugly so devs disable it (`outline: none`) — which **removes keyboard navigation**. `:focus-visible` is the modern fix: outline only when the user is actually using the keyboard.
+**`:focus-visible` over `:focus`** — `:focus` highlights the element _every time_ it gets focus, including after a mouse click. Most users find this ugly so devs disable it (`outline: none`) — which **removes keyboard navigation**. `:focus-visible` is the modern fix: outline only when the user is actually using the keyboard.
 
 > **Never write `*:focus { outline: none; }` without a replacement.** That breaks keyboard accessibility for every interactive element on the page.
 
 **`transition`** — animate between two states. The shorthand is `property duration timing-function delay`:
 
 ```css
-.card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
-.card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+.card {
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
 ```
 
 For multi-step animations, use `@keyframes`:
 
 ```css
 @keyframes fade-in {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
-.toast { animation: fade-in 0.2s ease-out; }
+.toast {
+  animation: fade-in 0.2s ease-out;
+}
 ```
 
 **Respect `prefers-reduced-motion`** — some users disable animations system-wide for vestibular reasons:
 
 ```css
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
@@ -456,24 +565,28 @@ Write base CSS for the smallest screen, then use `min-width` queries to **add** 
 
 /* Tablet and up */
 @media (min-width: 768px) {
-  .grid { grid-template-columns: repeat(2, 1fr); }
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 /* Desktop and up */
 @media (min-width: 1024px) {
-  .grid { grid-template-columns: repeat(3, 1fr); }
+  .grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 ```
 
 **Why mobile-first**: smaller screens get less CSS (perf), and you're forced to prioritize content (UX). A typical breakpoint set:
 
-| Breakpoint | Why |
-|---|---|
-| `480px` | Large phones (landscape) |
-| `768px` | Tablets |
-| `1024px` | Small desktops |
-| `1280px` | Large desktops |
-| `1536px+` | XL displays |
+| Breakpoint | Why                      |
+| ---------- | ------------------------ |
+| `480px`    | Large phones (landscape) |
+| `768px`    | Tablets                  |
+| `1024px`   | Small desktops           |
+| `1280px`   | Large desktops           |
+| `1536px+`  | XL displays              |
 
 Tailwind uses `sm: 640px / md: 768px / lg: 1024px / xl: 1280px / 2xl: 1536px` — close but slightly different. Pick a set and stick with it.
 
@@ -482,12 +595,19 @@ Tailwind uses `sm: 640px / md: 768px / lg: 1024px / xl: 1280px / 2xl: 1536px` �
 Media queries react to the **viewport**. Container queries react to the **parent's size**. Same component on a wide page and inside a narrow sidebar can adapt independently:
 
 ```css
-.card-grid { container-type: inline-size; }
+.card-grid {
+  container-type: inline-size;
+}
 
-.card { display: flex; flex-direction: column; }
+.card {
+  display: flex;
+  flex-direction: column;
+}
 
 @container (min-width: 400px) {
-  .card { flex-direction: row; }   /* side-by-side when its container is wide enough */
+  .card {
+    flex-direction: row;
+  } /* side-by-side when its container is wide enough */
 }
 ```
 
@@ -501,10 +621,14 @@ Browser support is universal as of 2023. Use them.
 
 ```css
 /* Fluid type: 1rem on small screens, up to 1.5rem on large, scales smoothly */
-h1 { font-size: clamp(1.5rem, 1rem + 2vw, 2.5rem); }
+h1 {
+  font-size: clamp(1.5rem, 1rem + 2vw, 2.5rem);
+}
 
 /* Fluid container padding */
-.section { padding-inline: clamp(1rem, 5vw, 4rem); }
+.section {
+  padding-inline: clamp(1rem, 5vw, 4rem);
+}
 ```
 
 The middle value is the "ideal", the first is the floor, the last is the ceiling. Combine with media queries for complete responsive control: media queries for **layout breakpoints** (1 col → 2 col → 3 col), `clamp()` for **continuous sizing** (font, padding, gap).
@@ -514,8 +638,15 @@ The middle value is the "ideal", the first is the floor, the last is the ceiling
 Reserve image/video space without juggling padding hacks:
 
 ```css
-.video { aspect-ratio: 16 / 9; width: 100%; }
-.avatar { aspect-ratio: 1; width: 64px; border-radius: 50%; }
+.video {
+  aspect-ratio: 16 / 9;
+  width: 100%;
+}
+.avatar {
+  aspect-ratio: 1;
+  width: 64px;
+  border-radius: 50%;
+}
 ```
 
 #### Putting it together — a responsive card grid
@@ -535,28 +666,39 @@ That's it — no media queries, but it goes from 1 column on a 360px phone to 6+
 ### Colors
 
 ```css
-color: #333333;              /* hex (6 digits) */
-color: #333;                 /* hex shorthand (3 digits) */
-color: rgb(51 51 51);        /* rgb (modern space-separated syntax) */
-color: rgb(51 51 51 / 0.5);  /* rgb with alpha (50% opacity) */
-color: hsl(0 0% 20%);        /* hue, saturation, lightness */
-color: oklch(0.5 0.1 200);   /* OKLCH — perceptually uniform, used by Tailwind v4 */
+color: #333333; /* hex (6 digits) */
+color: #333; /* hex shorthand (3 digits) */
+color: rgb(51 51 51); /* rgb (modern space-separated syntax) */
+color: rgb(51 51 51 / 0.5); /* rgb with alpha (50% opacity) */
+color: hsl(0 0% 20%); /* hue, saturation, lightness */
+color: oklch(0.5 0.1 200); /* OKLCH — perceptually uniform, used by Tailwind v4 */
 ```
 
 ### Typography
 
 ```css
 body {
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  font-size: 16px;      /* base size — 1rem will equal this */
-  line-height: 1.6;     /* unitless — multiplier of font-size */
-  font-weight: 400;     /* 400 = normal, 700 = bold */
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  font-size: 16px; /* base size — 1rem will equal this */
+  line-height: 1.6; /* unitless — multiplier of font-size */
+  font-weight: 400; /* 400 = normal, 700 = bold */
 }
 
-h1 { font-size: 2rem; }     /* 32px if base is 16px */
-h2 { font-size: 1.5rem; }   /* 24px */
+h1 {
+  font-size: 2rem;
+} /* 32px if base is 16px */
+h2 {
+  font-size: 1.5rem;
+} /* 24px */
 
-.small { font-size: 0.875rem; }  /* 14px */
+.small {
+  font-size: 0.875rem;
+} /* 14px */
 ```
 
 ## Learn More
@@ -577,13 +719,16 @@ h2 { font-size: 1.5rem; }   /* 24px */
 ## How to Work
 
 1. **Study examples** — double-click to open in a browser, or via Vite dev server (recommended for live reload):
+
    ```bash
    cd santa-app && npm run dev
    # then open: http://localhost:5173/<path-to-example>
    # or: open src/05-frontend/lessons/02-css-basics/examples/box-model.html
    #     directly via file:// — works for static CSS demos.
    ```
+
    Files:
+
    ```
    src/05-frontend/lessons/02-css-basics/examples/box-model.html
    src/05-frontend/lessons/02-css-basics/examples/flexbox-layouts.html
@@ -591,6 +736,7 @@ h2 { font-size: 1.5rem; }   /* 24px */
    ```
 
 2. **Complete exercises** — open the `.css` file in your editor, follow the TODO comments, refresh the `.html` in your browser to verify:
+
    ```
    src/05-frontend/lessons/02-css-basics/exercises/card-layout.html
    src/05-frontend/lessons/02-css-basics/exercises/card-layout.css
@@ -609,7 +755,7 @@ Take the mockups you built in Lesson 01 (`santa-app/public/mockups/login.html` a
 ```html
 <head>
   ...
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css" />
 </head>
 ```
 
@@ -626,6 +772,7 @@ In `styles.css`:
 - **Responsive** — at the smallest screens (`@media (max-width: 480px)`), drop the form padding so it fits comfortably.
 
 **Verify:**
+
 - [ ] Open `http://localhost:5173/mockups/login.html` — form is centered, inputs styled, button shows hover effect
 - [ ] Tab through with the keyboard — focus outlines are visible (no hidden focus)
 - [ ] Resize browser to 360px wide — form still readable, no horizontal scrollbar
@@ -657,6 +804,7 @@ This works on every screen size — no media queries needed for the columns.
 **Status badge** — small rounded pill. Each status gets a different `background` + `color`. Use CSS variables for the three colors.
 
 **Verify:**
+
 - [ ] At 1400px viewport, you see 5+ columns
 - [ ] At 768px, you see 3 columns
 - [ ] At 360px, you see 1 column
