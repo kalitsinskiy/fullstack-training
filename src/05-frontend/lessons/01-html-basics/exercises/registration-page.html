@@ -51,5 +51,36 @@
       built-in validation when you click Submit with empty required fields
   -->
 
+  <header>
+    <h1>Secret Santa</h1>
+  </header>
+
+  <main>
+    <h2>Create Account</h2>
+  </main>
+
+  <form method="POST" action="/register">
+    <fieldset>
+      <legend>Account Details</legend>
+
+      <label for="full-name">Full Name:</label>
+      <input type="text" id="full-name" name="full-name" required>
+
+      <label for="email">Email Address:</label>
+      <input type="email" id="email" name="email" required>
+
+      <label for="password">Password:</label>
+      <input type="password" id="password" name="password" required minlength="8">
+
+      <label for="confirm-password">Confirm Password:</label>
+      <input type="password" id="confirm-password" name="confirm-password" required minlength="8">
+    </fieldset>
+
+    <button type="submit">Create Account</button>
+  </form>
+
+  <footer>
+    <p>Already have an account? <a href="login.html">Log in</a></p>
+  </footer>
 </body>
 </html>
