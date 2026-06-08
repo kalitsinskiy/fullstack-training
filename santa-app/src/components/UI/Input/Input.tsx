@@ -3,14 +3,10 @@ import { clsx } from 'clsx';
 
 interface InputProps extends React.ComponentPropsWithoutRef<'input'> {
   label: string;
+  error?: string;
 }
 
-export function Input({
-  label,
-  id: externalId,
-  className,
-  ...rest
-}: InputProps) {
+export function Input({ label, error, id: externalId, className, ...rest }: InputProps) {
   const autoId = useId();
   const id = externalId ?? autoId;
 
@@ -23,17 +19,21 @@ export function Input({
         id={id}
         className={clsx(
           'rounded-base w-full',
-          'border border-edge',
+          'border-edge border',
           'bg-surface px-4 py-[0.85rem]',
-          'font-[inherit] text-[0.95rem] text-fg',
+          'text-fg font-[inherit] text-[0.95rem]',
           'placeholder:text-dim',
           'transition-[border-color,box-shadow] outline-none',
-          'focus-visible:border-brand',
+          error
+            ? 'border-red-500 focus-visible:border-red-500 focus-visible:shadow-[0_0_0_3px_rgba(239,68,68,0.18)]'
+            : 'focus-visible:border-brand',
           'focus-visible:shadow-[0_0_0_3px_rgba(74,222,128,0.18)]',
-          className,
+          className
         )}
+        aria-invalid={!!error}
         {...rest}
       />
+      {error && <p className="text-[0.78rem] text-red-500">{error}</p>}
     </div>
   );
 }
