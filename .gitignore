@@ -40,5 +40,6 @@ next-env.d.ts
 QUESTIONS.md
 CANDIDATES.md
 
-
+coverage
+santa-api/test/coverage
 santa-api/coverage

@@ -92,50 +92,6 @@
       }
     </style>
   </head>
-  <!--
-    TODO: Build a user registration page with semantic HTML.
-
-    Requirements:
-
-    1. HEADER
-       - Add a <header> element
-       - Inside it, add an <h1> with the text "Secret Santa"
-
-    2. MAIN CONTENT
-       - Add a <main> element
-       - Inside it, add:
-         a) An <h2> with the text "Create Account"
-         b) A <form> with method="POST" and action="/register"
-         c) Inside the form, add a <fieldset> with <legend> "Account Details"
-         d) Inside the fieldset, add these labeled inputs:
-            - Full Name (type="text", required)
-            - Email Address (type="email", required)
-            - Password (type="password", required, minlength="8")
-            - Confirm Password (type="password", required, minlength="8")
-         e) Each input MUST have:
-            - A <label> element with a "for" attribute
-            - An "id" attribute matching the label's "for"
-            - A "name" attribute
-            - A "placeholder" attribute
-         f) A <button type="submit"> with text "Create Account"
-
-    3. FOOTER
-       - Add a <footer> element
-       - Inside it, add a <p> with text: "Already have an account?"
-         followed by an <a> link to "login.html" with text "Log in"
-
-    4. ACCESSIBILITY
-       - Make sure all inputs have labels
-       - Use semantic elements (header, main, footer, fieldset, legend)
-       - Add a descriptive <title> in the <head>
-
-    Hints:
-    - Look at examples/forms.html for form patterns
-    - Look at examples/semantic-page.html for page structure
-    - Open this file in a browser to test — the form should show
-      built-in validation when you click Submit with empty required fields
-  -->
-
   <body>
     <header>
       <h1>Secret Santa</h1>
@@ -144,21 +100,15 @@
     <main>
       <h2>Create Account</h2>
 
-      <form method="POST" action="/register">
+      <form method="POST" action="/auth/register">
         <fieldset>
-          <legend>Account Details</legend>
+          <legend>Account details</legend>
 
-          <label for="fullname">Full Name</label>
-          <input type="text" id="fullname" name="fullname" placeholder="John Doe" required />
+          <label for="name">Full Name</label>
+          <input type="text" id="name" name="name" placeholder="John Doe" required />
 
-          <label for="email-address">Email Address</label>
-          <input
-            type="email"
-            id="email-address"
-            name="email-address"
-            placeholder="john@example.com"
-            required
-          />
+          <label for="email">Email Address</label>
+          <input type="email" id="email" name="email" placeholder="you@example.com" required />
 
           <label for="password">Password</label>
           <input
@@ -186,7 +136,7 @@
     </main>
 
     <footer>
-      <p>Already have an account? <a href="login.html">Log in</a></p>
+      <p>Already have an account? <a href="login.html">Sign in</a></p>
     </footer>
   </body>
 </html>
