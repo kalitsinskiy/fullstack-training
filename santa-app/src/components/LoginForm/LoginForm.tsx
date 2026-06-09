@@ -1,11 +1,16 @@
 import { useState } from 'react';
+import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../UI/Button';
 import { Input } from '../UI/Input';
 import { inputValidation } from '../../utils/validators';
 
 export function LoginForm() {
+  const auth = useAuth();
+
   const [fields, setFields] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState({ email: '', password: '' });
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const isDisabled = !fields.email || !fields.password || !!errors.email || !!errors.password;
 
@@ -18,12 +23,23 @@ export function LoginForm() {
     }));
   }
 
-  function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
 
     if (isDisabled) return;
 
-    console.log('Login payload:', fields);
+    try {
+      setSubmitting(true);
+      setSubmitError(null);
+
+      await auth.login(fields.email, fields.password);
+
+      console.log('logged in', auth.user?.email);
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Login failed');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -38,6 +54,12 @@ export function LoginForm() {
         <h2 className="from-brand-dark via-brand-warm to-gradient-end mb-8 bg-linear-to-r bg-clip-text text-center text-[2.5rem] leading-[1.05] font-extrabold tracking-[-0.03em] text-transparent">
           Welcome Back
         </h2>
+
+        {submitError && (
+          <div className="rounded-base mb-4 border border-red-200 bg-red-50 px-4 py-3 text-[0.875rem] text-red-700">
+            {submitError}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit}>
           <fieldset className="mb-5 border-0 p-0">
@@ -71,8 +93,13 @@ export function LoginForm() {
             </div>
           </fieldset>
 
-          <Button type="submit" variant="primary" disabled={isDisabled} className="mt-5 w-full">
-            Sign In
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={isDisabled || submitting}
+            className="mt-5 w-full"
+          >
+            {submitting ? 'Signing in…' : 'Sign In'}
           </Button>
 
           <p className="text-subdued mt-6 text-center text-[0.9rem]">

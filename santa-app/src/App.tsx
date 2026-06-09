@@ -1,5 +1,5 @@
-import { RegisterForm } from './components/RegisterForm';
-// import { LoginForm } from './components/LoginForm';
+// import { RegisterForm } from './components/RegisterForm';
+import { LoginForm } from './components/LoginForm';
 // import { RoomList } from './components/RoomList/RoomList';
 
 // const DEMO_ROOMS = [
@@ -16,8 +16,8 @@ import { RegisterForm } from './components/RegisterForm';
 export default function App() {
   return (
     <>
-      <RegisterForm />
-      {/* <LoginForm /> */}
+      {/* <RegisterForm /> */}
+      <LoginForm />
       {/* <RoomList rooms={DEMO_ROOMS} /> */}
     </>
   );
