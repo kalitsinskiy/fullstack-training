@@ -68,3 +68,142 @@
   - Look at examples/responsive.html + responsive.css for reference
   - Look at examples/css-variables.html for variable patterns
 */
+
+/*1. RESET & BASE*/
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+body {
+  font-family: system-ui, sans-serif;
+  line-height: 1.6;
+  color: #333;
+  background: #f9f9f9;
+}
+
+/*2. CSS VARIABLES*/
+:root {
+  --primary-color: #2d5a27;
+  --secondary-color: #cde6ca;
+  --color-bg: #f9f9f9;
+  --color-text: #333;
+  --color-surface: white;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 2rem;
+  --radius: 8px;
+}
+
+/*3. HEADER*/
+.header {
+  background: var(--primary-color);
+  color: white;
+  padding: var(--spacing-md) var(--spacing-lg);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+@media (min-width: 768px) {
+  .header {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+}
+.header-title {
+  font-size: 1.5rem;
+  margin-bottom: var(--spacing-sm);
+}
+@media (min-width: 768px) {
+  .header-title {
+    margin-bottom: 0;
+  }
+}
+.header-nav {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+/*4. NAV LINKS*/
+.header-nav a {
+  color: var(--secondary-color);
+  text-decoration: none;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius);
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+}
+.header-nav a:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+}
+
+/*5. HERO SECTION*/
+.hero {
+  text-align: center;
+  padding: var(--spacing-lg) var(--spacing-md);
+  animation: fadeIn 1s ease-out;
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.hero-title {
+  font-size: 2rem;
+  margin-bottom: var(--spacing-md);
+}
+.hero-description {
+  font-size: 1.25rem;
+  color: #666;
+}
+
+/*6. FEATURE CARDS*/
+.features {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--spacing-lg);
+  padding: var(--spacing-lg);
+}
+.feature-card {
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: var(--spacing-md);
+  position: relative;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
+}
+.feature-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+.feature-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: var(--primary-color);
+  border-top-left-radius: var(--radius);
+  border-top-right-radius: var(--radius);
+}
+
+/*7. FOOTER*/
+.footer {
+  background: var(--primary-color);
+  color: white;
+  text-align: center;
+  padding: var(--spacing-md);
+}
