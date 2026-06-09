@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Secret Santa — Register</title>
+  </head>
+  <body>
+    <header>
+      <h1>Secret Santa</h1>
+    </header>
+
+    <main>
+      <h2>Create Account</h2>
+
+      <form method="POST" action="/auth/register">
+        <fieldset>
+          <legend>Account details</legend>
+
+          <label for="full-name">Full Name</label>
+          <input
+            type="text"
+            id="full-name"
+            name="full-name"
+            placeholder="Taras Shevchenko"
+            required
+          />
+
+          <label for="email">Email Address</label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            placeholder="taras@example.com"
+            required
+          />
+
+          <label for="password">Password</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            placeholder="At least 8 characters"
+            minlength="8"
+            required
+          />
+
+          <label for="confirm-password">Confirm Password</label>
+          <input
+            type="password"
+            id="confirm-password"
+            name="confirm-password"
+            placeholder="Repeat your password"
+            minlength="8"
+            required
+          />
+
+          <button type="submit">Create Account</button>
+        </fieldset>
+      </form>
+    </main>
+
+    <footer>
+      <p>Already have an account? <a href="login.html">Sign in</a></p>
+    </footer>
+  </body>
+</html>
