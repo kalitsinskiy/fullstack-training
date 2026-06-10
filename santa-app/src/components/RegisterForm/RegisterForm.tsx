@@ -1,11 +1,18 @@
 import { useState } from 'react';
+import { Link, useNavigate } from 'react-router';
 import { Button } from '../UI/Button';
 import { Input } from '../UI/Input';
 import { inputValidation } from '../../utils/validators';
 
+const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001';
+
 export function RegisterForm() {
+  const navigate = useNavigate();
+
   const [fields, setFields] = useState({ name: '', email: '', password: '', confirmPassword: '' });
   const [errors, setErrors] = useState({ name: '', email: '', password: '', confirmPassword: '' });
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const isDisabled =
     !fields.name ||
@@ -30,12 +37,33 @@ export function RegisterForm() {
     }));
   }
 
-  function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
 
     if (isDisabled) return;
 
-    console.log('Login payload:', fields);
+    try {
+      setSubmitting(true);
+      setSubmitError(null);
+
+      const res = await fetch(`${BASE_URL}/api/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: fields.email,
+          password: fields.password,
+          displayName: fields.name,
+        }),
+      });
+
+      if (!res.ok) throw new Error('Registration failed');
+
+      navigate('/login');
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Registration failed');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -46,9 +74,17 @@ export function RegisterForm() {
             ● Secret Santa
           </span>
         </div>
+
         <h2 className="from-brand-dark via-brand-warm to-gradient-end mb-8 bg-linear-to-r bg-clip-text text-center text-[2.5rem] leading-[1.05] font-extrabold tracking-[-0.03em] text-transparent">
           Create Account
         </h2>
+
+        {submitError && (
+          <div className="rounded-base mb-4 border-red-200 bg-red-50 px-5 py-3 text-[0.875rem] text-red-700">
+            {submitError}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit}>
           <fieldset className="mb-5 border-0 p-0">
             <legend className="text-brand-soft border-b-edge float-left mb-2 w-full border-b pb-[0.85rem] text-[0.7rem] font-bold tracking-[0.25em] uppercase">
@@ -100,14 +136,19 @@ export function RegisterForm() {
               />
             </div>
           </fieldset>
-          <Button type="submit" variant="primary" disabled={isDisabled} className="mt-5 w-full">
-            Create Account
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={isDisabled || submitting}
+            className="mt-5 w-full"
+          >
+            {submitting ? 'Creating account…' : 'Create Account'}
           </Button>
           <p className="text-subdued mt-6 text-center text-[0.9rem]">
             Already have an account?{' '}
-            <a href="/login" className="text-brand-soft hover:text-brand-warm font-semibold">
+            <Link to="/login" className="text-brand-soft hover:text-brand-warm font-semibold">
               Sign in
-            </a>
+            </Link>
           </p>
         </form>
       </div>

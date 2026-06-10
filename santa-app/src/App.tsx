@@ -1,24 +1,31 @@
-// import { RegisterForm } from './components/RegisterForm';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 import { LoginForm } from './components/LoginForm';
-// import { RoomList } from './components/RoomList/RoomList';
-
-// const DEMO_ROOMS = [
-//   { code: '#OFHPGT', name: 'Office Holiday Party', participantCount: 12, status: 'open' as const },
-//   { code: '#FAMCKA', name: 'Family Christmas', participantCount: 8, status: 'drawn' as const },
-//   { code: '#DVTSDE', name: 'Dev Team Santa', participantCount: 6, status: 'closed' as const },
-//   { code: '#OFHPGQ', name: 'Office Holiday Party', participantCount: 12, status: 'open' as const },
-//   { code: '#FAMCKW', name: 'Family Christmas', participantCount: 8, status: 'drawn' as const },
-//   { code: '#DVTSDV', name: 'Office Holiday Party', participantCount: 12, status: 'open' as const },
-//   { code: '#FAMCKM', name: 'Family Christmas', participantCount: 8, status: 'drawn' as const },
-//   { code: '#DVTSDP', name: 'Dev Team Santa', participantCount: 6, status: 'closed' as const },
-// ];
+import { RegisterForm } from './components/RegisterForm';
+import { ProtectedRoute } from './components/ProtectedRoute';
+import { Layout } from './components/Layout';
+import { RoomsPage } from './pages/RoomsPage';
+import { RoomsDetailedPage } from './pages/RoomDetailPage';
+import { WishlistPage } from './pages/WishlistPage';
+import { NotFoundPage } from './pages/NotFoundPage';
 
 export default function App() {
   return (
-    <>
-      {/* <RegisterForm /> */}
-      <LoginForm />
-      {/* <RoomList rooms={DEMO_ROOMS} /> */}
-    </>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<LoginForm />} />
+        <Route path="/register" element={<RegisterForm />} />
+
+        <Route element={<ProtectedRoute />}>
+          <Route element={<Layout />}>
+            <Route index element={<Navigate to="/rooms" replace />} />
+            <Route path="/rooms" element={<RoomsPage />} />
+            <Route path="/rooms/:id" element={<RoomsDetailedPage />} />
+            <Route path="/rooms/:id/wishlist" element={<WishlistPage />} />
+          </Route>
+        </Route>
+
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+    </BrowserRouter>
   );
 }

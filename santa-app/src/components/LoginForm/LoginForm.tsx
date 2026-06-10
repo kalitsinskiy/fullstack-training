@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router';
 import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../UI/Button';
 import { Input } from '../UI/Input';
@@ -6,11 +7,18 @@ import { inputValidation } from '../../utils/validators';
 
 export function LoginForm() {
   const auth = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const state = location.state as { from?: { pathname?: string } } | null;
+  const from = state?.from?.pathname ?? '/rooms';
 
   const [fields, setFields] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState({ email: '', password: '' });
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  if (auth.isAuthenticated) return <Navigate to={from} replace />;
 
   const isDisabled = !fields.email || !fields.password || !!errors.email || !!errors.password;
 
@@ -34,7 +42,7 @@ export function LoginForm() {
 
       await auth.login(fields.email, fields.password);
 
-      console.log('logged in', auth.user?.email);
+      navigate(from, { replace: true });
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'Login failed');
     } finally {
@@ -104,9 +112,9 @@ export function LoginForm() {
 
           <p className="text-subdued mt-6 text-center text-[0.9rem]">
             Don't have an account?{' '}
-            <a href="/register" className="text-brand-soft hover:text-brand-warm font-semibold">
+            <Link to="/register" className="text-brand-soft hover:text-brand-warm font-semibold">
               Register
-            </a>
+            </Link>
           </p>
         </form>
       </div>
