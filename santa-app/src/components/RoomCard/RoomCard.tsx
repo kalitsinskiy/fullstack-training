@@ -1,5 +1,5 @@
 import { clsx } from 'clsx';
-import { Button } from '../UI/Button';
+import { Button } from '@/components/ui/button';
 
 type RoomCardCommonProps = { name: string; code: string; participantCount: number };
 
@@ -40,18 +40,20 @@ export function RoomCard(props: RoomCardProps) {
       className={clsx(
         '@container',
         'flex flex-col gap-4',
-        'rounded-card bg-surface border-edge border',
+        'rounded-card bg-card border-border border',
         'p-6',
         'transition-[transform,box-shadow] duration-150',
         'hover:-translate-y-0.5 hover:shadow-lg'
       )}
     >
       <div className="flex flex-col gap-1 @sm:flex-row @sm:items-baseline @sm:gap-3">
-        <span className="text-fg text-base font-bold">{name}</span>
-        <span className="text-muted font-mono text-[0.78rem] tracking-[0.08em]">{code}</span>
+        <span className="text-foreground text-base font-bold">{name}</span>
+        <span className="text-muted-foreground font-mono text-[0.78rem] tracking-[0.08em]">
+          {code}
+        </span>
       </div>
 
-      <p className="text-muted text-[0.85rem]">{participantCount} participants</p>
+      <p className="text-muted-foreground text-[0.85rem]">{participantCount} participants</p>
 
       <div className="mt-auto flex items-center justify-between pt-2">
         <span

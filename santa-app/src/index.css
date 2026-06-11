@@ -1,26 +1,17 @@
 @import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+@import '@fontsource-variable/inter';
+
+@custom-variant dark (&:is(.dark *));
 
 @theme {
-  /* Brand palette — light-theme defaults */
-  /* Darker greens: better contrast on white surfaces */
+  /* Brand-only tokens (no shadcn equivalent).                              */
+  /* Surfaces / text / borders now live in the shadcn tokens (:root/.dark). */
   --color-brand: #16a34a; /* green-600  →  bg-brand, text-brand */
   --color-brand-dark: #15803d; /* green-700  →  gradient start */
   --color-brand-warm: #22c55e; /* green-500  →  gradient end */
   --color-brand-soft: #16a34a; /* green-600  →  legend text, links */
-
-  /* Page & card surfaces */
-  --color-page: #f4f7f4; /* very light green-tinted white  →  bg-page */
-  --color-surface: #ffffff; /* card face  →  bg-surface */
-
-  /* Border */
-  /* border-white/8 was invisible on white; this flips to a subtle dark edge */
-  --color-edge: rgba(0, 0, 0, 0.09); /*  →  border-edge, border-b-edge */
-
-  /* Text */
-  --color-fg: #111827; /* body / heading text  →  text-fg */
-  --color-muted: #6b7280; /* labels, meta  →  text-muted */
-  --color-dim: #9ca3af; /* placeholders  →  text-dim */
-  --color-subdued: #9ca3af; /* footer / helper text →  text-subdued */
 
   /* h2 gradient endpoint — dark text keeps gradient visible on light bg */
   --color-gradient-end: #111827; /*  →  to-gradient-end */
@@ -40,49 +31,159 @@
 
 @layer base {
   body {
-    background-color: var(--color-page);
     background-image: var(--body-bg-gradient, none); /* glow injected by dark mode */
-    color: var(--color-fg);
     font-family: -apple-system, BlinkMacSystemFont, 'Inter', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     display: flex;
     flex-direction: column;
     min-height: 100dvh;
     line-height: 1.6;
+    @apply bg-background text-foreground;
   }
-
-  /* Dark mode — toggle by adding data-theme="dark" to <html> */
-  [data-theme='dark'] {
-    /* Brand — brighter neon reads well on dark surfaces */
-    --color-brand: #4ade80; /* green-400 */
-    --color-brand-dark: #16a34a; /* green-600 */
-    --color-brand-warm: #a3e635; /* lime-400  */
-    --color-brand-soft: #86efac; /* green-300 */
-
-    --color-page: #060e06;
-    --color-surface: rgba(255, 255, 255, 0.02);
-    --color-edge: rgba(255, 255, 255, 0.08);
-
-    --color-fg: #ffffff;
-    --color-muted: #b8c4b8;
-    --color-dim: #3d5a3d;
-    --color-subdued: #6b8a6b;
-
-    --color-gradient-end: #ffffff;
-
-    /* Badges — neon on dark bg */
-    --color-pending-bg: rgba(163, 230, 53, 0.12);
-    --color-pending-text: #a3e635;
-    --color-drawn-bg: rgba(74, 222, 128, 0.12);
-    --color-drawn-text: #4ade80;
-    --color-closed-bg: rgba(113, 113, 122, 0.12);
-    --color-closed-text: #71717a;
-
-    /* Decorative green glow behind the page in dark mode */
-    --body-bg-gradient: radial-gradient(
-      ellipse 80% 50% at 50% -10%,
-      rgba(74, 222, 128, 0.15),
-      transparent 60%
-    );
+  /* Dark mode lives in the single .dark block below (added to <html>). */
+  /* The old [data-theme='dark'] block was removed — one source of truth. */
+  * {
+    @apply border-border outline-ring/50;
   }
+  html {
+    @apply font-sans;
+  }
+}
+
+@theme inline {
+  --font-heading: var(--font-sans);
+  --font-sans: 'Inter Variable', sans-serif;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  /* Light theme — the brand green palette is now the source of truth.    */
+  /* (Replaces the former neutral black/white oklch shadcn defaults.)      */
+  --background: #f4f7f4; /* was --color-page */
+  --foreground: #111827; /* was --color-fg */
+  --card: #ffffff; /* was --color-surface */
+  --card-foreground: #111827;
+  --popover: #ffffff;
+  --popover-foreground: #111827;
+  --primary: var(--color-brand); /* green-600 — bg-primary, etc. */
+  --primary-foreground: #061206; /* dark text on brand green */
+  --secondary: #eef2ee; /* soft green-gray surface */
+  --secondary-foreground: #111827;
+  --muted: #eef2ee; /* subtle bg tint (hover, etc.) */
+  --muted-foreground: #6b7280; /* was --color-muted (subtle text) */
+  --accent: #eef2ee;
+  --accent-foreground: #111827;
+  --destructive: #ef4444; /* red-500 — input error ring */
+  --border: rgba(0, 0, 0, 0.09); /* was --color-edge */
+  --input: rgba(0, 0, 0, 0.09);
+  --ring: var(--color-brand); /* brand focus ring */
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  /* Single dark source of truth — add the `dark` class to <html> to enable. */
+  /* (Merged from the old [data-theme='dark'] block + dark shadcn tokens.)    */
+  --background: #060e06; /* was --color-page (dark) */
+  --foreground: #ffffff; /* was --color-fg (dark) */
+  --card: rgba(255, 255, 255, 0.02); /* was --color-surface (dark) */
+  --card-foreground: #ffffff;
+  --popover: #0e160e; /* solid: DialogContent uses bg-popover (rgba would be see-through) */
+  --popover-foreground: #ffffff;
+  --primary-foreground: #061206; /* dark text on brand green */
+  --secondary: rgba(255, 255, 255, 0.06);
+  --secondary-foreground: #ffffff;
+  --muted: rgba(255, 255, 255, 0.06);
+  --muted-foreground: #b8c4b8; /* was --color-muted (dark) */
+  --accent: rgba(255, 255, 255, 0.06);
+  --accent-foreground: #ffffff;
+  --destructive: #f87171; /* red-400 */
+  --border: rgba(255, 255, 255, 0.08); /* was --color-edge (dark) */
+  --input: rgba(255, 255, 255, 0.15);
+  /* --primary and --ring auto-follow the --color-brand override below */
+
+  /* brand-only tokens — dark overrides (moved from [data-theme='dark']) */
+  --color-brand: #4ade80; /* green-400 */
+  --color-brand-dark: #16a34a; /* green-600 */
+  --color-brand-warm: #a3e635; /* lime-400 */
+  --color-brand-soft: #86efac; /* green-300 */
+  --color-gradient-end: #ffffff;
+
+  /* badges — neon on dark bg */
+  --color-pending-bg: rgba(163, 230, 53, 0.12);
+  --color-pending-text: #a3e635;
+  --color-drawn-bg: rgba(74, 222, 128, 0.12);
+  --color-drawn-text: #4ade80;
+  --color-closed-bg: rgba(113, 113, 122, 0.12);
+  --color-closed-text: #71717a;
+
+  /* decorative green glow behind the page */
+  --body-bg-gradient: radial-gradient(
+    ellipse 80% 50% at 50% -10%,
+    rgba(74, 222, 128, 0.15),
+    transparent 60%
+  );
+
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
 }
