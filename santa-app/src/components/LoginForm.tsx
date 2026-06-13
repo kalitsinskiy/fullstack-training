@@ -1,11 +1,15 @@
 import { useState, type FormEvent } from "react";
 import clsx from "clsx";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function LoginForm() {
+  const auth = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   function validateEmail(value: string) {
     if (!value.trim()) return "Email is required";
@@ -23,14 +27,23 @@ export default function LoginForm() {
   const hasErrors = !!emailError || !!passwordError;
   const isEmpty = !email.trim() || !password.trim();
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const eErr = validateEmail(email);
     const pErr = validatePassword(password);
     setEmailError(eErr);
     setPasswordError(pErr);
     if (eErr || pErr) return;
-    console.log("login", { email, password });
+    try {
+      setSubmitting(true);
+      setSubmitError(null);
+      await auth.login(email, password);
+      console.log("logged in", auth.user?.email);
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Login failed");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -39,6 +52,12 @@ export default function LoginForm() {
       className="rounded-card p-card flex w-full max-w-sm flex-col gap-4 bg-white shadow-sm"
     >
       <h2 className="text-brand text-xl font-semibold">Sign In</h2>
+
+      {submitError && (
+        <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-600">
+          {submitError}
+        </p>
+      )}
 
       <div className="flex flex-col gap-1">
         <label
@@ -84,15 +103,15 @@ export default function LoginForm() {
 
       <button
         type="submit"
-        disabled={hasErrors || isEmpty}
+        disabled={hasErrors || isEmpty || submitting}
         className={clsx(
           "rounded px-4 py-2 text-sm font-medium text-white transition-colors",
-          hasErrors || isEmpty
+          hasErrors || isEmpty || submitting
             ? "bg-brand/50 cursor-not-allowed"
             : "bg-brand hover:bg-brand-dark",
         )}
       >
-        Sign In
+        {submitting ? "Signing in…" : "Sign In"}
       </button>
     </form>
   );
