@@ -1,12 +1,22 @@
+import { useState } from "react";
 import clsx from "clsx";
 
-export interface RoomCardProps {
-  name: string;
-  code: string;
-  memberCount: number;
-  status: "pending" | "drawn" | "closed";
-  onOpen: () => void;
-}
+export type RoomCardProps =
+  | {
+      status: "pending";
+      name: string;
+      code: string;
+      memberCount: number;
+      onOpen: () => void;
+    }
+  | {
+      status: "drawn";
+      name: string;
+      code: string;
+      memberCount: number;
+      onView: () => void;
+    }
+  | { status: "closed"; name: string; code: string; memberCount: number };
 
 const statusLabel: Record<RoomCardProps["status"], string> = {
   pending: "Pending",
@@ -20,15 +30,12 @@ const statusStyle: Record<RoomCardProps["status"], string> = {
   closed: "bg-gray-100 text-gray-600",
 };
 
-export default function RoomCard({
-  name,
-  code,
-  memberCount,
-  status,
-  onOpen,
-}: RoomCardProps) {
+export default function RoomCard(props: RoomCardProps) {
+  const [expanded, setExpanded] = useState(false);
+  const { name, code, memberCount, status } = props;
+
   return (
-    <article className="rounded-card p-card @container bg-white shadow-sm transition-[box-shadow,transform] duration-200 hover:-translate-y-1 hover:shadow-md">
+    <article className="rounded-card p-card @container bg-white shadow-sm transition-shadow duration-200 hover:shadow-md">
       <div className="flex flex-col gap-3 @[22rem]:flex-row @[22rem]:items-center">
         <div className="flex flex-1 flex-col gap-1">
           <span className="font-semibold text-gray-900">{name}</span>
@@ -46,15 +53,45 @@ export default function RoomCard({
             {statusLabel[status]}
           </span>
 
+          {props.status === "pending" && (
+            <button
+              type="button"
+              onClick={props.onOpen}
+              className="bg-brand hover:bg-brand-dark focus-visible:outline-brand rounded px-3 py-1.5 text-sm font-medium text-white transition-colors focus-visible:outline-2"
+            >
+              Join
+            </button>
+          )}
+
+          {props.status === "drawn" && (
+            <button
+              type="button"
+              onClick={props.onView}
+              className="bg-brand hover:bg-brand-dark focus-visible:outline-brand rounded px-3 py-1.5 text-sm font-medium text-white transition-colors focus-visible:outline-2"
+            >
+              View
+            </button>
+          )}
+
           <button
             type="button"
-            onClick={onOpen}
-            className="bg-brand hover:bg-brand-dark focus-visible:outline-brand rounded px-3 py-1.5 text-sm font-medium text-white transition-colors focus-visible:outline-2"
+            onClick={() => setExpanded((prev) => !prev)}
+            className="rounded px-3 py-1.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100"
           >
-            Open
+            {expanded ? "Less" : "More"}
           </button>
         </div>
       </div>
+
+      {expanded && (
+        <div className="mt-3 border-t border-gray-100 pt-3 text-sm text-gray-500">
+          <p>
+            Code: <span className="font-mono">{code}</span>
+          </p>
+          <p>Status: {statusLabel[status]}</p>
+          <p>{memberCount} participants</p>
+        </div>
+      )}
     </article>
   );
 }

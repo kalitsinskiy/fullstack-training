@@ -1,16 +1,37 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import clsx from "clsx";
 
 export default function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
+  function validateEmail(value: string) {
+    if (!value.trim()) return "Email is required";
+    if (!value.includes("@") || !value.includes("."))
+      return "Enter a valid email";
+    return null;
+  }
+
+  function validatePassword(value: string) {
+    if (!value) return "Password is required";
+    if (value.length < 8) return "Password must be at least 8 characters";
+    return null;
+  }
+
+  const hasErrors = !!emailError || !!passwordError;
   const isEmpty = !email.trim() || !password.trim();
 
-  function handleSubmit(e: React.FormEvent) {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const eErr = validateEmail(email);
+    const pErr = validatePassword(password);
+    setEmailError(eErr);
+    setPasswordError(pErr);
+    if (eErr || pErr) return;
     console.log("login", { email, password });
-  }
+  };
 
   return (
     <form
@@ -32,9 +53,11 @@ export default function LoginForm() {
           autoComplete="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          onBlur={() => setEmailError(validateEmail(email))}
           className="focus-visible:ring-brand rounded border border-gray-300 px-3 py-2 text-sm outline-none focus-visible:ring-2"
           placeholder="you@example.com"
         />
+        {emailError && <p className="text-xs text-red-500">{emailError}</p>}
       </div>
 
       <div className="flex flex-col gap-1">
@@ -50,17 +73,21 @@ export default function LoginForm() {
           autoComplete="current-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          onBlur={() => setPasswordError(validatePassword(password))}
           className="focus-visible:ring-brand rounded border border-gray-300 px-3 py-2 text-sm outline-none focus-visible:ring-2"
           placeholder="••••••••"
         />
+        {passwordError && (
+          <p className="text-xs text-red-500">{passwordError}</p>
+        )}
       </div>
 
       <button
         type="submit"
-        disabled={isEmpty}
+        disabled={hasErrors || isEmpty}
         className={clsx(
           "rounded px-4 py-2 text-sm font-medium text-white transition-colors",
-          isEmpty
+          hasErrors || isEmpty
             ? "bg-brand/50 cursor-not-allowed"
             : "bg-brand hover:bg-brand-dark",
         )}
