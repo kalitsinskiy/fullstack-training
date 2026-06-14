@@ -38,12 +38,23 @@ your Block-04 work. Use this as a reference to compare against.
 
 ## Run it (after copying to root)
 
+**Full stack in one command** — backends build and run in Docker alongside the infra:
+
 ```bash
-docker compose up -d                                  # mongo / redis / rabbitmq
+docker compose up --build                             # mongo/redis/rabbitmq + santa-api :3001 + santa-notifications :3002
+cd santa-app && npm install && cp .env.example .env && npm run dev   # client on Vite :5173
+```
+
+**Backend dev mode (hot-reload)** — run only the infra in Docker, the backends locally:
+
+```bash
+docker compose up -d mongodb redis rabbitmq           # infra only
 cd santa-api            && npm install && cp .env.example .env && npm run start:dev   # :3001
 cd ../santa-notifications && npm install && cp .env.example .env && npm run dev       # :3002
 cd ../santa-app         && npm install && cp .env.example .env && npm run dev         # :5173
 ```
+
+The client always runs on Vite for hot-reload; Dockerizing it is your Lesson 01 task.
 
 First account: `RegisterPage` is a stub you build later — create your first user
 via Swagger (`http://localhost:3001/docs`) or curl, then sign in through the UI

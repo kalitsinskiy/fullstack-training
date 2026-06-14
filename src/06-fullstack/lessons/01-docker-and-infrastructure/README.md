@@ -4,12 +4,15 @@
 
 Until now you have been running `santa-api`, `santa-notifications`, and MongoDB as separate processes on your machine. This works for development, but it is fragile -- every new developer must install exact versions of Node.js, MongoDB, and any other dependencies manually. Docker solves this by packaging each service into an isolated, reproducible **container** that runs identically on any machine.
 
-By the end of this lesson you will have:
+By the end of this lesson you will:
 
-- A multi-stage Dockerfile for each backend service
-- A `docker-compose.yml` that starts the entire stack with a single command
-- Persistent storage for MongoDB so data survives container restarts
-- Healthcheck endpoints so Docker knows when a service is ready
+- Understand the multi-stage Dockerfile and `docker-compose.yml` that ship with the
+  template and bring up the whole backend (`santa-api`, `santa-notifications`,
+  mongo, redis, rabbitmq) with a single `docker compose up --build`
+- Have written your own multi-stage Dockerfile for the **frontend** (`santa-app`),
+  served as static files behind nginx
+- Understand container networking (service-name hostnames), `depends_on` healthchecks,
+  and persistent volumes so data survives restarts
 
 ---
 
@@ -198,146 +201,111 @@ The volume `mongo-data` persists even when the container is destroyed. When you 
 
 ## Task
 
-### Step 1: Write a Dockerfile for santa-api
+> **Two starting points.** The recommended template (`00-kickoff/template/`) already
+> ships a working backend Docker setup: `santa-api/Dockerfile`,
+> `santa-notifications/Dockerfile`, their `.dockerignore` files, and a
+> `docker-compose.yml` that builds both services on top of mongo/redis/rabbitmq.
+> So your hands-on Dockerfile practice in this lesson is the **frontend**.
+>
+> - **Using the template?** Do Step 1 (study the provided backend setup) and
+>   Step 2 (Dockerize `santa-app` yourself).
+> - **Using your own services?** The backend `docker-compose.yml` isn't written for
+>   you — apply the patterns from Step 1 to your own `santa-api`/`santa-notifications`
+>   first, then do Step 2.
 
-Create `santa-api/Dockerfile` with a multi-stage build:
+### Step 1: Study and run the provided backend Docker setup
 
-1. **Build stage** (`node:22-alpine AS build`):
-   - Set `WORKDIR /app`
-   - Copy `package.json` and `package-lock.json`
-   - Run `npm ci` to install all dependencies (including dev)
-   - Copy the rest of the source code
-   - Run `npm run build` to compile TypeScript
+Open and read these three files in the template — they are the concepts above made concrete:
 
-2. **Production stage** (`node:22-alpine`):
-   - Set `WORKDIR /app`
-   - Copy `package.json` and `package-lock.json`
-   - Run `npm ci --omit=dev` (only production dependencies)
-   - Copy the compiled `dist/` folder from the build stage
-   - Expose port `3001`
-   - Set `CMD` to `["node", "dist/main.js"]`
+- `santa-api/Dockerfile` — multi-stage build (`npm ci` → `npm run build` → `npm ci --omit=dev` → copy `dist/`).
+- `santa-notifications/Dockerfile` — same pattern, `CMD ["node", "dist/server.js"]`.
+- `docker-compose.yml` — `mongodb` / `redis` / `rabbitmq` plus the two backend services. Note:
+  - hostnames are **service names** (`mongodb`, `redis`, `rabbitmq`), not `localhost`;
+  - `depends_on: { condition: service_healthy }` waits for infra healthchecks;
+  - secrets (`JWT_SECRET`, `SERVICE_API_KEY`) are dev placeholders — you change these for any real deployment.
 
-### Step 2: Write a Dockerfile for santa-notifications
-
-Create `santa-notifications/Dockerfile` with the same multi-stage pattern:
-
-- Build stage compiles TypeScript
-- Production stage runs with only production dependencies
-- Expose port `3002`
-- Adjust the `CMD` to match santa-notifications entry point (e.g., `dist/server.js` -- check your project)
-
-### Step 3: Create .dockerignore files
-
-Create `.dockerignore` in both `santa-api/` and `santa-notifications/`:
-
-```
-node_modules
-dist
-.git
-.env
-*.md
-.DS_Store
-coverage
-.eslintcache
-```
-
-### Step 4: Add healthcheck endpoints
-
-In **santa-api**, add a `GET /health` endpoint that returns:
-
-```json
-{ "status": "ok", "service": "santa-api" }
-```
-
-In NestJS, you can create a `HealthController` or add the route to an existing controller.
-
-In **santa-notifications**, add a `GET /health` endpoint that returns:
-
-```json
-{ "status": "ok", "service": "santa-notifications" }
-```
-
-In Fastify, register a simple route:
-
-```typescript
-fastify.get('/health', async () => {
-  return { status: 'ok', service: 'santa-notifications' };
-});
-```
-
-### Step 5: Create docker-compose.yml
-
-Create `docker-compose.yml` at the **repository root** with three services:
-
-1. **mongo**
-   - Image: `mongo:8`
-   - Port: `27017:27017`
-   - Named volume: `mongo-data:/data/db`
-   - Healthcheck: use `mongosh --quiet` to ping the database
-
-2. **santa-api**
-   - Build from `./santa-api/Dockerfile`
-   - Port: `3001:3001`
-   - Environment: `MONGO_URL=mongodb://mongo:27017/santa`, `PORT=3001`, `NODE_ENV=production`
-   - Depends on `mongo` (with `condition: service_healthy`)
-   - Healthcheck: `wget -qO- http://localhost:3001/health || exit 1`
-
-3. **santa-notifications**
-   - Build from `./santa-notifications/Dockerfile`
-   - Port: `3002:3002`
-   - Environment: `MONGO_URL=mongodb://mongo:27017/santa`, `PORT=3002`, `NODE_ENV=production`
-   - Depends on `mongo` (with `condition: service_healthy`)
-   - Healthcheck: `wget -qO- http://localhost:3002/health || exit 1`
-
-4. **Volumes section**: define `mongo-data`
-
-### Step 6: Test the full stack
-
-Start everything:
+Bring the whole backend up and confirm it's healthy:
 
 ```bash
-docker-compose up --build
+docker compose up --build         # builds santa-api + santa-notifications, starts everything
+docker compose ps                 # all services Up; infra healthy
+curl http://localhost:3001/docs   # Swagger from santa-api
 ```
 
-You should see all three services start up. Verify they are healthy:
+Answer for yourself: *why does the build stage run `npm ci` (all deps) but the
+production stage run `npm ci --omit=dev`?* (Hint: `@nestjs/cli` / `tsc` are only
+needed to build.)
 
-```bash
-docker-compose ps
-```
+### Step 2: Dockerize the frontend (santa-app) — your turn
+
+The client runs on Vite (`npm run dev`) day-to-day, but production ships as static
+files behind a web server. Write it yourself:
+
+1. **`santa-app/.dockerignore`**
+
+   ```
+   node_modules
+   dist
+   .git
+   .env
+   .env.*
+   *.md
+   .DS_Store
+   ```
+
+2. **`santa-app/Dockerfile`** — multi-stage: build with Node, serve with nginx.
+
+   - **Build stage** (`node:22-alpine AS build`): `WORKDIR /app`, copy manifests,
+     `npm ci`, copy source, `npm run build` (Vite emits static files to `dist/`).
+   - **Serve stage** (`nginx:alpine`): copy `--from=build /app/dist` into
+     `/usr/share/nginx/html`, `EXPOSE 80`.
+   - Add an `nginx.conf` with an SPA fallback so client-side routes resolve:
+     `try_files $uri $uri/ /index.html;`
+
+3. Remember Vite bakes `VITE_*` env at **build time**. Pass the API URL as a build
+   arg (`ARG VITE_API_URL` → `ENV VITE_API_URL=$VITE_API_URL` before `npm run build`)
+   so the image knows where the API lives.
+
+> Day-to-day you'll still run the client with `npm run dev` for hot-reload — the
+> Dockerfile is for production builds and deployment (Lesson 10).
+
+### Step 3 (optional): Add santa-app to compose
+
+If you want the whole stack in one `docker compose up`, add a `santa-app` service
+that builds from `./santa-app` with `args: { VITE_API_URL: http://localhost:3001 }`
+and maps `5173:80`. Keep it optional — the default workflow is Vite for the client.
 
 ---
 
 ## Verification
 
-After running `docker-compose up --build`, verify each piece:
-
 ```bash
-# Check all containers are running and healthy
-docker-compose ps
+# Backend stack (from the template) — all up, infra healthy
+docker compose ps
 
-# Test santa-api health endpoint
-curl http://localhost:3001/health
-# Expected: {"status":"ok","service":"santa-api"}
+# santa-api is serving
+curl http://localhost:3001/docs        # Swagger UI
 
-# Test santa-notifications health endpoint
-curl http://localhost:3002/health
-# Expected: {"status":"ok","service":"santa-notifications"}
+# Services reach MongoDB by service name, not localhost
+docker compose exec mongodb mongosh --eval 'db.runCommand("ping")'
 
-# Verify MongoDB is accessible (from the mongo container)
-docker-compose exec mongo mongosh --eval 'db.runCommand("ping")'
-
-# Check image sizes (multi-stage should be smaller)
+# Your frontend image builds and is small (multi-stage + nginx)
+docker build -t santa-app ./santa-app --build-arg VITE_API_URL=http://localhost:3001
 docker images | grep santa
 
-# Stop everything
-docker-compose down
+# Run your frontend image and open http://localhost:8080
+docker run --rm -p 8080:80 santa-app
 
-# Stop and remove volumes (deletes all data!)
-docker-compose down -v
+# Stop the stack
+docker compose down
+docker compose down -v                 # also deletes volumes (all data!)
 ```
 
 **Troubleshooting tips:**
 
-- If a service fails to connect to MongoDB, make sure you are using `mongo` (the service name) not `localhost` in the `MONGO_URL`.
-- If the build is slow, check that `.dockerignore` excludes `node_modules`.
-- If ports are already in use, stop local instances of the services first.
+- Service can't reach MongoDB/Redis/RabbitMQ → use the **service name**
+  (`mongodb`, `redis`, `rabbitmq`), not `localhost`, inside a container.
+- Build slow or image huge → confirm `.dockerignore` excludes `node_modules` and `dist`.
+- `Bind for 0.0.0.0:3001 failed: port is already allocated` → a local `npm run start:dev`
+  is still holding the port; stop it before `docker compose up`.
+- Frontend shows a blank page on refresh of a sub-route → missing SPA fallback in `nginx.conf`.

@@ -90,14 +90,22 @@ cp -R src/06-fullstack/lessons/00-kickoff/template/. .
 
 ### 3.1 Infrastructure (Docker)
 
-From the repo root, start MongoDB, Redis, and RabbitMQ:
+From the repo root, the template's `docker compose` brings up the whole backend —
+mongo/redis/rabbitmq **plus** `santa-api` and `santa-notifications`:
 
 ```bash
-docker compose up -d        # mongodb :27017, redis :6379, rabbitmq :5672 (+15672 UI)
-docker compose ps           # all should be "healthy"
+docker compose up --build   # infra + both backends (santa-api :3001, santa-notifications :3002)
+docker compose ps           # infra "healthy", backends "Up"
 ```
 
-(You'll add the backend services to compose in Lesson 01. For now infra only.)
+While actively developing a backend you'll usually want hot-reload instead —
+run only the infra in Docker and the service locally:
+
+```bash
+docker compose up -d mongodb redis rabbitmq   # infra only (:27017 / :6379 / :5672 + :15672 UI)
+```
+
+(In Lesson 01 you study this backend Docker setup and Dockerize the frontend yourself.)
 
 ### 3.2 Backends
 
