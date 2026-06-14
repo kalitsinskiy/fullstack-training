@@ -9,32 +9,39 @@ your own `santa-api` / `santa-notifications` / `santa-app` when you pull updates
 
 | Folder | Stack | What you get |
 |--------|-------|--------------|
-| `santa-api/` | NestJS + MongoDB | Auth, rooms, wishlists, draw + assignment endpoints, e2e suite, CORS for the Vite frontend, `.env.example` |
-| `santa-notifications/` | Fastify + MongoDB | Service skeleton + `dev`/`start`/`build` scripts (nodemon + ts-node), `.env.example` |
-| `santa-app/` | React + Vite + Tailwind + shadcn | Worked-example `LoginPage` + page stubs, `docs/design-system.md`, `docs/design-tokens.json`, `docs/mockups/`, `public/decor/` |
-| `docker-compose.yml` | mongo:8 · redis:8 · rabbitmq:4 | Local infra |
+| `santa-api/` | NestJS + MongoDB | **Skeleton**: controllers, DTOs, Mongoose schemas, modules, the API contract, Dockerfile, a component-test harness (worked example + `it.todo`s). Service logic is stubbed — you implement it (Kickoff §4). |
+| `santa-notifications/` | Fastify + MongoDB | **Skeleton**: app + routes + scripts (`dev`/`start`/`build`/`test`), Dockerfile, Jest test harness, `.env.example` |
+| `santa-app/` | React + Vite + Tailwind + shadcn | Worked-example `LoginPage` + page stubs, RTL+MSW test setup, `docs/design-system.md`, `docs/design-tokens.json`, `docs/mockups/`, `public/decor/` |
+| `docker-compose.yml` | mongo:8 · redis:8 · rabbitmq:4 + both backends | Full local stack (`name: santa`) |
 
 ## How to use it
 
-**Option A — take the whole template (recommended).** Copy it to your repo root:
+**Option A — overlay the whole template (recommended).** Copy its contents onto
+your root `santa-*` projects (the ones you've grown since Block 04). From the
+repo root:
 
 ```bash
-cp -R src/06-fullstack/lessons/00-kickoff/template/. .
-# now santa-api/, santa-notifications/, santa-app/, docker-compose.yml are at root
+T=src/06-fullstack/lessons/00-kickoff/template
+cp -R "$T/santa-api/."            santa-api/
+cp -R "$T/santa-notifications/."  santa-notifications/
+cp -R "$T/santa-app/."            santa-app/
+cp    "$T/docker-compose.yml"     docker-compose.yml   # replaces the older root compose
 ```
 
-**Option B — cherry-pick.** Copy only what you need, e.g. keep your own Block-04
-backend but take our `santa-app` baseline:
+**Option B — cherry-pick.** Overlay only what you need, e.g. keep your own
+Block-04 backend but take our `santa-app` baseline:
 
 ```bash
-cp -R src/06-fullstack/lessons/00-kickoff/template/santa-app .
+cp -R src/06-fullstack/lessons/00-kickoff/template/santa-app/. santa-app/
 ```
 
 **Option C — keep your own.** Ignore the template entirely and keep building on
 your Block-04 work. Use this as a reference to compare against.
 
-> Don't edit files **inside** this `template/` folder for your own work — copy
-> them out first. That keeps your pulls conflict-free.
+> The trailing `/.` overlays *contents* onto your existing folders (so your
+> Block-04 `examples/`/`exercises/` stay). Don't copy `template/`'s own
+> `README.md` to the root, and never edit files **inside** `template/` — it's the
+> source you copy from. That keeps your pulls conflict-free.
 
 ## Run it (after copying to root)
 

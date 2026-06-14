@@ -75,18 +75,32 @@ You are **not** handed a finished frontend. You get structure, an approach, and
 
 **Prerequisites:** Node 20+, Docker Desktop, a terminal.
 
-### 3.0 Get the template
+### 3.0 Get the template — overlay it onto your root projects
 
-The starter code lives in [`template/`](template/) (see its
-[`README.md`](template/README.md)). Copy it to your repo root, then run from
-there:
+[`template/`](template/) holds the **recommended fullstack files**. You don't
+work *inside* `template/` — it's the source you copy from. Copy (overlay) its
+contents **onto the `santa-api/` / `santa-notifications/` / `santa-app/` projects
+that already live at your repo root** — the same projects you've grown since
+Block 04. The overlay adds the fullstack scaffolding (package.json, `src/`,
+configs, the frontend, `docker-compose.yml`) on top of your Block-04/05 work; it
+doesn't erase your earlier `examples/` and `exercises/`.
+
+From the repo root:
 
 ```bash
-cp -R src/06-fullstack/lessons/00-kickoff/template/. .
-# → santa-api/, santa-notifications/, santa-app/, docker-compose.yml now at root
+T=src/06-fullstack/lessons/00-kickoff/template
+cp -R "$T/santa-api/."            santa-api/
+cp -R "$T/santa-notifications/."  santa-notifications/
+cp -R "$T/santa-app/."            santa-app/
+cp    "$T/docker-compose.yml"     docker-compose.yml   # replaces the older root compose
 ```
 
-(Or keep your own Block-04 backend and copy only `template/santa-app` — see §4.)
+> Copy only the projects + `docker-compose.yml` above — **not** `template/`'s own
+> `README.md` (that would clobber the repo's root README). You can re-run these
+> copies any time to refresh against the recommended baseline. Then
+> `npm install` in each project.
+
+(Or keep your own Block-04 backend and overlay only `template/santa-app` — see §5.)
 
 ### 3.1 Infrastructure (Docker)
 
@@ -124,33 +138,65 @@ cd santa-notifications && npm install && cp .env.example .env && npm run dev # :
 cd santa-app && npm install && cp .env.example .env && npm run dev          # :5173
 ```
 
-Create your first account, then sign in at http://localhost:5173/login — the
-**LoginPage is the worked example** and talks to `santa-api`, so you'll land on
-the (stub) rooms dashboard.
-
-> To create that first account, use the API directly (the `RegisterPage` is a
-> stub you build later): open Swagger at http://localhost:3001/docs and call
-> `POST /api/auth/register`, or:
-> ```bash
-> curl -X POST http://localhost:3001/api/auth/register \
->   -H 'Content-Type: application/json' \
->   -d '{"email":"you@example.com","password":"Passw0rd!","displayName":"You"}'
-> ```
+All three apps now **boot**, but the API is a **skeleton**: every service method
+throws `501 Not Implemented`. So registering or logging in fails until you do the
+bootstrap below. That's intentional — the template hands you the structure
+(controllers, DTOs, schemas, the API contract, tests), and you write the logic.
 
 ---
 
-## 4. Choose your starting point
+## 4. Bootstrap the base backend (your first task)
+
+Before any feature lesson, make the **base API real**. This is the CRUD you
+already built in Block 04 — re-implement it here against the provided structure.
+Open each stubbed service and replace the `throw new NotImplementedException(...)`
+bodies (each has a `TODO` describing what it should do):
+
+| Service | Methods to implement | Leave for later |
+|---|---|---|
+| `auth/auth.service.ts` | `register`, `login` (bcrypt hash/compare, sign JWT) | — |
+| `users/users.service.ts` | `create`, `findByEmail`, `findById`, `updateCurrentUser` | — |
+| `rooms/rooms.service.ts` | `create`, `findByUser`, `findById`, `findByIdForUser`, `join` | `draw`, `getAssignment` → **Lesson 03** |
+| `wishlist/wishlist.service.ts` | `set`, `get` | — |
+
+**Your spec, three sources that agree:**
+- `santa-api/docs/api-contract.md` — every endpoint's request/response shape.
+- The `TODO` comment on each stub — what that method must do.
+- The tests — `cd santa-api && npm run test:e2e`. One example per file is green;
+  the rest are `it.todo(...)`. Turn each todo into a real test as you implement,
+  and watch them go green. (See `santa-api/test/TESTING.md`.)
+
+**Verify the bootstrap works:**
+
+```bash
+# Register, then log in — both should now succeed (201 / 200 + a token):
+curl -X POST http://localhost:3001/api/auth/register \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"you@example.com","password":"Passw0rd!","displayName":"You"}'
+```
+
+Then sign in at http://localhost:5173/login (the **LoginPage is the worked
+example**) — you should land on the rooms dashboard and be able to create a room.
+
+> The `RegisterPage` UI is itself a stub you build later from the mockups; for now
+> Swagger (http://localhost:3001/docs) or the curl above creates your first user.
+
+---
+
+## 5. Choose your starting point
 
 The [`template/`](template/) folder beside this lesson holds the **recommended
-template** — a unified, tested baseline: a contract-faithful backend (auth,
-rooms, wishlists, the draw + assignment endpoints, an e2e suite) plus the React
-frontend scaffold. It lives under the lesson (not at the repo root) so it never
-conflicts with your own folders on `git pull` — you copy out what you want.
+skeleton** — the structure to build on: controllers, DTOs, Mongoose schemas, the
+API contract, a frontend scaffold (with `LoginPage` as the one worked example),
+and a test harness with worked examples + `it.todo` lists. Service logic is
+stubbed (you implement it, starting with §4). It lives under the lesson (not at
+the repo root) so it never conflicts with your own folders on `git pull` — you
+copy out what you want.
 
 | Option | What you do |
 |--------|-------------|
-| **Use the template** (recommended) | `cp -R …/template/. .` then build features on top, lesson by lesson |
-| **Cherry-pick** | Copy only parts, e.g. our `santa-app` baseline + your own Block-04 backend |
+| **Use the template** (recommended) | Overlay it onto your root `santa-*` projects (§3.0), implement §4, then build features lesson by lesson |
+| **Cherry-pick** | Overlay only parts, e.g. our `santa-app` baseline + your own Block-04 backend |
 | **Keep your own** | Ignore the template; build on your Block-04 work, using this as a reference |
 
 Nothing is mandatory — the template unblocks you, it doesn't replace your work.
@@ -162,17 +208,17 @@ See [`template/README.md`](template/README.md) for copy/run details.
 
 ---
 
-## 5. How this block works
+## 6. How this block works
 
 Each lesson adds one capability across the stack. No separate exercises — the
 **app is the exercise**.
 
 | # | Lesson | You build |
 |---|--------|-----------|
-| 00 | Kickoff (this) | Stack running, starting point chosen |
+| 00 | Kickoff (this) | Stack running, base backend bootstrapped (§4), starting point chosen |
 | 01 | Docker & Infrastructure | Dockerfiles, full compose stack |
 | 02 | Environment & Config | Typed env for all three apps |
-| 03 | Rooms & Draw | Derangement, transaction, room + draw UI |
+| 03 | Rooms & Draw | Derangement, single-document atomic draw, room + draw UI |
 | 04 | Redis | Caching, TTL invite codes, rate limiting |
 | 05 | RabbitMQ | Event publish/consume between services |
 | 06 | Notifications | HTTP inter-service calls, notifications UI |
