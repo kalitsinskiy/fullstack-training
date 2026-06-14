@@ -89,61 +89,42 @@ Errors: `400`, `401`
 
 ## Rooms
 
-### `POST /rooms`
-
-Request:
-
-```json
-{
-  "name": "New Year team building"
-}
-```
-
-Response `201`:
+**Room shape** (returned by every room endpoint below). Participants are populated
+to `{ id, displayName }`; `participantCount` is the number of members.
 
 ```json
 {
   "id": "665f0c2ab7d13a5e8b1c4d9f",
   "name": "New Year team building",
-  "ownerId": "665f0c2ab7d13a5e8b1c4d1a",
-  "code": "Q7X4LM",
-  "members": ["665f0c2ab7d13a5e8b1c4d1a"],
+  "creatorId": "665f0c2ab7d13a5e8b1c4d1a",
+  "inviteCode": "Q7X4LM",
+  "participants": [
+    { "id": "665f0c2ab7d13a5e8b1c4d1a", "displayName": "Mariia" }
+  ],
+  "participantCount": 1,
   "status": "pending",
-  "drawDate": "2025-12-20T00:00:00.000Z"
+  "drawDate": null
 }
 ```
+
+`status` is `"pending"` until the draw, then `"drawn"` (with `drawDate` set).
+
+### `POST /rooms`
+
+Request: `{ "name": "New Year team building" }`
+
+Response `201`: the room shape (creator is the first participant).
 
 Errors: `400`, `401`
 
 ### `GET /rooms?page=1&limit=10`
 
-Response `200`:
-
-```json
-{
-  "data": [
-    {
-      "id": "665f0c2ab7d13a5e8b1c4d9f",
-      "name": "New Year team building",
-      "ownerId": "665f0c2ab7d13a5e8b1c4d1a",
-      "code": "Q7X4LM",
-      "members": ["665f0c2ab7d13a5e8b1c4d1a"],
-      "status": "pending",
-      "drawDate": "2025-12-20T00:00:00.000Z"
-    }
-  ],
-  "meta": {
-    "total": 1,
-    "page": 1,
-    "limit": 10,
-    "totalPages": 1
-  }
-}
-```
+Response `200`: `{ "data": [ <room> ], "meta": { "total", "page", "limit", "totalPages" } }`
+— rooms where the caller is a participant.
 
 Notes:
 
-- `page` defaults to `1` and is clamped to a minimum of `1`
+- `page` defaults to `1`, clamped to a minimum of `1`
 - `limit` defaults to `10`, minimum `1`, maximum `100`
 - `totalPages` is always at least `1`, even when `data` is empty
 
@@ -151,56 +132,71 @@ Errors: `401`
 
 ### `GET /rooms/:id`
 
-Response `200`: same room shape as `POST /rooms`
+Response `200`: the room shape. Only a participant may read it.
 
-Errors: `401`, `404`
+Errors: `401`, `403`, `404`
 
-### `POST /rooms/:code/join`
+### `POST /rooms/:id/join`
 
-Request body: `{}`
+Request: `{ "inviteCode": "Q7X4LM" }`
 
-Response `201`: same room shape as `POST /rooms`
+Response `201`: the room shape (caller added to `participants`).
 
-Errors: `401`, `404`
+Errors: `400` (wrong invite code), `401`, `403` (draw already done), `404`
 
-## Wishlist
+### `POST /rooms/:id/draw`
 
-### `POST /rooms/:roomId/wishlist`
+Creator-only. Requires at least 3 participants and a `pending` room. Produces a
+derangement (no one is their own giftee) and saves all assignments in a single
+atomic document write.
 
-Request:
+Response `200`: the room shape with `status: "drawn"` and `drawDate` set.
+
+Errors: `400` (fewer than 3 participants / already drawn), `401`, `403` (not the creator), `404`
+
+### `GET /rooms/:id/assignment`
+
+Your giftee for a drawn room. Only a participant may read it.
+
+Response `200`:
 
 ```json
 {
-  "items": [
-    {
-      "name": "Warm socks",
-      "url": "https://example.com/socks",
-      "priority": 1
-    }
-  ]
+  "receiver": {
+    "id": "665f0c2ab7d13a5e8b1c4d2b",
+    "displayName": "Gita",
+    "wishlist": ["Wool socks", "A good book"]
+  }
 }
 ```
 
-Response `201`:
+Errors: `400` (draw not done yet), `401`, `403`, `404`
+
+## Wishlist
+
+A wishlist is a list of plain strings, scoped to `{ roomId, userId }`.
+
+### `PUT /rooms/:roomId/wishlist`
+
+Upserts the caller's wishlist for the room.
+
+Request: `{ "items": ["Wool socks", "A good book"] }`
+
+Response `200`:
 
 ```json
 {
   "roomId": "665f0c2ab7d13a5e8b1c4d9f",
   "userId": "665f0c2ab7d13a5e8b1c4d1a",
-  "items": [
-    {
-      "name": "Warm socks",
-      "url": "https://example.com/socks",
-      "priority": 1
-    }
-  ]
+  "items": ["Wool socks", "A good book"]
 }
 ```
 
 Errors: `400`, `401`
 
-### `GET /rooms/:roomId/wishlist/me`
+### `GET /rooms/:roomId/wishlist/:userId`
 
-Response `200`: same shape as `POST /rooms/:roomId/wishlist`
+Response `200`: the wishlist shape above. If the user has **no** wishlist yet,
+returns an **empty** one (`"items": []`) — not a `404`.
 
-Errors: `401`, `404`
+Errors: `401`

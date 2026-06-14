@@ -26,13 +26,17 @@ export interface RoomSummary {
   participantCount: number;
 }
 
+export type RoomMember = Pick<User, 'id' | 'displayName'>;
+
 export interface RoomDetail {
   id: string;
   name: string;
   inviteCode: string;
   creatorId: string;
   status: RoomStatus;
-  participants: User[];
+  participants: RoomMember[];
+  participantCount: number;
+  drawDate?: string;
 }
 
 export interface Wishlist {

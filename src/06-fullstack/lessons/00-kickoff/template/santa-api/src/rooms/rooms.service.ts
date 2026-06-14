@@ -17,6 +17,9 @@ export class RoomsService {
     private readonly wishlistService: WishlistService,
   ) {}
 
+  // NOTE: every room response uses the shape in docs/api-contract.md — map
+  // participants to populated { id, displayName } and include participantCount.
+
   // TODO (Kickoff): create a room with a unique invite code; the creator is the
   // first participant. Status starts as 'pending'.
   create(dto: CreateRoomDto, creatorId: string): Promise<Room> {

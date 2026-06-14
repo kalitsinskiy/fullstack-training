@@ -2,7 +2,6 @@ import {
   Body,
   Controller,
   Get,
-  NotFoundException,
   Param,
   Put,
   UseGuards,
@@ -68,19 +67,11 @@ export class WishlistController {
     type: WishlistResponseDto,
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 404, description: 'Wishlist not found' })
   async findOne(
     @Param('roomId') roomId: string,
     @Param('userId') userId: string,
   ): Promise<Wishlist> {
-    const wishlist = await this.wishlistService.get(roomId, userId);
-
-    if (!wishlist) {
-      throw new NotFoundException(
-        `Wishlist for room ${roomId} and user ${userId} not found`,
-      );
-    }
-
-    return wishlist;
+    // Returns an empty wishlist ({ items: [] }) if the user has none yet.
+    return this.wishlistService.get(roomId, userId);
   }
 }

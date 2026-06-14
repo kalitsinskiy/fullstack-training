@@ -16,8 +16,9 @@ export class WishlistService {
     throw new NotImplementedException('WishlistService.set is not implemented');
   }
 
-  // TODO (Lesson: Wishlist) — return the wishlist for {roomId, userId}, or undefined.
-  get(roomId: string, userId: string): Promise<Wishlist | undefined> {
+  // TODO (Lesson: Wishlist) — return the wishlist for {roomId, userId}. If the user
+  // has none yet, return an EMPTY one ({ roomId, userId, items: [] }) — not a 404.
+  get(roomId: string, userId: string): Promise<Wishlist> {
     throw new NotImplementedException('WishlistService.get is not implemented');
   }
 }
