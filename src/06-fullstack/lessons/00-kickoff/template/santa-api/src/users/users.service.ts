@@ -1,6 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotImplementedException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model } from 'mongoose';
 import { UpdateCurrentUserDto } from './dto/update-current-user.dto';
 import { User } from './user.types';
 import { User as UserModel, UserDocument } from './schemas/user.schema';
@@ -19,85 +19,33 @@ export class UsersService {
     private readonly userModel: Model<UserModel>,
   ) {}
 
-  async create({
-    email,
-    displayName,
-    passwordHash,
-    role,
-  }: CreateUserInput): Promise<User> {
-    const user = await this.userModel.create({
-      email: email.toLowerCase(),
-      displayName,
-      passwordHash,
-      role: role ?? 'user',
-    });
-
-    return this.toUser(user);
+  // TODO (Kickoff / Auth): persist a new user (lower-case the email, default role 'user').
+  create(input: CreateUserInput): Promise<User> {
+    throw new NotImplementedException('UsersService.create is not implemented');
   }
 
+  // TODO (Kickoff / Auth): find a user by email. When opts.withPassword is set,
+  // select('+passwordHash') so login can compare it. Returns the raw document or null.
   findByEmail(
     email: string,
     opts: { withPassword?: boolean } = {},
   ): Promise<UserDocument | null> {
-    const query = this.userModel.findOne({ email: email.toLowerCase() });
-
-    if (opts.withPassword) {
-      query.select('+passwordHash');
-    }
-
-    return query.exec();
+    throw new NotImplementedException(
+      'UsersService.findByEmail is not implemented',
+    );
   }
 
-  async findById(id: string): Promise<User> {
-    if (!Types.ObjectId.isValid(id)) {
-      throw new NotFoundException(`User ${id} not found`);
-    }
-
-    const user = await this.userModel.findById(id).exec();
-
-    if (!user) {
-      throw new NotFoundException(`User ${id} not found`);
-    }
-
-    return this.toUser(user);
+  // TODO (Profile): find a user by id; throw NotFoundException if missing or id invalid.
+  findById(id: string): Promise<User> {
+    throw new NotImplementedException(
+      'UsersService.findById is not implemented',
+    );
   }
 
-  async updateCurrentUser(
-    id: string,
-    { displayName }: UpdateCurrentUserDto,
-  ): Promise<User> {
-    if (!Types.ObjectId.isValid(id)) {
-      throw new NotFoundException(`User ${id} not found`);
-    }
-
-    const user = await this.userModel
-      .findByIdAndUpdate(
-        id,
-        {
-          ...(displayName ? { displayName } : {}),
-        },
-        { new: true },
-      )
-      .exec();
-
-    if (!user) {
-      throw new NotFoundException(`User ${id} not found`);
-    }
-
-    return this.toUser(user);
-  }
-
-  private toUser(user: {
-    _id: Types.ObjectId;
-    displayName: string;
-    email: string;
-    role: 'user' | 'admin';
-  }): User {
-    return {
-      id: user._id.toString(),
-      displayName: user.displayName,
-      email: user.email,
-      role: user.role,
-    };
+  // TODO (Profile): update the current user's displayName and return the fresh user.
+  updateCurrentUser(id: string, dto: UpdateCurrentUserDto): Promise<User> {
+    throw new NotImplementedException(
+      'UsersService.updateCurrentUser is not implemented',
+    );
   }
 }

@@ -127,70 +127,13 @@ await this.roomModel.findByIdAndUpdate(
 );
 ```
 
-#### (Optional) When you'd reach for a transaction
+> **Why single-document and not a transaction?** We deliberately keep all
+> assignments on the Room document so one atomic write covers the whole draw.
+> That avoids multi-document transactions entirely — no `startSession`, no
+> `withTransaction`, and **no replica set** to run locally. Keep the data on one
+> document and you never need them for this app.
 
-If you stored assignments in a *separate* collection instead, you'd write
-multiple documents and would need a multi-document **transaction** (which
-requires a replica set) to keep them atomic. Worth knowing — shown below — but
-**not needed for this lesson**.
-
-```typescript
-const session = await mongoose.startSession();
-
-try {
-  session.startTransaction();
-
-  // All operations use the same session
-  await Assignment.insertMany(assignments, { session });
-  await Room.findByIdAndUpdate(
-    roomId,
-    { status: 'drawn' },
-    { session }
-  );
-
-  // If we get here, commit
-  await session.commitTransaction();
-} catch (error) {
-  // Something failed, roll back everything
-  await session.abortTransaction();
-  throw error;
-} finally {
-  session.endSession();
-}
-```
-
-**Key points:**
-
-- You must pass the `session` to every operation that should be part of the transaction.
-- If any operation fails, `abortTransaction()` undoes all changes.
-- MongoDB transactions require a **replica set**. For local development, you can use `mongodb-memory-server` with `--replSet` or run a single-node replica set in Docker.
-
-### 6. (Optional) Running MongoDB as a Replica Set in Docker
-
-*Only needed if you took the optional transaction route above.* Transactions require a replica set — update your Docker Compose mongo service:
-
-```yaml
-mongo:
-  image: mongo:7
-  command: ['--replSet', 'rs0']
-  ports:
-    - '27017:27017'
-  volumes:
-    - mongo-data:/data/db
-  healthcheck:
-    test: |
-      mongosh --quiet --eval "
-        try { rs.status().ok } 
-        catch(e) { rs.initiate().ok }
-      "
-    interval: 10s
-    timeout: 5s
-    retries: 5
-```
-
-The healthcheck initializes the replica set on first run. After the replica set is initialized, transactions work.
-
-### 7. Error Handling and Idempotency
+### 6. Error Handling and Idempotency
 
 The draw endpoint should be **idempotent** in the sense that it cannot be run twice. Once a room is in "drawn" status, subsequent draw requests should return an error (or return the existing assignments). This prevents duplicate assignments.
 

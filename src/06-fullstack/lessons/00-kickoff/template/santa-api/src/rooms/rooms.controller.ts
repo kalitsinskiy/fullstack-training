@@ -122,9 +122,15 @@ export class RoomsController {
     description: 'Draw completed; room is now drawn',
     type: RoomResponseDto,
   })
-  @ApiResponse({ status: 400, description: 'Not enough participants / already drawn' })
+  @ApiResponse({
+    status: 400,
+    description: 'Not enough participants / already drawn',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Only the creator can run the draw' })
+  @ApiResponse({
+    status: 403,
+    description: 'Only the creator can run the draw',
+  })
   @ApiResponse({ status: 404, description: 'Room not found' })
   draw(
     @Param('id') id: string,

@@ -308,12 +308,11 @@ Create the pre-commit hook:
 npx lint-staged
 ```
 
-Create the pre-push hook:
+Create a placeholder pre-push hook (Step 3 turns it into the full CI gate):
 
 ```bash
 # .husky/pre-push
-npm run type-check
-npm test -- --run
+echo "pre-push: CI gate is wired up in Step 3"
 ```
 
 Configure lint-staged in the root `package.json`:
@@ -378,7 +377,7 @@ set -e
 
 for app in santa-api santa-notifications santa-app; do
   echo "▶ CI: $app"
-  ( cd "$app" && npm run lint && npm run type-check && npm run test:unit )
+  ( cd "$app" && npm run lint && npm run type-check && npm test )
 done
 ```
 

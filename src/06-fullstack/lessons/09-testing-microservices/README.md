@@ -33,7 +33,14 @@ santa-notifications integration tests:
 
 ### Test Environment Setup
 
-Create separate environment files for testing:
+The template uses an **in-memory MongoDB** (`mongodb-memory-server`) that each
+test spins up and tears down — so there's **no external test database and no
+`.env.test` to manage**. The harness sets `process.env.MONGO_URL` to the
+in-memory URI before the app boots. This is the recommended path.
+
+*Alternative (real infrastructure):* if you'd rather point tests at a real test
+database/queue, create separate environment files with distinct DB names and
+ports, e.g.:
 
 ```bash
 # santa-api/.env.test
@@ -362,37 +369,55 @@ Keep E2E tests minimal (5-10 tests) -- they are slow and brittle. Use integratio
 
 ## Task
 
-### Step 1: Set Up Test Environment
+> **The template already scaffolds this for you.** Each service ships a test
+> harness, **one worked example**, and an `it.todo(...)` list of the scenarios to
+> cover — plus a `TESTING.md` describing the approach. Your job in this lesson is
+> to **turn each `it.todo` into a real test** (and add the edge cases you find).
+> Don't build the harness from scratch; read it, then fill it in.
+>
+> - **santa-api** — `test/` (`auth.e2e-spec.ts`, `rooms.e2e-spec.ts`, `setup-mongo.ts`, `factories.ts`, `auth-token.helper.ts`, `TESTING.md`). Run `npm run test:e2e`.
+> - **santa-notifications** — `test/` (`notifications.test.ts`, `helpers/db.ts`, `TESTING.md`). Run `npm test`.
+> - **santa-app** — co-located `*.test.tsx` next to the component, plus `src/test/` (`render.tsx`, `mocks/`, `setup.ts`, `TESTING.md`). Run `npm test`.
+>
+> Tests use an **in-memory MongoDB** (`mongodb-memory-server`) — no external test
+> database, no `.env.test`. Backend tests live in **`test/`**, never beside the
+> source; frontend tests are co-located (React convention).
 
-Create `.env.test` files for both santa-api and santa-notifications with separate database names and ports (see examples above).
+### Step 1: Read the test setup that ships with the template
 
-Install test dependencies:
+The dependencies and harness are already installed and wired:
 
-```bash
-# In santa-api
-npm install -D jest ts-jest @types/jest supertest @types/supertest
+- **santa-api** boots the real `AppModule` against in-memory Mongo and drives it
+  with `supertest` (`Test.createTestingModule` → `configureApp` → `app.init()`).
+  See `test/setup-mongo.ts` for the Mongo lifecycle and `clearAllCollections`.
+- **santa-notifications** builds the real Fastify app and drives it with the
+  built-in `app.inject()` (no supertest). See `test/helpers/db.ts`.
+- **santa-app** renders pages inside the real providers via
+  `renderWithProviders` and intercepts HTTP with **MSW** (`src/test/mocks`).
 
-# In santa-notifications
-npm install -D jest ts-jest @types/jest
+Open each `TESTING.md` and the worked example before writing anything — they are
+the pattern you'll copy for every todo below.
 
-# In santa-app
-npm install -D @testing-library/react @testing-library/jest-dom @testing-library/user-event
-```
-
-Create `test/setup.ts` in each backend service with MongoDB connection, cleanup, and teardown logic.
+> **If you built your own services instead of using the template**, create the
+> same harness yourself: `mongodb-memory-server` for an ephemeral DB, `supertest`
+> /`app.inject()` to drive HTTP, and put the specs in `test/`. The deps are
+> `jest ts-jest @types/jest supertest @types/supertest mongodb-memory-server`
+> (backend) and `vitest @testing-library/{react,jest-dom,user-event} jsdom msw`
+> (frontend).
 
 ### Step 2: santa-api Integration Tests
 
-Create the following test files:
+Fill in the `it.todo`s in `test/auth.e2e-spec.ts` and `test/rooms.e2e-spec.ts`
+(copy the worked example's wiring). The scenarios to implement:
 
-**test/auth.test.ts** -- Test the complete auth flow:
+**test/auth.e2e-spec.ts** -- the complete auth flow:
 - Register a new user (verify 201 + token returned)
 - Register with duplicate email (verify 409)
 - Login with correct credentials (verify 200 + token)
 - Login with wrong password (verify 401)
 - Access a protected route without a token (verify 401)
 
-**test/rooms.test.ts** -- Test the rooms flow:
+**test/rooms.e2e-spec.ts** -- the rooms flow:
 - Create a room (verify room object with invite code)
 - List rooms for the current user
 - Join a room by invite code
@@ -495,56 +520,39 @@ describe('Cross-Service: Draw Notification Flow', () => {
 
 ### Step 5: santa-app Component Tests
 
-Test key pages with mocked API responses. Create:
+Co-locate each test next to its page (`src/pages/LoginPage.test.tsx`), render it
+with `renderWithProviders` (from `src/test/render.tsx`), and mock the API with
+**MSW** (`server.use(http.get(...))`). `LoginPage.test.tsx` already has a worked
+example + `it.todo`s — start there, then add the others.
 
-**src/pages/\_\_tests\_\_/LoginPage.test.tsx** -- Test:
-- Renders email and password fields
-- Shows validation error for empty fields
-- Calls API on submit and redirects on success
-- Shows error message on API failure
+**src/pages/LoginPage.test.tsx** (worked example provided) -- finish:
+- Renders email and password fields ✅ (done)
+- Calls the API on submit and redirects on success (MSW: `POST /api/auth/login`)
+- Shows an error message on API failure (MSW: 401)
 
-**src/pages/\_\_tests\_\_/RoomListPage.test.tsx** -- Test:
-- Shows loading spinner initially
-- Renders room list after API resolves
-- Shows empty state when no rooms
-- Shows error on API failure
+**src/pages/RoomListPage.test.tsx** -- Test:
+- Shows loading state initially
+- Renders the room list after the API resolves (MSW: `GET /api/rooms`)
+- Shows the empty state when there are no rooms
+- Shows an error on API failure
 
-**src/pages/\_\_tests\_\_/RoomDetailPage.test.tsx** -- Test:
+**src/pages/RoomDetailPage.test.tsx** -- Test:
 - Shows room name and members
 - Shows the draw button for the room owner
-- Shows assignment after draw
+- Shows the assignment after the draw
 
-### Step 6: Add Test Scripts
+### Step 6: Test Scripts (already configured in the template)
 
-```json
-// santa-api/package.json
-{
-  "scripts": {
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:integration": "jest --config jest.integration.config.ts",
-    "test:cov": "jest --coverage"
-  }
-}
+The scripts are wired up — just run them:
 
-// santa-notifications/package.json
-{
-  "scripts": {
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:integration": "jest --config jest.integration.config.ts"
-  }
-}
+| Service | Run tests | Watch |
+|---|---|---|
+| santa-api | `npm run test:e2e` | — |
+| santa-notifications | `npm test` | `npm run test:watch` |
+| santa-app | `npm test` | `npm run test:watch` |
 
-// santa-app/package.json
-{
-  "scripts": {
-    "test": "vitest",
-    "test:run": "vitest run",
-    "test:cov": "vitest run --coverage"
-  }
-}
-```
+(If you built your own services, add equivalent `test` scripts pointing at Jest /
+Vitest with the config above.)
 
 ### Step 7: Playwright E2E — the full UI journey
 

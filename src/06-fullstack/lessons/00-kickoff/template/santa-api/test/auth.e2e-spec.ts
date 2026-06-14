@@ -14,7 +14,18 @@ import {
   stopInMemoryMongo,
 } from './setup-mongo';
 
-describe('Auth (e2e)', () => {
+/**
+ * COMPONENT TEST (HTTP slice) — the approach for this whole course.
+ *
+ * We boot the real AppModule against an in-memory MongoDB and drive it through
+ * real HTTP with supertest. No mocking of services or the database: a request
+ * goes through pipes → guards → controller → service → Mongo, exactly like prod.
+ *
+ * One example below is fully written so you can see the wiring. The rest are
+ * `it.todo(...)` — turn each into a real test as you implement AuthService.
+ * Add more scenarios as you find edge cases; this list is a floor, not a ceiling.
+ */
+describe('Auth (HTTP)', () => {
   let app: NestFastifyApplication;
   const originalJwtSecret = process.env.JWT_SECRET;
   const originalMongoUrl = process.env.MONGO_URL;
@@ -51,139 +62,39 @@ describe('Auth (e2e)', () => {
     } else {
       process.env.JWT_SECRET = originalJwtSecret;
     }
-
     if (originalMongoUrl === undefined) {
       delete process.env.MONGO_URL;
     } else {
       process.env.MONGO_URL = originalMongoUrl;
     }
-
     await stopInMemoryMongo();
   });
 
-  it('POST /api/auth/register returns a token for a valid request', async () => {
-    const response = await request(app.getHttpServer())
-      .post('/api/auth/register')
-      .send({
-        email: 'alice@test.com',
-        password: 'SecretPass1',
-        displayName: 'Alice',
-      })
-      .expect(201);
-
-    const body = response.body as {
-      id: string;
-      email: string;
-      displayName: string;
-      accessToken: string;
-    };
-    expect(body).toMatchObject({
-      id: expect.any(String) as string,
-      email: 'alice@test.com',
-      displayName: 'Alice',
-      accessToken: expect.any(String) as string,
-    });
-  });
-
-  it('POST /api/auth/register returns 400 when required fields are missing', async () => {
+  // ✅ WORKED EXAMPLE — green against the skeleton: validation runs in the
+  // ValidationPipe, before AuthService is ever called. Study this wiring, then
+  // implement the service and fill in the `it.todo`s below the same way.
+  it('POST /api/auth/register → 400 when required fields are missing', async () => {
     const response = await request(app.getHttpServer())
       .post('/api/auth/register')
       .send({ email: 'alice@test.com' })
       .expect(400);
 
-    const body = response.body as {
-      success: boolean;
-      statusCode: number;
-      message: string[];
-    };
-    expect(body).toMatchObject({
+    expect(response.body).toMatchObject({
       success: false,
       statusCode: 400,
       message: expect.any(Array) as string[],
     });
   });
 
-  it('POST /api/auth/register returns 409 for duplicate emails', async () => {
-    await request(app.getHttpServer())
-      .post('/api/auth/register')
-      .send({
-        email: 'alice@test.com',
-        password: 'SecretPass1',
-        displayName: 'Alice',
-      })
-      .expect(201);
-
-    const response = await request(app.getHttpServer())
-      .post('/api/auth/register')
-      .send({
-        email: 'alice@test.com',
-        password: 'SecretPass1',
-        displayName: 'Alice Again',
-      })
-      .expect(409);
-
-    expect(response.body).toMatchObject({
-      success: false,
-      statusCode: 409,
-      message: 'Email is already registered',
-    });
-  });
-
-  it('POST /api/auth/login returns a token for valid credentials', async () => {
-    await request(app.getHttpServer())
-      .post('/api/auth/register')
-      .send({
-        email: 'alice@test.com',
-        password: 'SecretPass1',
-        displayName: 'Alice',
-      })
-      .expect(201);
-
-    const response = await request(app.getHttpServer())
-      .post('/api/auth/login')
-      .send({
-        email: 'alice@test.com',
-        password: 'SecretPass1',
-      })
-      .expect(200);
-
-    const body = response.body as { accessToken: string };
-    expect(body).toEqual({
-      accessToken: expect.any(String) as string,
-    });
-  });
-
-  it('POST /api/auth/login returns the same generic 401 message for wrong password and unknown email', async () => {
-    await request(app.getHttpServer())
-      .post('/api/auth/register')
-      .send({
-        email: 'alice@test.com',
-        password: 'SecretPass1',
-        displayName: 'Alice',
-      })
-      .expect(201);
-
-    const wrongPassword = await request(app.getHttpServer())
-      .post('/api/auth/login')
-      .send({
-        email: 'alice@test.com',
-        password: 'WrongPass1',
-      })
-      .expect(401);
-
-    const unknownEmail = await request(app.getHttpServer())
-      .post('/api/auth/login')
-      .send({
-        email: 'unknown@test.com',
-        password: 'WrongPass1',
-      })
-      .expect(401);
-
-    expect((wrongPassword.body as { message: string }).message).toBe(
-      'Invalid credentials',
-    );
-    expect((unknownEmail.body as { message: string }).message).toBe(
-      'Invalid credentials',
-    );
-  });
+  // 👇 Implement AuthService, then turn each of these into a real test.
+  it.todo(
+    'POST /api/auth/register → 201 returns { id, email, displayName, accessToken }',
+  );
+  it.todo('POST /api/auth/register → 409 when the email is already registered');
+  it.todo(
+    'POST /api/auth/login → 200 returns an accessToken for valid credentials',
+  );
+  it.todo(
+    'POST /api/auth/login → 401 with the SAME generic message for a wrong password AND an unknown email',
+  );
 });

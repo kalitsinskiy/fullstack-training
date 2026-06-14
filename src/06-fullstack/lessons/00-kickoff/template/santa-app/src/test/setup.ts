@@ -1,8 +1,10 @@
 import '@testing-library/jest-dom/vitest';
+import { afterAll, afterEach, beforeAll } from 'vitest';
+import { server } from './mocks/server';
 
-// MSW server hook-up lives here once handlers are added (lesson 11 / fullstack 09).
-// import { afterAll, afterEach, beforeAll } from 'vitest';
-// import { server } from './mocks/server';
-// beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
-// afterEach(() => server.resetHandlers());
-// afterAll(() => server.close());
+// Start MSW once, reset handlers between tests, and stop it at the end.
+// `onUnhandledRequest: 'error'` makes any un-mocked request fail loudly — add a
+// handler in mocks/handlers.ts (or server.use(...) in a test) for each call.
+beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());

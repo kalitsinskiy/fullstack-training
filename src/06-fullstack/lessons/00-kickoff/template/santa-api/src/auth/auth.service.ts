@@ -1,12 +1,6 @@
-import {
-  ConflictException,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, NotImplementedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
-import type { JwtPayload } from './jwt.strategy';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 
@@ -28,69 +22,18 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async register({
-    email,
-    password,
-    displayName,
-  }: RegisterDto): Promise<RegisterResponse> {
-    const normalizedEmail = email.toLowerCase();
-    const existingUser = await this.usersService.findByEmail(normalizedEmail);
-
-    if (existingUser) {
-      throw new ConflictException('Email is already registered');
-    }
-
-    const passwordHash = await bcrypt.hash(password, 10);
-    const user = await this.usersService.create({
-      email: normalizedEmail,
-      displayName,
-      passwordHash,
-      role: 'user',
-    });
-
-    return {
-      id: user.id,
-      email: user.email,
-      displayName: user.displayName,
-      accessToken: await this.signToken(user.id, user.email, user.role),
-    };
+  // TODO (Kickoff / Auth): reject a duplicate email, hash the password with bcrypt,
+  // create the user via UsersService, and return the user plus a signed JWT.
+  register(dto: RegisterDto): Promise<RegisterResponse> {
+    throw new NotImplementedException(
+      'AuthService.register is not implemented',
+    );
   }
 
-  async login({ email, password }: LoginDto): Promise<LoginResponse> {
-    const user = await this.usersService.findByEmail(email.toLowerCase(), {
-      withPassword: true,
-    });
-
-    if (!user?.passwordHash) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
-
-    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
-
-    if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
-
-    return {
-      accessToken: await this.signToken(
-        user._id.toString(),
-        user.email,
-        user.role,
-      ),
-    };
-  }
-
-  private signToken(
-    userId: string,
-    email: string,
-    role: 'user' | 'admin',
-  ): Promise<string> {
-    const payload: JwtPayload = {
-      sub: userId,
-      email,
-      role,
-    };
-
-    return this.jwtService.signAsync(payload);
+  // TODO (Kickoff / Auth): look up the user by email (with password hash), verify the
+  // password with bcrypt.compare, and return a signed JWT. Throw UnauthorizedException
+  // on any mismatch — never reveal which field was wrong.
+  login(dto: LoginDto): Promise<LoginResponse> {
+    throw new NotImplementedException('AuthService.login is not implemented');
   }
 }

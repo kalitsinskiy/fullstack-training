@@ -29,6 +29,9 @@ export default tseslint.config(
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-floating-promises': 'warn',
       '@typescript-eslint/no-unsafe-argument': 'warn',
+      // Skeleton methods ship unimplemented, so unused *parameters* are expected.
+      // Unused imports and local variables are still reported.
+      '@typescript-eslint/no-unused-vars': ['error', { args: 'none' }],
       "prettier/prettier": ["error", { endOfLine: "auto" }],
     },
   },

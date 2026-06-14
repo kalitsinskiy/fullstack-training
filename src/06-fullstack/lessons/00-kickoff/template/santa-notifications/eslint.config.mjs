@@ -14,6 +14,9 @@ export default tseslint.config(
     },
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
+      // Skeleton handlers ship unimplemented, so unused *parameters* are expected.
+      // Unused imports and local variables are still reported.
+      '@typescript-eslint/no-unused-vars': ['error', { args: 'none' }],
     },
   },
 );
