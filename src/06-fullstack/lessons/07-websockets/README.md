@@ -470,26 +470,22 @@ Add `VITE_WS_URL=http://localhost:3002` to santa-app's `.env`.
 
 ### Step 7: Add Toast Notifications
 
-Install a toast library (or use MUI Snackbar):
+> **Use the course stack.** `sonner` is **already wired** — `<Toaster />` lives in
+> `App.tsx`. Do **not** install `react-hot-toast` or MUI Snackbar, and don't add a
+> second `<Toaster />`. Just call `sonner`'s `toast()`.
 
-```bash
-cd santa-app
-npm install react-hot-toast
-```
-
-Create a component that listens for Socket.IO events and shows toasts:
+Create a component that listens for Socket.IO events and shows toasts via `sonner`:
 
 ```tsx
 // src/components/SocketNotifications.tsx
 import { useEffect } from 'react';
-import toast, { Toaster } from 'react-hot-toast';
-import { useSocket } from '../hooks/useSocket';
+import { toast } from 'sonner';
+import { useSocket } from '@/hooks/useSocket';
 
 interface NotificationPayload {
   id: string;
   type: string;
-  title: string;
-  body: string;
+  message: string;
 }
 
 export function SocketNotifications() {
@@ -499,10 +495,7 @@ export function SocketNotifications() {
     if (!socket) return;
 
     const handleNotification = (payload: NotificationPayload) => {
-      toast(payload.body, {
-        icon: getIcon(payload.type),
-        duration: 5000,
-      });
+      toast(payload.message, { icon: iconFor(payload.type) });
     };
 
     socket.on('notification', handleNotification);
@@ -511,10 +504,10 @@ export function SocketNotifications() {
     };
   }, [socket]);
 
-  return <Toaster position="top-right" />;
+  return null; // the global <Toaster /> already lives in App.tsx
 }
 
-function getIcon(type: string): string {
+function iconFor(type: string): string {
   switch (type) {
     case 'draw.completed': return '🎉';
     case 'room.joined': return '👋';
@@ -524,7 +517,7 @@ function getIcon(type: string): string {
 }
 ```
 
-Add `<SocketNotifications />` to your root layout so it listens globally.
+Mount `<SocketNotifications />` once in your root layout so it listens globally.
 
 ### Step 8: Real-Time Room Updates
 

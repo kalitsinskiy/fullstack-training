@@ -7,6 +7,7 @@ export interface User {
   id: string;
   email: string;
   displayName: string;
+  role: 'user' | 'admin';
 }
 
 export interface AuthResponse {
@@ -51,8 +52,10 @@ export interface Assignment {
 
 export interface Notification {
   id: string;
+  userId: string;
   type: string;
   message: string;
+  payload?: unknown;
   read: boolean;
   createdAt: string;
 }

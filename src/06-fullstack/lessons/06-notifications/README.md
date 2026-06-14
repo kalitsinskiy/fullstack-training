@@ -469,6 +469,12 @@ async function handleRoomJoined(event: RoomJoinedEvent) {
 
 ### Step 6: Build the NotificationsPage in santa-app
 
+> **Build with the course stack, not MUI.** Use shadcn/ui + Tailwind, the `api`
+> axios client, TanStack Query (`useQuery`/`useMutation`), and `sonner` toasts —
+> exactly like `LoginPage`/`RoomDetailPage` and the mockups in `docs/design-system.md`.
+> The snippets in Steps 6–7 use MUI **only to show structure and data flow** — port
+> them to shadcn components + the design tokens; don't `npm install @mui/*`.
+
 ```tsx
 // src/pages/NotificationsPage.tsx
 import { useEffect, useState } from 'react';

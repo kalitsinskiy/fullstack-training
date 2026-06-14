@@ -26,12 +26,11 @@ export class RoomResponseDto {
   inviteCode!: string;
 
   @ApiProperty({
-    description: 'Identifiers of all room participants',
-    example: ['665f0c2ab7d13a5e8b1c4d1a', '665f0c2ab7d13a5e8b1c4d1b'],
-    type: String,
+    description: 'Room participants, populated to { id, displayName }',
+    example: [{ id: '665f0c2ab7d13a5e8b1c4d1a', displayName: 'Mariia' }],
     isArray: true,
   })
-  participants!: string[];
+  participants!: { id: string; displayName: string }[];
 
   @ApiProperty({
     description: 'Number of participants in the room',

@@ -1,9 +1,15 @@
+/** A room member, as returned in room responses (participants are populated). */
+export interface RoomParticipant {
+  id: string;
+  displayName: string;
+}
+
 export interface Room {
   id: string;
   name: string;
   creatorId: string;
   inviteCode: string;
-  participants: string[];
+  participants: RoomParticipant[];
   participantCount: number;
   status: 'pending' | 'drawn';
   drawDate?: string;

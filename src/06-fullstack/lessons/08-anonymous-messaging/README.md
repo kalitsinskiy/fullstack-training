@@ -301,6 +301,12 @@ Return messages received by the current user in a specific room. **senderId must
 
 ### Step 4: Build the MessagesPage in santa-app
 
+> **Build with the course stack, not MUI.** Use shadcn/ui + Tailwind, the `api`
+> axios client, TanStack Query, `useSocket`, and `sonner` — like `LoginPage`/
+> `RoomDetailPage` and the chat-bubble mockup above. The snippet below uses MUI
+> **only to show structure** — port it to shadcn components + the design tokens;
+> don't `npm install @mui/*`.
+
 ```tsx
 // src/pages/MessagesPage.tsx
 import { useEffect, useState, FormEvent } from 'react';

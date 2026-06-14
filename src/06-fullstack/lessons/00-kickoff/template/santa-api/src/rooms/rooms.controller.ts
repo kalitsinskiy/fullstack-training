@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
   Param,
   Post,
   Query,
@@ -111,6 +112,7 @@ export class RoomsController {
   }
 
   @Post(':id/draw')
+  @HttpCode(200)
   @ApiOperation({ summary: 'Run the draw for a room (creator only)' })
   @ApiParam({
     name: 'id',
@@ -118,7 +120,7 @@ export class RoomsController {
     example: '665f0c2ab7d13a5e8b1c4d9f',
   })
   @ApiResponse({
-    status: 201,
+    status: 200,
     description: 'Draw completed; room is now drawn',
     type: RoomResponseDto,
   })
