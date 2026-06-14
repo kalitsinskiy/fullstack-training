@@ -158,20 +158,24 @@ if (room.createdBy.toString() !== userId) {
 
 ## Task
 
-### Step 1: Add assignments to the Room schema
+### Step 1: Confirm the Room schema stores the draw result
 
-In **santa-api**, store the draw result **on the Room document** — an
-`assignments` array of `{ giverId, receiverId }` pairs (both `ObjectId`, ref
-`User`), plus a `status` field and an optional `drawDate`. Writing the whole
-array in one update keeps the draw atomic without a separate collection or a
-transaction.
+The draw result lives **on the Room document** — an `assignments` array of
+`{ giverId, receiverId }` pairs (both `ObjectId`, ref `User`), plus a `status`
+field and an optional `drawDate`. Writing the whole array in one update keeps the
+draw atomic without a separate collection or a transaction.
+
+The template's `rooms/schemas/room.schema.ts` **already includes these** (they're
+part of the provided structure) — open it and confirm:
 
 ```typescript
-// Room schema additions:
+// Room schema (already present):
 // - status:      'pending' | 'drawn'  (default 'pending')
 // - drawDate?:   Date
 // - assignments: [{ giverId: ObjectId<User>, receiverId: ObjectId<User> }]
 ```
+
+> If you built your own schema instead of using the template, add these fields now.
 
 ### Step 2: Implement the derangement algorithm
 
