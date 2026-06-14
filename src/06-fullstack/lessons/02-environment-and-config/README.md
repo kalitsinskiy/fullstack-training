@@ -39,7 +39,7 @@ The `dotenv` package reads a `.env` file and sets variables on `process.env`:
 # .env
 PORT=3001
 NODE_ENV=development
-MONGO_URI=mongodb://localhost:27017/santa
+MONGO_URL=mongodb://localhost:27017/santa
 JWT_SECRET=my-dev-secret
 JWT_EXPIRATION=7d
 ```
@@ -48,7 +48,7 @@ JWT_EXPIRATION=7d
 import 'dotenv/config'; // Load .env into process.env
 
 console.log(process.env.PORT);       // "3001"
-console.log(process.env.MONGO_URI);  // "mongodb://localhost:27017/santa"
+console.log(process.env.MONGO_URL);  // "mongodb://localhost:27017/santa"
 ```
 
 **Important:** `dotenv` is for local development only. In production (Docker, cloud), environment variables are injected by the platform. The `.env` file should never exist in production.
@@ -65,7 +65,7 @@ console.log(process.env.MONGO_URI);  // "mongodb://localhost:27017/santa"
 ```
 PORT=3001
 NODE_ENV=development
-MONGO_URI=mongodb://localhost:27017/santa
+MONGO_URL=mongodb://localhost:27017/santa
 JWT_SECRET=<your-secret-here>
 JWT_EXPIRATION=7d
 ```
@@ -96,8 +96,8 @@ function validateConfig(): AppConfig {
   const nodeEnv = process.env.NODE_ENV;
   if (!nodeEnv) errors.push('NODE_ENV is required');
 
-  const mongoUri = process.env.MONGO_URI;
-  if (!mongoUri) errors.push('MONGO_URI is required');
+  const mongoUri = process.env.MONGO_URL;
+  if (!mongoUri) errors.push('MONGO_URL is required');
 
   const jwtSecret = process.env.JWT_SECRET;
   if (!jwtSecret) errors.push('JWT_SECRET is required');
@@ -132,7 +132,7 @@ import * as Joi from 'joi';
       validationSchema: Joi.object({
         PORT: Joi.number().default(3001),
         NODE_ENV: Joi.string().valid('development', 'staging', 'production').default('development'),
-        MONGO_URI: Joi.string().required(),
+        MONGO_URL: Joi.string().required(),
         JWT_SECRET: Joi.string().required(),
         JWT_EXPIRATION: Joi.string().default('7d'),
       }),
@@ -166,18 +166,18 @@ import { FastifyInstance } from 'fastify';
 export interface EnvConfig {
   PORT: number;
   NODE_ENV: string;
-  MONGO_URI: string;
+  MONGO_URL: string;
 }
 
 const configPlugin = fp(async (fastify: FastifyInstance) => {
   const config: EnvConfig = {
     PORT: parseInt(process.env.PORT || '3002', 10),
     NODE_ENV: process.env.NODE_ENV || 'development',
-    MONGO_URI: process.env.MONGO_URI || '',
+    MONGO_URL: process.env.MONGO_URL || '',
   };
 
   const missing: string[] = [];
-  if (!config.MONGO_URI) missing.push('MONGO_URI');
+  if (!config.MONGO_URL) missing.push('MONGO_URL');
 
   if (missing.length > 0) {
     throw new Error(
@@ -236,7 +236,7 @@ services:
     environment:
       - PORT=3001
       - NODE_ENV=production
-      - MONGO_URI=mongodb://mongo:27017/santa
+      - MONGO_URL=mongodb://mongodb:27017/santa
       - JWT_SECRET=${JWT_SECRET}  # Read from host .env or shell
     env_file:
       - ./santa-api/.env.docker  # Or load from a file
@@ -255,7 +255,7 @@ Different environments need different settings:
 | Setting | Development | Staging | Production |
 |---------|------------|---------|------------|
 | `NODE_ENV` | development | staging | production |
-| `MONGO_URI` | localhost:27017 | staging-cluster.mongodb.net | prod-cluster.mongodb.net |
+| `MONGO_URL` | localhost:27017 | staging-cluster.mongodb.net | prod-cluster.mongodb.net |
 | `JWT_EXPIRATION` | 30d (convenient) | 7d | 1d (strict) |
 | Logging level | debug | info | warn |
 
@@ -275,25 +275,26 @@ The code stays the same. Only the environment variables change.
 2. Update `AppModule` to import `ConfigModule.forRoot()` with a Joi validation schema. Validate these variables:
    - `PORT` (number, default 3001)
    - `NODE_ENV` (string, one of: development / staging / production)
-   - `MONGO_URI` (string, required)
+   - `MONGO_URL` (string, required)
    - `JWT_SECRET` (string, required)
    - `JWT_EXPIRATION` (string, default "7d")
 
 3. Make `ConfigModule` global (`isGlobal: true`) so `ConfigService` is available everywhere without extra imports.
 
-4. Replace any hard-coded config values in your existing code with `ConfigService` calls. For example, update your MongoDB connection to use `configService.get('MONGO_URI')`, and JWT configuration to use `configService.get('JWT_SECRET')`.
+4. Replace any hard-coded config values in your existing code with `ConfigService` calls. For example, update your MongoDB connection to use `configService.get('MONGO_URL')`, and JWT configuration to use `configService.get('JWT_SECRET')`.
 
-### Step 2: Create config plugin for santa-notifications
+### Step 2: Extend the config plugin for santa-notifications
 
-1. Create a config plugin (`src/plugins/config.ts`) that:
-   - Reads `PORT`, `NODE_ENV`, `MONGO_URI` from `process.env`
-   - Validates that required variables are present
-   - Throws a clear error listing all missing variables if any are absent
-   - Decorates the Fastify instance with the config object (`fastify.config`)
+The template already ships `src/plugins/config.ts` — it reads `PORT` / `NODE_ENV`
+and decorates `fastify.config`. **Extend** it (don't recreate it) to:
 
-2. Register the plugin before any other plugins that need configuration (e.g., database plugin).
-
-3. Update your MongoDB connection to read the URI from `fastify.config.MONGO_URI` instead of a hard-coded string.
+1. Also read `MONGO_URL` from `process.env`, and add it to the `AppConfig`
+   interface + the decorated object.
+2. Validate that required variables (`MONGO_URL`) are present; throw a clear error
+   listing all missing variables if any are absent (so the service fails fast).
+3. Keep it registered before the DB connection (it already is, in `app.ts`).
+4. Update `src/db.ts` to read the URI from `fastify.config.MONGO_URL` instead of
+   `process.env.MONGO_URL ?? '…'`.
 
 ### Step 3: Create .env.example files
 
@@ -302,7 +303,7 @@ Create `.env.example` in **santa-api/**:
 ```
 PORT=3001
 NODE_ENV=development
-MONGO_URI=mongodb://localhost:27017/santa
+MONGO_URL=mongodb://localhost:27017/santa
 JWT_SECRET=<your-secret-here>
 JWT_EXPIRATION=7d
 ```
@@ -312,7 +313,7 @@ Create `.env.example` in **santa-notifications/**:
 ```
 PORT=3002
 NODE_ENV=development
-MONGO_URI=mongodb://localhost:27017/santa
+MONGO_URL=mongodb://localhost:27017/santa
 ```
 
 Create actual `.env` files (copy from examples) with your local values. Make sure `.env` is listed in `.gitignore` for all projects.
@@ -364,7 +365,7 @@ Update the `docker-compose.yml` from Lesson 01 to pass environment variables pro
        environment:
          - PORT=3001
          - NODE_ENV=production
-         - MONGO_URI=mongodb://mongo:27017/santa
+         - MONGO_URL=mongodb://mongodb:27017/santa
          - JWT_SECRET=${JWT_SECRET}
          - JWT_EXPIRATION=7d
 
@@ -372,7 +373,7 @@ Update the `docker-compose.yml` from Lesson 01 to pass environment variables pro
        environment:
          - PORT=3002
          - NODE_ENV=production
-         - MONGO_URI=mongodb://mongo:27017/santa
+         - MONGO_URL=mongodb://mongodb:27017/santa
    ```
 
 3. Add `.env` at the repo root to `.gitignore`.
@@ -381,7 +382,7 @@ Update the `docker-compose.yml` from Lesson 01 to pass environment variables pro
 
 Test that validation catches missing variables:
 
-1. Remove or unset a required variable (like `MONGO_URI`) and start the service.
+1. Remove or unset a required variable (like `MONGO_URL`) and start the service.
 2. Confirm the app crashes immediately with a clear error message listing the missing variable.
 3. Restore the variable and verify the service starts normally.
 
@@ -392,13 +393,13 @@ Test that validation catches missing variables:
 ```bash
 # 1. Test santa-api fails fast with missing config
 cd santa-api
-MONGO_URI= JWT_SECRET= npx ts-node src/main.ts
+MONGO_URL= JWT_SECRET= npx ts-node src/main.ts
 # Expected: Throws error about missing required variables
 
 # 2. Test santa-notifications fails fast
 cd santa-notifications
-MONGO_URI= npx ts-node src/server.ts
-# Expected: Throws error about missing MONGO_URI
+MONGO_URL= npx ts-node src/server.ts
+# Expected: Throws error about missing MONGO_URL
 
 # 3. Normal startup works with valid .env
 cd santa-api && npm run start:dev
@@ -406,8 +407,8 @@ cd santa-api && npm run start:dev
 
 # 4. Docker-compose injects env vars
 docker-compose up --build
-docker-compose exec santa-api printenv | grep MONGO_URI
-# Expected: MONGO_URI=mongodb://mongo:27017/santa
+docker-compose exec santa-api printenv | grep MONGO_URL
+# Expected: MONGO_URL=mongodb://mongodb:27017/santa
 
 # 5. Vite env vars work
 cd santa-app && npm run dev
