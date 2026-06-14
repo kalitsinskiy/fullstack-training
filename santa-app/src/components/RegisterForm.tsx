@@ -1,4 +1,7 @@
 import React, { useState } from "react";
+import type ValidationError from "../utils/ValidationError";
+import Validate from "../utils/Validation";
+import ValidationList from "./ValidationList";
 
 export default function RegisterForm() {
   const [name, setName] = useState("");
@@ -6,13 +9,38 @@ export default function RegisterForm() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
 
+  const [nameErrors, setNameErrors] = useState<ValidationError[]>([]);
+  const [emailErrors, setEmailErrors] = useState<ValidationError[]>([]);
+  const [passwordErrors, setPasswordErrors] = useState<ValidationError[]>([]);
+  const [confirmErrors, setConfirmErrors] = useState<ValidationError[]>([]);
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    console.log("register:", { name, email, password, confirm });
+
+    const nameValidationErrors = Validate.name(name);
+    const emailValidationErrors = Validate.email(email);
+    const passwordValidationErrors = Validate.password(password);
+    const confirmValidationErrors = Validate.confirmPassword(password, confirm);
+
+    setNameErrors(nameValidationErrors);
+    setEmailErrors(emailValidationErrors);
+    setPasswordErrors(passwordValidationErrors);
+    setConfirmErrors(confirmValidationErrors);
+
+    if (
+      nameValidationErrors.length > 0 ||
+      emailValidationErrors.length > 0 ||
+      passwordValidationErrors.length > 0 ||
+      confirmValidationErrors.length > 0
+    ) {
+      console.error("validation errors:");
+      return;
+    }
+
+    console.info("register:", { name, email, password, confirm });
   }
 
-  const isDisabled =
-    !name || !email || !password || !confirm || password !== confirm;
+  const isDisabled = !name || !email || !password || !confirm;
 
   return (
     <form
@@ -30,6 +58,7 @@ export default function RegisterForm() {
           onChange={(e) => setName(e.target.value)}
           required
         />
+        <ValidationList errors={nameErrors} />
       </label>
 
       <label className="flex flex-col gap-1">
@@ -41,6 +70,7 @@ export default function RegisterForm() {
           onChange={(e) => setEmail(e.target.value)}
           required
         />
+        <ValidationList errors={emailErrors} />
       </label>
 
       <label className="flex flex-col gap-1">
@@ -52,6 +82,7 @@ export default function RegisterForm() {
           onChange={(e) => setPassword(e.target.value)}
           required
         />
+        <ValidationList errors={passwordErrors} />
       </label>
 
       <label className="flex flex-col gap-1">
@@ -63,6 +94,7 @@ export default function RegisterForm() {
           onChange={(e) => setConfirm(e.target.value)}
           required
         />
+        <ValidationList errors={confirmErrors} />
       </label>
 
       <div className="flex items-center gap-3">
@@ -73,9 +105,6 @@ export default function RegisterForm() {
         >
           Create account
         </button>
-        {password && confirm && password !== confirm ? (
-          <span className="text-danger text-sm">Passwords do not match</span>
-        ) : null}
       </div>
     </form>
   );

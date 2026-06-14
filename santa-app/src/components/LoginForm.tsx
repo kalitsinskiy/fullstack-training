@@ -1,15 +1,32 @@
-import React, { useState } from "react";
+import React, { useState, type ChangeEvent } from "react";
+import type ValidationError from "../utils/ValidationError";
+import Validate from "../utils/Validation";
+import ValidationList from "./ValidationList";
 
 export default function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [emailErrors, setEmailErrors] = useState<ValidationError[]>([]);
+  const [passwordErrors, setPasswordErrors] = useState<ValidationError[]>([]);
+
+  const isValid = email !== "" && password !== "";
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    console.log("login:", { email, password });
-  }
+    const emailValidationErrors = Validate.email(email);
+    const passwordValidationErrors = Validate.password(password);
+    setEmailErrors(emailValidationErrors);
+    setPasswordErrors(passwordValidationErrors);
 
-  const isDisabled = !email || !password;
+    if (
+      emailValidationErrors.length > 0 ||
+      passwordValidationErrors.length > 0
+    ) {
+      console.error("validation errors:");
+      return;
+    }
+    console.info("login:", { email, password });
+  }
 
   return (
     <form
@@ -28,6 +45,7 @@ export default function LoginForm() {
           onChange={(e) => setEmail(e.target.value)}
           required
         />
+        <ValidationList errors={emailErrors} />
       </label>
 
       <label className="flex flex-col gap-1">
@@ -39,11 +57,12 @@ export default function LoginForm() {
           onChange={(e) => setPassword(e.target.value)}
           required
         />
+        <ValidationList errors={passwordErrors} />
       </label>
 
       <button
         type="submit"
-        disabled={isDisabled}
+        disabled={!isValid}
         className="bg-brand hover:bg-brand-dark mt-2 rounded-md px-4 py-2 font-semibold text-(--button-text) transition disabled:cursor-not-allowed disabled:opacity-60"
       >
         Sign in

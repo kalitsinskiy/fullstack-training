@@ -49,7 +49,57 @@
  */
 
 // TODO: import useState
-
+import { useState } from 'react';
 // TODO: create the Counter component
 
+function Counter() {
+  const [count, setCount] = useState(0);
+  const [step, setStep] = useState(1);
+
+  const buttonStyle: React.CSSProperties = {
+    border: '1px solid #ccc',
+    margin: '0.5rem',
+    padding: '0 0.5rem',
+    minWidth: '60px',
+    cursor: 'pointer',
+  };
+  const inputStyle: React.CSSProperties = {
+    width: '60px',
+    padding: '0.25rem',
+    marginLeft: '0.5rem',
+  };
+
+  const color = count > 0 ? 'green' : count < 0 ? 'red' : 'gray';
+
+  return (
+    <div style={{ marginBottom: '1.5rem' }}>
+      <h3 style={{ color }}>Counter: {count}</h3>
+      <p style={{ color }}>{count === 0 && 'Count is at zero'}</p>
+      <div style={{ marginBottom: '0.5rem' }}>
+        <label>
+          Step:
+          <input
+            type="number"
+            value={step}
+            onChange={(e) => setStep(Number(e.target.value))}
+            style={inputStyle}
+          />
+        </label>
+      </div>
+      <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <button style={buttonStyle} onClick={() => setCount((prev) => prev + step)}>
+          +{step}
+        </button>
+        <button style={buttonStyle} onClick={() => setCount((prev) => prev - step)}>
+          -{step}
+        </button>
+        <button style={buttonStyle} onClick={() => setCount(0)}>
+          Reset
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // TODO: export default Counter
+export default Counter;

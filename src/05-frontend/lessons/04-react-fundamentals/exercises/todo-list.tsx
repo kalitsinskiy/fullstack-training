@@ -61,9 +61,14 @@
  *   function App() { return <TodoList />; }
  */
 
-import { useState } from 'react';
+import { use, useState } from 'react';
 
 // TODO: Define the Todo interface
+interface Todo {
+  id: number;
+  text: string;
+  completed: boolean;
+}
 
 // TODO: Create the TodoList component
 //
@@ -96,5 +101,127 @@ import { useState } from 'react';
 //     </div>
 //   );
 // }
+function TodoList() {
+  // State: todos array, input text, nextId
+  const [todos, setTodos] = useState<Todo[]>([]);
+  const [task, setTask] = useState('');
+  const [nextId, setNextId] = useState(1);
+
+  // Handler: addTodo (called on form submit)
+  function handleAdd(e: React.FormEvent) {
+    e.preventDefault();
+
+    if (!task || !task.trim()) {
+      return;
+    }
+
+    const todo: Todo = {
+      id: nextId,
+      text: task.trim(),
+      completed: false,
+    };
+
+    setTodos((prev) => [...prev, todo]);
+    setNextId((prev) => prev + 1);
+    setTask('');
+  }
+
+  // Handler: removeTodo (called with an id)
+  function handleRemove(id: number) {
+    setTodos((prev) => prev.filter((task) => task.id !== id));
+  }
+
+  // Handler: toggleTodo (called with an id)
+  function toggleTodo(id: number) {
+    setTodos((prev) => prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t)));
+  }
+
+  // Computed: remaining count
+  const remainingCount = todos.filter((t) => !t.completed).length;
+
+  return (
+    <div>
+      <h2>Todo List</h2>
+      {/* Add form */}
+      <form onSubmit={handleAdd} style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+        <input
+          type="text"
+          value={task}
+          onChange={(e) => setTask(e.target.value)}
+          placeholder="What needs to be done?"
+          style={{
+            flex: 1,
+            padding: '0.5rem',
+            border: '1px solid #ccc',
+            borderRadius: '4px',
+            fontSize: '1rem',
+          }}
+        />
+        <button
+          type="submit"
+          style={{
+            background: '#2d5a27',
+            color: 'white',
+            border: 'none',
+            padding: '0.5rem 1rem',
+            borderRadius: '4px',
+            cursor: 'pointer',
+          }}
+        >
+          Add
+        </button>
+      </form>
+      {/* Todo list or empty message */}
+      {todos.length === 0 ? (
+        <p style={{ color: '#666', fontStyle: 'italic' }}>No todos yet. Add one!</p>
+      ) : (
+        <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+          {todos.map((task) => (
+            <li
+              key={task.id}
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '0.5rem 0.75rem',
+                borderBottom: '1px solid #eee',
+              }}
+            >
+              <span
+                style={{
+                  cursor: 'pointer',
+                  textDecoration: task.completed ? 'line-through' : 'none',
+                  color: task.completed ? '#999' : '#333',
+                }}
+                onClick={() => toggleTodo(task.id)}
+              >
+                {task.text}
+              </span>
+              <button
+                onClick={() => handleRemove(task.id)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#c0392b',
+                  cursor: 'pointer',
+                  fontSize: '0.9rem',
+                }}
+              >
+                Remove
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {/* Remaining count */}
+      {todos.length > 0 && (
+        <p style={{ marginTop: '0.5rem', color: '#666', fontSize: '0.85rem' }}>
+          {remainingCount} items left
+        </p>
+      )}
+    </div>
+  );
+}
 
 // TODO: Export default TodoList
+export default TodoList;

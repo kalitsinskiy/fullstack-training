@@ -4,7 +4,7 @@ export interface Room {
   id: string;
   name: string;
   code: string;
-  memberCount: number;
+  participantCount: number;
   status: RoomStatus;
 }
 
@@ -20,9 +20,10 @@ export default function RoomList({ rooms }: RoomListProps) {
           key={room.id}
           name={room.name}
           code={room.code}
-          memberCount={room.memberCount}
+          participantCount={room.participantCount}
           status={room.status}
-          onOpen={() => console.log("open room", room.id)}
+          onJoin={() => console.log("join room", room.id)}
+          onView={() => console.log("view room", room.id)}
         />
       ))}
     </div>

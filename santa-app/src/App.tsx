@@ -3,9 +3,10 @@ import reactLogo from "./assets/react.svg";
 import viteLogo from "./assets/vite.svg";
 import heroImg from "./assets/hero.png";
 import "./App.css";
-import LoginForm from "./components/LoginForm/LoginForm";
-import RegisterForm from "./components/RegisterForm/RegisterForm";
-import RoomList, { type Room } from "./components/RoomList";
+import LoginForm from "./components/LoginForm";
+import RegisterForm from "./components/RegisterForm";
+import RoomList from "./components/RoomList";
+import type { Room } from "./components/RoomList";
 
 function App() {
   const [count, setCount] = useState(0);
@@ -15,29 +16,29 @@ function App() {
       id: "1",
       name: "Holiday Secret Santa",
       code: "HS-9123",
-      memberCount: 16,
-      status: "pending",
+      participantCount: 16,
+      status: "open",
     },
     {
       id: "2",
       name: "Family Gift Swap",
       code: "FS-2024",
-      memberCount: 10,
+      participantCount: 10,
       status: "drawn",
     },
     {
       id: "3",
       name: "Office Holiday Party",
       code: "OH-4512",
-      memberCount: 24,
+      participantCount: 24,
       status: "closed",
     },
     {
       id: "4",
       name: "Friends Gift Exchange",
       code: "FG-3701",
-      memberCount: 8,
-      status: "pending",
+      participantCount: 8,
+      status: "open",
     },
   ];
 

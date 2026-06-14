@@ -3,6 +3,8 @@
 @theme {
   --color-brand: #2d5a27;
   --color-brand-dark: #1e3d1a;
+  --color-brand-secondary: #4caf50;
+  --color-brand-secondary-dark: #388e3c;
   --color-danger: #c0392b;
   --spacing-card: 1.5rem;
   --radius-card: 0.5rem;
