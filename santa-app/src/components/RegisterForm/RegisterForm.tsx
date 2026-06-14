@@ -1,70 +1,35 @@
-import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useNavigate } from 'react-router';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Field } from '../ui/Field';
-import { inputValidation } from '../../utils/validators';
-
-const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001';
+import { RegisterSchema, type RegisterInput } from '@/schemas/auth';
 
 export function RegisterForm() {
+  const auth = useAuth();
   const navigate = useNavigate();
 
-  const [fields, setFields] = useState({ name: '', email: '', password: '', confirmPassword: '' });
-  const [errors, setErrors] = useState({ name: '', email: '', password: '', confirmPassword: '' });
-  const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<RegisterInput>({
+    resolver: zodResolver(RegisterSchema),
+    mode: 'onBlur',
+  });
 
-  const isDisabled =
-    !fields.name ||
-    !fields.email ||
-    !fields.password ||
-    !fields.confirmPassword ||
-    !!errors.name ||
-    !!errors.email ||
-    !!errors.password ||
-    !!errors.confirmPassword;
-
-  function handleChange(e: React.ChangeEvent<HTMLFieldElement>) {
-    const { name, value } = e.target;
-    setFields((prev) => ({ ...prev, [name]: value }));
-    setErrors((prev) => ({
-      ...prev,
-      [name]: inputValidation(
-        name as 'name' | 'email' | 'password' | 'confirmPassword',
-        value,
-        name === 'confirmPassword' ? fields.password : undefined
-      ),
-    }));
-  }
-
-  async function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
-    e.preventDefault();
-
-    if (isDisabled) return;
-
+  const submit = async (data: RegisterInput) => {
     try {
-      setSubmitting(true);
-      setSubmitError(null);
-
-      const res = await fetch(`${BASE_URL}/api/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: fields.email,
-          password: fields.password,
-          displayName: fields.name,
-        }),
-      });
-
-      if (!res.ok) throw new Error('Registration failed');
-
+      await auth.register(data.email, data.password, data.displayName);
       navigate('/login');
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : 'Registration failed');
-    } finally {
-      setSubmitting(false);
+      setError('root.serverError', {
+        message: err instanceof Error ? err.message : 'Registration failed',
+      });
     }
-  }
+  };
 
   return (
     <main className="grid flex-1 place-items-center px-6 pt-16 pb-20">
@@ -79,13 +44,16 @@ export function RegisterForm() {
           Create Account
         </h2>
 
-        {submitError && (
-          <div className="rounded-base mb-4 border-red-200 bg-red-50 px-5 py-3 text-[0.875rem] text-red-700">
-            {submitError}
+        {errors.root?.serverError && (
+          <div
+            role="alert"
+            className="rounded-base mb-4 border-red-200 bg-red-50 px-5 py-3 text-[0.875rem] text-red-700"
+          >
+            {errors.root.serverError.message}
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit(submit)}>
           <fieldset className="mb-5 border-0 p-0">
             <legend className="text-brand-soft float-left mb-2 w-full border-b pb-[0.85rem] text-[0.7rem] font-bold tracking-[0.25em] uppercase">
               Account details
@@ -94,45 +62,31 @@ export function RegisterForm() {
             <div className="flex flex-col gap-[1.1rem]">
               <Field
                 label="Name"
-                name="name"
                 type="text"
                 placeholder="Display Name"
-                required
-                value={fields.name}
-                error={errors.name}
-                onChange={handleChange}
+                {...register('displayName')}
+                error={errors.displayName?.message}
               />
               <Field
                 label="Email"
-                name="email"
                 type="email"
                 placeholder="Valid Email"
-                required
-                value={fields.email}
-                error={errors.email}
-                onChange={handleChange}
+                {...register('email')}
+                error={errors.email?.message}
               />
               <Field
                 label="Password"
-                name="password"
                 type="password"
                 placeholder="Password"
-                minLength={8}
-                required
-                value={fields.password}
-                error={errors.password}
-                onChange={handleChange}
+                {...register('password')}
+                error={errors.password?.message}
               />
               <Field
                 label="Confirm Password"
-                name="confirmPassword"
                 type="password"
                 placeholder="Confirm password"
-                minLength={8}
-                required
-                value={fields.confirmPassword}
-                error={errors.confirmPassword}
-                onChange={handleChange}
+                {...register('confirm')}
+                error={errors.confirm?.message}
               />
             </div>
           </fieldset>
@@ -140,10 +94,10 @@ export function RegisterForm() {
             type="submit"
             variant="default"
             size="lg"
-            disabled={isDisabled || submitting}
+            disabled={isSubmitting}
             className="mt-5 w-full"
           >
-            {submitting ? 'Creating account…' : 'Create Account'}
+            {isSubmitting ? 'Creating account…' : 'Create Account'}
           </Button>
           <p className="text-muted-foreground mt-6 text-center text-[0.9rem]">
             Already have an account?{' '}

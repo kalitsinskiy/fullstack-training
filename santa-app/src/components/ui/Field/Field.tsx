@@ -10,12 +10,24 @@ interface FieldProps extends React.ComponentPropsWithoutRef<'input'> {
 export function Field({ label, error, id, name, className, ...rest }: FieldProps) {
   const autoId = useId();
   const fieldId = id ?? name ?? autoId;
+  const errorId = `${fieldId}-error`;
 
   return (
     <div className="flex flex-col gap-1.5">
       <Label htmlFor={fieldId}>{label}</Label>
-      <Input id={fieldId} name={name} aria-invalid={!!error} className={className} {...rest} />
-      {error && <p className="text-[0.78rem] text-red-500">{error}</p>}
+      <Input
+        id={fieldId}
+        name={name}
+        aria-invalid={!!error}
+        aria-describedby={error ? errorId : undefined}
+        className={className}
+        {...rest}
+      />
+      {error && (
+        <p id={errorId} role="alert" className="text-[0.78rem] text-red-500">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

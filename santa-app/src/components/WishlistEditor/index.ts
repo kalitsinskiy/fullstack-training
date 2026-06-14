@@ -1,0 +1,1 @@
+export { WishlistEditor } from './WishlistEditor';

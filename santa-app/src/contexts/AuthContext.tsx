@@ -11,6 +11,7 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   isLoading: boolean;
+  register: (email: string, password: string, displayName: string) => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
@@ -50,6 +51,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .finally(() => setIsLoading(false));
   }, []);
 
+  async function register(email: string, password: string, displayName: string) {
+    const res = await fetch(`${BASE_URL}/api/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'qpplication/json' },
+      body: JSON.stringify({ email, password, displayName }),
+    });
+
+    if (!res.ok) throw new Error('Registration failed');
+  }
+
   async function login(email: string, password: string) {
     const loginRes = await fetch(`${BASE_URL}/api/auth/login`, {
       method: 'POST',
@@ -82,7 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, token, isLoading, login, logout, isAuthenticated: user !== null }}
+      value={{ user, token, isLoading, register, login, logout, isAuthenticated: user !== null }}
     >
       {children}
     </AuthContext.Provider>
