@@ -1,29 +1,3 @@
-/**
- * Exercise: Build the same RoomCard, two ways
- *
- * The component:
- *   - Shows: room name (h3), invite code (mono font), member count, status badge,
- *     "Open" button on the right
- *   - Status badge colors: pending=amber, drawn=green, closed=slate
- *   - On hover: subtle shadow lift
- *   - Should look usable on both 320px (phone) and 1200px (desktop)
- *
- * Pick PATH A or PATH B and implement that one. Optionally do both.
- *
- *   Path A — Material UI
- *   Path B — Tailwind + shadcn-style primitives
- *
- * Required imports/setup are listed below the component spec.
- *
- * Test by rendering <RoomCardDemo /> in your Vite app:
- *
- *   import { RoomCardDemo } from './exercises/build-room-card';
- *   function App() { return <RoomCardDemo />; }
- */
-
-/* eslint-disable */
-// @ts-nocheck — exercise file. Path A implemented; Path B stub kept intentionally.
-
 import { useState } from 'react';
 import {
   Card,
@@ -55,18 +29,6 @@ const sampleRooms: Room[] = [
   { id: '3', name: 'Friends Christmas', code: 'GHI789', memberCount: 12, status: 'closed' },
 ];
 
-// ================================================
-// PATH A — Material UI
-// ================================================
-//
-// npm install @mui/material @emotion/react @emotion/styled @mui/icons-material
-//
-// Use these MUI primitives:
-//   Card, CardContent, CardActions, Typography, Button, Chip, Box, Stack
-//
-// Tip: <Chip color="warning|success|default" label={room.status} size="small" />
-
-// Chip color maps to MUI's built-in palette tokens
 const statusColor: Record<Room['status'], 'warning' | 'success' | 'default'> = {
   pending: 'warning',
   drawn: 'success',
@@ -108,34 +70,8 @@ function RoomCardMUI({ room, onOpen }: RoomCardProps) {
   );
 }
 
-// ================================================
-// PATH B — Tailwind + shadcn-style
-// ================================================
-//
-// Setup (one-time):
-//   npm install -D tailwindcss @tailwindcss/vite clsx tailwind-merge class-variance-authority
-//
-// You may either:
-//   a) Run `npx shadcn@latest add button card` and use the generated files.
-//   b) Hand-roll a Card composition like in examples/shadcn-concept.tsx.
-//
-// Either way, the leaf component should accept the same RoomCardProps shape.
-
-// TODO PATH B: implement RoomCardShadcn using Tailwind utilities (and Radix-based dialog later).
-// Replace this stub with your implementation.
-
-function RoomCardShadcn(_props: RoomCardProps) {
-  return null; // TODO
-}
-
-// ================================================
-// DEMO — switch between paths via a toggle
-// ================================================
-
 export function RoomCardDemo() {
   const [path, setPath] = useState<'A' | 'B'>('A');
-
-  const Renderer = path === 'A' ? RoomCardMUI : RoomCardShadcn;
 
   return (
     <div style={{ padding: 24, fontFamily: 'system-ui, sans-serif' }}>
@@ -148,7 +84,6 @@ export function RoomCardDemo() {
           Path B — Tailwind
         </button>
       </header>
-
       <div
         style={{
           display: 'grid',
@@ -156,9 +91,12 @@ export function RoomCardDemo() {
           gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
         }}
       >
-        {sampleRooms.map((room) => (
-          <Renderer key={room.id} room={room} onOpen={() => alert(`Opening ${room.name}`)} />
-        ))}
+        {/* Only Path A (MUI) is implemented */}
+        {path === 'A' &&
+          sampleRooms.map((room) => (
+            <RoomCardMUI key={room.id} room={room} onOpen={() => alert(`Opening ${room.name}`)} />
+          ))}
+        {path === 'B' && <p style={{ color: '#888' }}>Path B (Tailwind) not implemented yet.</p>}
       </div>
     </div>
   );
