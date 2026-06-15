@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import reactLogo from './assets/react.svg';
 import viteLogo from './assets/vite.svg';
 import heroImg from './assets/hero.png';
@@ -6,8 +7,33 @@ import Counter from './exercises/counter';
 import TodoList from './exercises/todo-list';
 import PostList from './exercises/use-fetch';
 import ThemeSwitcherApp from './exercises/theme-switcher';
+import MultiPageApp from './exercises/multi-page-app';
+import ProtectedApp from './exercises/protected-app';
+
+type RouterDemo = 'multi-page' | 'protected';
 
 function App() {
+  // Two BrowserRouters cannot coexist — only mount one at a time
+  const [activeDemo, setActiveDemo] = useState<RouterDemo | null>(null);
+
+  if (activeDemo === 'multi-page') {
+    return (
+      <div>
+        <button onClick={() => setActiveDemo(null)} style={{ margin: 12 }}>← Back to Exercises</button>
+        <MultiPageApp />
+      </div>
+    );
+  }
+
+  if (activeDemo === 'protected') {
+    return (
+      <div>
+        <button onClick={() => setActiveDemo(null)} style={{ margin: 12 }}>← Back to Exercises</button>
+        <ProtectedApp />
+      </div>
+    );
+  }
+
   return (
     <>
       <section id="center">
@@ -23,6 +49,10 @@ function App() {
         <TodoList />
         <PostList />
         <ThemeSwitcherApp />
+        <div style={{ marginTop: 32, display: 'flex', gap: 12 }}>
+          <button onClick={() => setActiveDemo('multi-page')}>Open Multi-Page App →</button>
+          <button onClick={() => setActiveDemo('protected')}>Open Protected App →</button>
+        </div>
       </section>
 
       <div className="ticks"></div>

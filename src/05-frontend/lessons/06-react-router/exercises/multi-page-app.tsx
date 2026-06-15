@@ -22,15 +22,8 @@
 //
 // To test: render this component in a Vite React app.
 
-import {
-  BrowserRouter,
-  Routes,
-  Route,
-  Link,
-  NavLink,
-  useParams,
-  useNavigate,
-} from 'react-router';
+import React from 'react';
+import { BrowserRouter, Routes, Route, Link, NavLink, useParams, useNavigate } from 'react-router';
 
 // ---- Data ----
 
@@ -53,23 +46,61 @@ const users: User[] = [
 // - Style active links differently (bold, color change)
 // - Use the style or className prop on NavLink with the isActive callback
 
+// isActive callback lets NavLink apply different styles to the currently active route
+const navLinkStyle = ({ isActive }: { isActive: boolean }) => ({
+  textDecoration: 'none',
+  color: isActive ? '#1976d2' : '#333',
+  fontWeight: isActive ? ('bold' as const) : ('normal' as const),
+  borderBottom: isActive ? '2px solid #1976d2' : '2px solid transparent',
+  paddingBottom: 4,
+});
+
 function Navigation() {
-  // TODO: Implement
-  return <nav>Navigation — implement me</nav>;
+  return (
+    <nav
+      style={{
+        display: 'flex',
+        gap: 16,
+        padding: '12px 20px',
+        borderBottom: '1px solid #ddd',
+        backgroundColor: '#f5f5f5',
+      }}
+    >
+      <NavLink to="/" end style={navLinkStyle}>
+        Home
+      </NavLink>
+      <NavLink to="/about" style={navLinkStyle}>
+        About
+      </NavLink>
+      <NavLink to="/users" style={navLinkStyle}>
+        Users
+      </NavLink>
+    </nav>
+  );
 }
 
 // ---- TODO 2: Create Home page ----
 
 function Home() {
-  // TODO: Implement — show a welcome message
-  return <div>Home — implement me</div>;
+  return (
+    <div>
+      <h2>Welcome!</h2>
+      <p>This is a multi-page app built with React Router v6.</p>
+      <p>Use the navigation above to explore the app.</p>
+    </div>
+  );
 }
 
 // ---- TODO 3: Create About page ----
 
 function About() {
-  // TODO: Implement — show app description
-  return <div>About — implement me</div>;
+  return (
+    <div>
+      <h2>About</h2>
+      <p>This app demonstrates client-side routing with React Router v6.</p>
+      <p>It supports nested routes, dynamic segments, and a 404 catch-all.</p>
+    </div>
+  );
 }
 
 // ---- TODO 4: Create UserList page ----
@@ -77,8 +108,18 @@ function About() {
 // - Each user name should be a <Link> to /users/:id
 
 function UserList() {
-  // TODO: Implement
-  return <div>UserList — implement me</div>;
+  return (
+    <div>
+      <h2>Users</h2>
+      <ul>
+        {users.map((user) => (
+          <li key={user.id}>
+            <Link to={`/users/${user.id}`}>{user.name}</Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 // ---- TODO 5: Create UserDetail page ----
@@ -89,8 +130,33 @@ function UserList() {
 // - Add a "Back to Users" button using useNavigate
 
 function UserDetail() {
-  // TODO: Implement
-  return <div>UserDetail — implement me</div>;
+  // useParams reads dynamic URL segments defined in the Route path
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+
+  const user = users.find((u) => u.id === id);
+
+  if (!user) {
+    return (
+      <div>
+        <p>User not found.</p>
+        <button onClick={() => navigate('/users')}>Back to Users</button>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <h2>{user.name}</h2>
+      <p>
+        <strong>Email:</strong> {user.email}
+      </p>
+      <p>
+        <strong>Role:</strong> {user.role}
+      </p>
+      <button onClick={() => navigate('/users')}>Back to Users</button>
+    </div>
+  );
 }
 
 // ---- TODO 6: Create NotFound page ----
@@ -98,8 +164,13 @@ function UserDetail() {
 // - Add a <Link> back to Home
 
 function NotFound() {
-  // TODO: Implement
-  return <div>NotFound — implement me</div>;
+  return (
+    <div>
+      <h2>404 — Page Not Found</h2>
+      <p>The page you are looking for does not exist.</p>
+      <Link to="/">Go Home</Link>
+    </div>
+  );
 }
 
 // ---- TODO 7: Wire it all up ----
@@ -109,6 +180,20 @@ function NotFound() {
 // - Don't forget the catch-all "*" route for 404
 
 export default function MultiPageApp() {
-  // TODO: Implement
-  return <div>MultiPageApp — implement me</div>;
+  return (
+    <BrowserRouter>
+      <div style={{ fontFamily: 'sans-serif' }}>
+        <Navigation />
+        <div style={{ padding: 20 }}>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/users" element={<UserList />} />
+            <Route path="/users/:id" element={<UserDetail />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </div>
+      </div>
+    </BrowserRouter>
+  );
 }
