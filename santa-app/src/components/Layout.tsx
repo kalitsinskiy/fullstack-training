@@ -1,44 +1,119 @@
+import { useState } from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router";
+import {
+  AppBar,
+  Toolbar,
+  Button,
+  IconButton,
+  Typography,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+} from "@mui/material";
+import AddIcon from "@mui/icons-material/Add";
+import LogoutIcon from "@mui/icons-material/Logout";
 import { useAuth } from "../contexts/AuthContext";
 
 export function Layout() {
   const auth = useAuth();
   const navigate = useNavigate();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [roomName, setRoomName] = useState("");
 
   const handleLogout = () => {
     auth.logout();
     navigate("/login");
   };
 
+  const handleCreate = () => {
+    console.log({ name: roomName });
+    setRoomName("");
+    setDialogOpen(false);
+  };
+
+  const handleClose = () => {
+    setRoomName("");
+    setDialogOpen(false);
+  };
+
   return (
     <>
-      <header className="flex items-center justify-between bg-white px-6 py-3 shadow-sm">
-        <Link to="/rooms" className="text-brand text-lg font-bold">
-          Secret Santa
-        </Link>
-        <nav className="flex items-center gap-4">
+      <AppBar position="static">
+        <Toolbar sx={{ gap: 2 }}>
+          <Typography
+            component={Link}
+            to="/rooms"
+            variant="h6"
+            sx={{ flexGrow: 0, color: "inherit", textDecoration: "none", mr: 2 }}
+          >
+            Secret Santa
+          </Typography>
+
           <NavLink
             to="/rooms"
-            className={({ isActive }) =>
-              isActive ? "text-brand font-semibold" : "text-gray-600 hover:text-gray-900"
-            }
+            style={({ isActive }) => ({
+              color: "inherit",
+              textDecoration: isActive ? "underline" : "none",
+              fontWeight: isActive ? 700 : 400,
+            })}
           >
             Rooms
           </NavLink>
-        </nav>
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-gray-600">{auth.user?.displayName}</span>
-          <button
+
+          <IconButton
+            color="inherit"
+            onClick={() => setDialogOpen(true)}
+            aria-label="Create room"
+            sx={{ ml: "auto" }}
+          >
+            <AddIcon />
+          </IconButton>
+
+          <Typography variant="body2" sx={{ color: "inherit", opacity: 0.85 }}>
+            {auth.user?.displayName}
+          </Typography>
+
+          <Button
+            color="inherit"
+            startIcon={<LogoutIcon />}
             onClick={handleLogout}
-            className="rounded bg-gray-200 px-3 py-1 text-sm hover:bg-gray-300"
           >
             Logout
-          </button>
-        </div>
-      </header>
+          </Button>
+        </Toolbar>
+      </AppBar>
+
       <main className="min-h-screen bg-gray-100 p-6">
         <Outlet />
       </main>
+
+      <Dialog open={dialogOpen} onClose={handleClose} fullWidth maxWidth="xs">
+        <DialogTitle>Create Room</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            label="Room name"
+            fullWidth
+            required
+            value={roomName}
+            onChange={(e) => setRoomName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && roomName.trim() && handleCreate()}
+            sx={{ mt: 1 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClose}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={handleCreate}
+            disabled={!roomName.trim()}
+          >
+            Create
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }
