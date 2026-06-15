@@ -71,3 +71,144 @@
   - Look at examples/flexbox-layouts.html for navbar patterns
   - Test by resizing the browser below 768px width
 */
+
+/* 1. RESET & BASE */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: system-ui, sans-serif;
+}
+
+/* 2. NAVBAR */
+.navbar {
+  background: #2d5a27;
+  display: flex;
+  align-items: center;
+  padding: 0 1.5rem;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  flex-wrap: wrap;
+}
+
+/* 3. LOGO */
+.navbar-logo {
+  color: white;
+  font-size: 1.25rem;
+  font-weight: bold;
+  text-decoration: none;
+  padding: 1rem 0;
+}
+
+/* 4. NAV LINKS */
+.navbar-links {
+  list-style: none;
+  display: flex;
+  gap: 0.25rem;
+  margin-left: auto;
+  padding: 0;
+}
+
+/* 5. INDIVIDUAL LINKS */
+.nav-link {
+  color: #cde6ca;
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+  display: block;
+}
+
+.nav-link:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+/* 6. CTA LINK */
+.nav-link-cta {
+  background: #c0392b;
+  color: white;
+}
+
+.nav-link-cta:hover {
+  background: #e74c3c;
+  color: white;
+}
+
+/* 7. HAMBURGER TOGGLE — hidden on desktop */
+.nav-toggle {
+  display: none;
+}
+
+.nav-toggle-label {
+  display: none;
+  cursor: pointer;
+  margin-left: auto;
+  padding: 1rem 0;
+}
+
+/* Hamburger bars via the span + ::before / ::after */
+.hamburger,
+.hamburger::before,
+.hamburger::after {
+  display: block;
+  width: 24px;
+  height: 2px;
+  background: white;
+}
+
+.hamburger {
+  position: relative;
+}
+
+.hamburger::before,
+.hamburger::after {
+  content: '';
+  position: absolute;
+  left: 0;
+}
+
+.hamburger::before {
+  transform: translateY(-7px);
+}
+
+.hamburger::after {
+  transform: translateY(7px);
+}
+
+/* 8. MOBILE LAYOUT */
+@media (max-width: 768px) {
+  .nav-toggle-label {
+    display: block;
+  }
+
+  /* Reset margin-left auto set for desktop so label sits at the right */
+  .navbar-links {
+    flex-basis: 100%;
+    flex-direction: column;
+    gap: 0;
+    margin-left: 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+  }
+
+  /* Reveal links when checkbox is checked */
+  .nav-toggle:checked ~ .navbar-links {
+    max-height: 300px;
+  }
+
+  .navbar-links .nav-link {
+    padding: 0.75rem 1rem;
+    border-radius: 0;
+    width: 100%;
+  }
+}
