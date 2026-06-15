@@ -31,6 +31,10 @@ interface UseFetchResult<T> {
 
 function useFetch<T>(url: string): UseFetchResult<T> {
   // TODO 1: Create state variables for data, loading, and error
+  const [data, setData] = useState<T | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [trigger, setTrigger] = useState(0);
 
   // TODO 2: Create a fetchData function (async) that:
   //   - Sets loading to true and error to null
@@ -46,14 +50,37 @@ function useFetch<T>(url: string): UseFetchResult<T> {
   //   - Uses a `cancelled` flag for cleanup
   //   - Depends on `url`
   //   - Ensures state is NOT updated if `cancelled` is true
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchData() {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = (await res.json()) as T;
+        if (!cancelled) setData(json);
+      } catch (err) {
+        if (!cancelled) setError((err as Error).message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    fetchData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [url, trigger]);
 
   // TODO 4: Create a `refetch` function wrapped in useCallback
   //   that triggers fetchData again
+  const refetch = useCallback(() => setTrigger((t) => t + 1), []);
 
   // TODO 5: Return { data, loading, error, refetch }
-
-  // Remove this placeholder and implement the hook:
-  return { data: null, loading: false, error: 'Not implemented', refetch: () => {} };
+  return { data, loading, error, refetch };
 }
 
 // ---- Demo Component (do not modify) ----
