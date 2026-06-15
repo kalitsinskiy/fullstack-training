@@ -1,0 +1,55 @@
+{
+  "$comment": "Machine-readable design tokens for santa-app. Mirrors src/index.css and docs/design-system.md. You do NOT need Figma Dev Mode — these are the canonical values.",
+  "color": {
+    "background":       { "hex": "#FFFBEB", "hsl": "48 100% 96%",  "cssVar": "--background",       "use": "App background (cream)" },
+    "foreground":       { "hex": "#78350F", "hsl": "22 78% 27%",   "cssVar": "--foreground",       "use": "Body text (cocoa)" },
+    "primary":          { "hex": "#C2410C", "hsl": "17 88% 40%",   "cssVar": "--primary",          "use": "Primary actions, brand" },
+    "primaryForeground":{ "hex": "#FFFCF0", "hsl": "48 100% 97%",  "cssVar": "--primary-foreground","use": "Text on primary" },
+    "secondary":        { "hex": "#15803D", "hsl": "142 72% 29%",  "cssVar": "--secondary",        "use": "Success, pine-green" },
+    "accent":           { "hex": "#CA8A04", "hsl": "41 96% 40%",   "cssVar": "--accent",           "use": "Gold highlights" },
+    "destructive":      { "hex": "#C62828", "hsl": "0 72% 45%",    "cssVar": "--destructive",      "use": "Errors, danger" },
+    "muted":            { "hex": "#EFEAE0", "hsl": "40 30% 92%",   "cssVar": "--muted",            "use": "Subtle backgrounds" },
+    "mutedForeground":  { "hex": "#8A7A6A", "hsl": "25 20% 45%",   "cssVar": "--muted-foreground", "use": "Secondary text" },
+    "border":           { "hex": "#E3DBCF", "hsl": "40 25% 86%",   "cssVar": "--border",           "use": "Borders, dividers" },
+    "card":             { "hex": "#FFFFFF", "hsl": "0 0% 100%",    "cssVar": "--card",             "use": "Cards, inputs" },
+    "primarySoft":      { "hex": "#F7E6DB", "hsl": "24 64% 91%",   "cssVar": "--primary-soft",     "use": "Hat badge, avatars, soft fills" },
+    "greenSoft":        { "hex": "#DBEDE0", "hsl": "136 33% 89%",  "cssVar": "--green-soft",       "use": "'drawn' status pill" },
+    "frost":            { "hex": "#A9C5D1", "hsl": "198 30% 74%",  "cssVar": "--frost",            "use": "Decorative snowflakes only" }
+  },
+  "font": {
+    "display": { "family": "Fraunces", "stack": "Fraunces, Georgia, serif", "tailwind": "font-display" },
+    "sans":    { "family": "Inter", "stack": "Inter, system-ui, sans-serif", "tailwind": "font-sans" },
+    "mono":    { "family": "JetBrains Mono", "stack": "\"JetBrains Mono\", monospace", "tailwind": "font-mono" }
+  },
+  "typography": {
+    "Display/Hero":     { "font": "Fraunces", "weight": "Bold",      "size": 56, "lineHeight": 1.10 },
+    "Display/Title":    { "font": "Fraunces", "weight": "SemiBold",  "size": 32, "lineHeight": 1.20 },
+    "Heading/Dialog":   { "font": "Fraunces", "weight": "SemiBold",  "size": 28, "lineHeight": 1.20 },
+    "Display/Section":  { "font": "Fraunces", "weight": "SemiBold",  "size": 24, "lineHeight": 1.20 },
+    "Heading/Card":     { "font": "Fraunces", "weight": "SemiBold",  "size": 19, "lineHeight": 1.30 },
+    "Heading/CardSm":   { "font": "Fraunces", "weight": "SemiBold",  "size": 17, "lineHeight": 1.30 },
+    "Brand/Wordmark":   { "font": "Fraunces", "weight": "Bold",      "size": 17, "lineHeight": 1.20 },
+    "Body/Large":       { "font": "Inter",    "weight": "Regular",   "size": 18, "lineHeight": 1.50 },
+    "Body":             { "font": "Inter",    "weight": "Regular",   "size": 15, "lineHeight": 1.50 },
+    "Body/Small":       { "font": "Inter",    "weight": "Regular",   "size": 13, "lineHeight": 1.50 },
+    "Label":            { "font": "Inter",    "weight": "Medium",    "size": 14, "lineHeight": 1.40 },
+    "Label/Small":      { "font": "Inter",    "weight": "Medium",    "size": 13, "lineHeight": 1.40 },
+    "Caption":          { "font": "Inter",    "weight": "Medium",    "size": 12, "lineHeight": 1.30 },
+    "Button":           { "font": "Inter",    "weight": "SemiBold",  "size": 15, "lineHeight": 1.00 },
+    "Button/Small":     { "font": "Inter",    "weight": "SemiBold",  "size": 13, "lineHeight": 1.00 },
+    "Mono/Code":        { "font": "JetBrains Mono", "weight": "Medium", "size": 12, "lineHeight": 1.20 }
+  },
+  "radius": { "sm": 8, "md": 10, "lg": 12, "base": "0.75rem", "full": 9999 },
+  "spacingBasePx": 4,
+  "shadow": { "sm": "cards at rest", "DEFAULT": "primary button", "lg": "toasts, modals, popovers" },
+  "breakpoints": { "sm": 640, "md": 768, "lg": 1024, "xl": 1280, "2xl": 1280 },
+  "components": {
+    "button":  { "heightMobile": 44, "heightDesktop": 48, "heightSm": 36, "radius": 8 },
+    "input":   { "heightMobile": 40, "heightDesktop": 44, "radius": 8, "borderPx": 1 },
+    "card":    { "radiusMobile": 12, "radiusDesktop": 16, "paddingPx": 24, "borderPx": 1 },
+    "sidebar": { "widthPx": 260 },
+    "bottomNav": { "heightPx": 64 },
+    "avatar":  { "chipPx": 26, "profilePx": 56 },
+    "hatBadge": { "circlePx": 60 }
+  }
+}
