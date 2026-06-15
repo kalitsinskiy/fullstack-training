@@ -1,13 +1,12 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Secret Santa — Gift Catalog</title>
-</head>
-<body>
-
-  <!--
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Secret Santa — Gift Catalog</title>
+  </head>
+  <body>
+    <!--
     TODO: Build a product catalog page for gift ideas.
 
     Requirements:
@@ -70,5 +69,107 @@
     [ ] Optional: paste source into https://validator.w3.org/ — should pass
   -->
 
-</body>
+    <header>
+      <h1>Secret Santa</h1>
+      <nav>
+        <ul>
+          <li><a href="#">Home</a></li>
+          <li><a href="#">Catalog</a></li>
+          <li><a href="#">My Wishlist</a></li>
+          <li><a href="#">My Room</a></li>
+        </ul>
+      </nav>
+    </header>
+
+    <main>
+      <h2>Gift Ideas</h2>
+      <section>
+        <article data-product-id="1">
+          <img
+            src="https://via.placeholder.com/300x200"
+            alt="Wireless headphones"
+            width="300"
+            height="200"
+          />
+          <h3>Wireless Headphones</h3>
+          <p>Premium sound quality with noise cancellation and 20-hour battery life.</p>
+          <p><strong>$29.99</strong></p>
+          <button>Add to Wishlist</button>
+        </article>
+
+        <article data-product-id="2">
+          <img
+            src="https://via.placeholder.com/300x200"
+            alt="Cozy blanket"
+            width="300"
+            height="200"
+          />
+          <h3>Cozy Blanket</h3>
+          <p>Super soft fleece throw blanket, perfect for chilly evenings on the couch.</p>
+          <p><strong>$24.99</strong></p>
+          <button>Add to Wishlist</button>
+        </article>
+
+        <article data-product-id="3">
+          <img
+            src="https://via.placeholder.com/300x200"
+            alt="Coffee mug set"
+            width="300"
+            height="200"
+          />
+          <h3>Coffee Mug Set</h3>
+          <p>Set of 4 ceramic mugs in festive holiday designs, microwave and dishwasher safe.</p>
+          <p><strong>$19.99</strong></p>
+          <button>Add to Wishlist</button>
+        </article>
+
+        <article data-product-id="4">
+          <img
+            src="https://via.placeholder.com/300x200"
+            alt="Board game box"
+            width="300"
+            height="200"
+          />
+          <h3>Board Game</h3>
+          <p>A hilarious party game for 2–8 players, guaranteed fun for the whole family.</p>
+          <p><strong>$34.99</strong></p>
+          <button>Add to Wishlist</button>
+        </article>
+
+        <article data-product-id="5">
+          <img
+            src="https://via.placeholder.com/300x200"
+            alt="Scented candle pack"
+            width="300"
+            height="200"
+          />
+          <h3>Scented Candle Pack</h3>
+          <p>
+            Set of 3 hand-poured soy candles in warm winter scents: cinnamon, vanilla, and pine.
+          </p>
+          <p><strong>$14.99</strong></p>
+          <button>Add to Wishlist</button>
+        </article>
+
+        <article data-product-id="6">
+          <img
+            src="https://via.placeholder.com/300x200"
+            alt="Gourmet chocolate box"
+            width="300"
+            height="200"
+          />
+          <h3>Gourmet Chocolate Box</h3>
+          <p>
+            Assorted artisan chocolates from around the world, beautifully packaged in a gift box.
+          </p>
+          <p><strong>$22.99</strong></p>
+          <button>Add to Wishlist</button>
+        </article>
+      </section>
+    </main>
+
+    <footer>
+      <p>&copy; 2026 Secret Santa. All rights reserved.</p>
+    </footer>
+  </body>
 </html>
