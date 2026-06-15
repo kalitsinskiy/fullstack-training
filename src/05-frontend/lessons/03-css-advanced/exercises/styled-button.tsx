@@ -49,13 +49,71 @@
  * - A disabled button
  */
 
-import styled from 'styled-components';
+import React from 'react';
+import styled, { css } from 'styled-components';
 
-// TODO: Define ButtonProps interface
+interface ButtonProps {
+  $variant?: 'primary' | 'secondary' | 'danger';
+  $size?: 'sm' | 'md' | 'lg';
+}
 
-// TODO: Create the styled Button component
+const variantStyles = {
+  primary: css`
+    background-color: #2d5a27;
+    color: white;
 
-// TODO: Export the Button
+    &:hover {
+      background-color: #1e3d1a;
+    }
+  `,
+  secondary: css`
+    background-color: #6c757d;
+    color: white;
+
+    &:hover {
+      background-color: #5a6268;
+    }
+  `,
+  danger: css`
+    background-color: #c0392b;
+    color: white;
+
+    &:hover {
+      background-color: #a5311f;
+    }
+  `,
+};
+
+const sizeStyles = {
+  sm: css`
+    padding: 0.25rem 0.75rem;
+    font-size: 0.875rem;
+  `,
+  md: css`
+    padding: 0.5rem 1.25rem;
+    font-size: 1rem;
+  `,
+  lg: css`
+    padding: 0.75rem 2rem;
+    font-size: 1.125rem;
+  `,
+};
+
+export const Button = styled.button<ButtonProps>`
+  border: none;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+
+  ${({ $variant = 'primary' }: ButtonProps) => variantStyles[$variant]}
+  ${({ $size = 'md' }: ButtonProps) => sizeStyles[$size]}
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
 
 // Demo component to showcase all variants
 function StyledButtonDemo() {
@@ -64,18 +122,26 @@ function StyledButtonDemo() {
       <h2>Styled Button Exercise</h2>
 
       <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-        {/* TODO: Render primary buttons in sm, md, lg sizes */}
-        <p>TODO: primary sm / md / lg buttons here</p>
+        <Button $variant="primary" $size="sm">
+          Primary sm
+        </Button>
+        <Button $variant="primary" $size="md">
+          Primary md
+        </Button>
+        <Button $variant="primary" $size="lg">
+          Primary lg
+        </Button>
       </div>
 
       <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-        {/* TODO: Render secondary and danger buttons */}
-        <p>TODO: secondary and danger buttons here</p>
+        <Button $variant="secondary">Secondary</Button>
+        <Button $variant="danger">Danger</Button>
       </div>
 
       <div>
-        {/* TODO: Render a disabled button */}
-        <p>TODO: disabled button here</p>
+        <Button $variant="primary" disabled>
+          Disabled
+        </Button>
       </div>
     </div>
   );
