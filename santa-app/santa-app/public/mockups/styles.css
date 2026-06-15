@@ -1,0 +1,159 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+}
+
+:root {
+  --color-primary: #2d5a27;
+  --color-primary-hover: #1e3d1a;
+  --color-bg: #f2f5f1;
+  --color-surface: #ffffff;
+  --color-text: #2b2b2b;
+  --color-border: #d6dbd4;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 1rem;
+  --space-4: 1.5rem;
+  --space-5: 2rem;
+
+  --radius: 0.5rem;
+}
+
+[data-theme='dark'] {
+  --color-primary: #4caf50;
+  --color-primary-hover: #6cc06f;
+  --color-bg: #1b201b;
+  --color-surface: #262d26;
+  --color-text: #e6ece6;
+  --color-border: #3b443b;
+}
+
+body {
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
+  line-height: 1.6;
+  color: var(--color-text);
+  background: var(--color-bg);
+}
+
+header {
+  background: var(--color-primary);
+  color: #ffffff;
+  padding: var(--space-3) var(--space-4);
+}
+
+header h1 {
+  font-size: 1.5rem;
+}
+
+main {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  place-content: center;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  text-align: center;
+}
+
+main h2 {
+  color: var(--color-primary);
+}
+
+form {
+  width: 100%;
+  max-width: 600px;
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 8%);
+  padding: var(--space-4);
+  text-align: left;
+}
+
+fieldset {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: var(--space-3);
+}
+
+legend {
+  font-weight: 600;
+  padding: 0 var(--space-2);
+  color: var(--color-primary);
+}
+
+label {
+  display: block;
+  margin-top: var(--space-3);
+  font-weight: 500;
+}
+
+input {
+  display: block;
+  width: 100%;
+  margin-top: var(--space-1);
+  padding: var(--space-2);
+  font: inherit;
+  color: inherit;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+input:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+button[type='submit'] {
+  display: block;
+  width: 100%;
+  margin-top: var(--space-4);
+  padding: var(--space-2) var(--space-4);
+  font: inherit;
+  font-weight: 600;
+  color: #ffffff;
+  background: var(--color-primary);
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+button[type='submit']:hover {
+  background: var(--color-primary-hover);
+}
+
+button[type='submit']:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+footer {
+  text-align: center;
+  padding: var(--space-4);
+}
+
+footer a {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+@media (max-width: 480px) {
+  main {
+    padding: var(--space-2);
+  }
+
+  form {
+    padding: var(--space-3);
+    box-shadow: none;
+  }
+}

@@ -4,93 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Secret Santa — Login</title>
-    <style>
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
-      body {
-        font-family:
-          system-ui,
-          -apple-system,
-          sans-serif;
-        line-height: 1.6;
-        color: #333;
-      }
-
-      header {
-        background: #2d5a27;
-        color: white;
-        padding: 1rem 2rem;
-      }
-      header h1 {
-        font-size: 1.5rem;
-      }
-
-      main {
-        max-width: 480px;
-        margin: 2rem auto;
-        padding: 0 1rem;
-      }
-      main h2 {
-        margin-bottom: 1rem;
-        color: #2d5a27;
-      }
-
-      form {
-        background: #f9f9f9;
-        padding: 1.5rem;
-        border-radius: 8px;
-      }
-      fieldset {
-        border: 1px solid #ccc;
-        border-radius: 6px;
-        padding: 1rem;
-      }
-      legend {
-        font-weight: bold;
-        padding: 0 0.5rem;
-        color: #2d5a27;
-      }
-      label {
-        display: block;
-        margin-top: 0.75rem;
-        font-weight: 500;
-      }
-      input {
-        display: block;
-        width: 100%;
-        padding: 0.5rem;
-        margin-top: 0.25rem;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        font-size: 1rem;
-      }
-      button[type='submit'] {
-        margin-top: 1.25rem;
-        width: 100%;
-        padding: 0.6rem 1.5rem;
-        background: #2d5a27;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        font-size: 1rem;
-        cursor: pointer;
-      }
-      button[type='submit']:hover {
-        background: #1e3d1a;
-      }
-
-      footer {
-        text-align: center;
-        padding: 1.5rem 1rem;
-        color: #555;
-      }
-      footer a {
-        color: #2d5a27;
-      }
-    </style>
+    <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <header>
@@ -105,13 +19,7 @@
           <legend>Sign in</legend>
 
           <label for="email">Email Address</label>
-          <input
-            type="email"
-            id="email"
-            name="email"
-            placeholder="you@example.com"
-            required
-          />
+          <input type="email" id="email" name="email" placeholder="you@example.com" required />
 
           <label for="password">Password</label>
           <input
