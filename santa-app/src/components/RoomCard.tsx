@@ -1,15 +1,26 @@
 import { clsx } from "clsx";
 
-export interface RoomCardProps {
-  name: string;
-  code: string;
-  memberCount: number;
-  status: "pending" | "drawn" | "closed";
-  onOpen: () => void;
-}
+type RoomCardProps =
+  | {
+      status: "open";
+      name: string;
+      code: string;
+      participantCount: number;
+      onJoin: () => void;
+    }
+  | {
+      status: "drawn";
+      name: string;
+      code: string;
+      participantCount: number;
+      onView: () => void;
+    }
+  | { status: "closed"; name: string; code: string; participantCount: number };
+
+export type { RoomCardProps };
 
 const statusConfig = {
-  pending: { label: "Pending", className: "bg-yellow-100 text-yellow-800" },
+  open: { label: "Open", className: "bg-yellow-100 text-yellow-800" },
   drawn: { label: "Drawn", className: "bg-green-100 text-green-800" },
   closed: { label: "Closed", className: "bg-gray-100 text-gray-600" },
 } satisfies Record<
@@ -17,13 +28,8 @@ const statusConfig = {
   { label: string; className: string }
 >;
 
-export function RoomCard({
-  name,
-  code,
-  memberCount,
-  status,
-  onOpen,
-}: RoomCardProps) {
+export function RoomCard(props: RoomCardProps) {
+  const { name, code, participantCount, status } = props;
   const badge = statusConfig[status];
 
   return (
@@ -43,17 +49,28 @@ export function RoomCard({
           </div>
           <p className="text-text-muted font-mono text-sm">Code: {code}</p>
           <p className="text-text-muted text-sm">
-            {memberCount} member{memberCount !== 1 ? "s" : ""}
+            {participantCount} participant{participantCount !== 1 ? "s" : ""}
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={onOpen}
-          className="bg-brand hover:bg-brand-dark focus-visible:ring-brand self-start rounded-md px-4 py-1.5 text-sm font-medium text-white transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none @[22rem]:self-center"
-        >
-          Open
-        </button>
+        {status === "open" && (
+          <button
+            type="button"
+            onClick={props.onJoin}
+            className="bg-brand hover:bg-brand-dark focus-visible:ring-brand self-start rounded-md px-4 py-1.5 text-sm font-medium text-white transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none @[22rem]:self-center"
+          >
+            Join
+          </button>
+        )}
+        {status === "drawn" && (
+          <button
+            type="button"
+            onClick={props.onView}
+            className="bg-brand hover:bg-brand-dark focus-visible:ring-brand self-start rounded-md px-4 py-1.5 text-sm font-medium text-white transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none @[22rem]:self-center"
+          >
+            View
+          </button>
+        )}
       </div>
     </article>
   );

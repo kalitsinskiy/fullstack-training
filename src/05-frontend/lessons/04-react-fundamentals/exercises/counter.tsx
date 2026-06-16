@@ -48,8 +48,38 @@
  *   function App() { return <Counter />; }
  */
 
-// TODO: import useState
+import React, { useState } from 'react';
 
-// TODO: create the Counter component
+function Counter() {
+  const [count, setCount] = useState(0);
+  const [step, setStep] = useState(1);
 
-// TODO: export default Counter
+  const color = count > 0 ? 'green' : count < 0 ? 'red' : 'gray';
+
+  return (
+    <div style={{ padding: '1rem' }}>
+      <h2 style={{ color, fontSize: '2rem' }}>{count}</h2>
+      {count === 0 && <p>Count is at zero</p>}
+
+      <div style={{ margin: '0.5rem 0' }}>
+        <label>
+          Step:{' '}
+          <input
+            type="number"
+            value={step}
+            onChange={(e) => setStep(Number(e.target.value))}
+            style={{ width: '4rem', marginLeft: '0.25rem' }}
+          />
+        </label>
+      </div>
+
+      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+        <button onClick={() => setCount((prev) => prev + step)}>Increment</button>
+        <button onClick={() => setCount((prev) => prev - step)}>Decrement</button>
+        <button onClick={() => setCount(0)}>Reset</button>
+      </div>
+    </div>
+  );
+}
+
+export default Counter;
