@@ -1,0 +1,1 @@
+export { MyAssignment } from './MyAssignment';

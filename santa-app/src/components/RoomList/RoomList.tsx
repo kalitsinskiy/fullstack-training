@@ -1,21 +1,10 @@
+import { useNavigate } from 'react-router';
 import { RoomCard } from '../RoomCard';
 import { Button } from '@/components/ui/button';
-
-type RoomCommon = { code: string; name: string; participantCount: number };
-
-type Room =
-  | (RoomCommon & { status: 'open' })
-  | (RoomCommon & { status: 'drawn' })
-  | (RoomCommon & { status: 'closed' });
+import type { Room } from '@/types/api';
 
 export function RoomList({ rooms }: { rooms: Room[] }) {
-  function onJoinRoom(code: string): void {
-    console.log('Joined room:', code);
-  }
-
-  function onViewRoom(code: string): void {
-    console.log('View room:', code);
-  }
+  const navigate = useNavigate();
 
   return (
     <main className="flex-1">
@@ -30,17 +19,14 @@ export function RoomList({ rooms }: { rooms: Room[] }) {
         </div>
       ) : (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-[clamp(1rem,2vw,2rem)] p-[clamp(1rem,4vw,3rem)]">
-          {rooms.map((room) => {
-            if (room.status === 'open') {
-              return <RoomCard key={room.code} {...room} onJoin={() => onJoinRoom(room.code)} />;
-            }
-
-            if (room.status === 'drawn') {
-              return <RoomCard key={room.code} {...room} onView={() => onViewRoom(room.code)} />;
-            }
-
-            return <RoomCard key={room.code} {...room} />;
-          })}
+          {rooms.map((room) => (
+            <RoomCard
+              key={room.id}
+              room={room}
+              onOpen={() => navigate(`/rooms/${room.id}`)}
+              onJoin={() => navigate(`/rooms/${room.id}`)}
+            />
+          ))}
         </div>
       )}
     </main>

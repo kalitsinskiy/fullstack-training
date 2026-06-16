@@ -1,39 +1,23 @@
 import { clsx } from 'clsx';
 import { Button } from '@/components/ui/button';
+import type { Room } from '@/types/api';
 
-type RoomCardCommonProps = { name: string; code: string; participantCount: number };
-
-type RoomCardProps =
-  | (RoomCardCommonProps & { status: 'open'; onJoin: () => void })
-  | (RoomCardCommonProps & { status: 'drawn'; onView: () => void })
-  | (RoomCardCommonProps & { status: 'closed' });
+interface RoomCardProps {
+  room: Room;
+  onJoin?: () => void;
+  onOpen?: () => void;
+}
 
 const badgeClasses = {
-  open: 'bg-pending-bg text-pending-text',
+  pending: 'bg-pending-bg text-pending-text',
   drawn: 'bg-drawn-bg text-drawn-text',
   closed: 'bg-closed-bg text-closed-text',
 };
 
-const badgeLabels = { open: 'Pending', drawn: 'Drawn', closed: 'Closed' };
+const badgeLabels = { pending: 'Pending', drawn: 'Drawn', closed: 'Closed' };
 
-export function RoomCard(props: RoomCardProps) {
-  const { name, code, participantCount, status } = props;
-
-  let action: React.ReactNode = null;
-
-  if (props.status === 'open') {
-    action = (
-      <Button variant="outline" size="sm" onClick={props.onJoin}>
-        Join
-      </Button>
-    );
-  } else if (props.status === 'drawn') {
-    action = (
-      <Button variant="outline" size="sm" onClick={props.onView}>
-        View
-      </Button>
-    );
-  }
+export function RoomCard({ room, onJoin, onOpen }: RoomCardProps) {
+  const { name, code, members, status } = room;
 
   return (
     <article
@@ -53,7 +37,7 @@ export function RoomCard(props: RoomCardProps) {
         </span>
       </div>
 
-      <p className="text-muted-foreground text-[0.85rem]">{participantCount} participants</p>
+      <p className="text-muted-foreground text-[0.85rem]">{members.length} participants</p>
 
       <div className="mt-auto flex items-center justify-between pt-2">
         <span
@@ -66,7 +50,18 @@ export function RoomCard(props: RoomCardProps) {
           {badgeLabels[status]}
         </span>
 
-        {action}
+        <span className="flex gap-2">
+          {status === 'pending' && onJoin && (
+            <Button variant="outline" size="sm" onClick={onJoin}>
+              Join
+            </Button>
+          )}
+          {onOpen && (
+            <Button variant="outline" size="sm" onClick={onOpen}>
+              View
+            </Button>
+          )}
+        </span>
       </div>
     </article>
   );

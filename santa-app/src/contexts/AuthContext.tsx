@@ -1,11 +1,8 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useEffect, useState } from 'react';
-
-interface User {
-  id: string;
-  email: string;
-  name: string;
-}
+import { useQueryClient } from '@tanstack/react-query';
+import { api } from '@/services/api';
+import { type User } from '../types/api';
 
 interface AuthContextType {
   user: User | null;
@@ -19,12 +16,11 @@ interface AuthContextType {
 
 export const AuthContext = createContext<AuthContextType | null>(null);
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001';
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(() => !!localStorage.getItem('token'));
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const stored = localStorage.getItem('token');
@@ -33,14 +29,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    fetch(`${BASE_URL}/api/users/me`, {
-      headers: { Authorization: `Bearer ${stored}` },
-    })
-      .then((res) => {
-        if (res.status === 401) throw new Error('expired');
-        if (!res.ok) throw new Error('failed');
-        return res.json() as Promise<User>;
-      })
+    api
+      .get<User>('/api/users/me')
       .then((u) => {
         setToken(stored);
         setUser(u);
@@ -52,43 +42,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   async function register(email: string, password: string, displayName: string) {
-    const res = await fetch(`${BASE_URL}/api/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'qpplication/json' },
-      body: JSON.stringify({ email, password, displayName }),
-    });
-
-    if (!res.ok) throw new Error('Registration failed');
+    await api.post('/api/auth/register', { email, password, displayName });
   }
 
   async function login(email: string, password: string) {
-    const loginRes = await fetch(`${BASE_URL}/api/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
+    const { accessToken } = await api.post<{ accessToken: string }>('/api/auth/login', {
+      email,
+      password,
     });
-
-    if (!loginRes.ok) throw new Error('Invalid credentials');
-
-    const { accessToken } = (await loginRes.json()) as { accessToken: string };
-
-    const meRes = await fetch(`${BASE_URL}/api/users/me`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-
-    if (!meRes.ok) throw new Error('Failed to load profile');
-
-    const me = (await meRes.json()) as User;
 
     localStorage.setItem('token', accessToken);
-    setToken(accessToken);
-    setUser(me);
+
+    try {
+      const me = await api.get<User>('/api/users/me');
+
+      setToken(accessToken);
+      setUser(me);
+    } catch (err) {
+      localStorage.removeItem('token');
+      throw err;
+    }
   }
 
   function logout() {
     localStorage.removeItem('token');
     setToken(null);
     setUser(null);
+    queryClient.clear();
   }
 
   return (

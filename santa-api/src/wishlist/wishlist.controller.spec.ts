@@ -119,6 +119,22 @@ describe('WishlistController (HTTP)', () => {
       expect(res.body.items[0].name).toBe('Lego set');
     });
 
+    test("includes the wishlist owner's display name", async () => {
+      await request(app.getHttpServer())
+        .post(`/rooms/${roomId}/wishlist`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ items: [{ name: 'Lego set' }] });
+
+      const res = await request(app.getHttpServer())
+        .get(`/rooms/${roomId}/wishlist/${userId}`)
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+
+      expect(res.body.userName).toBe('Me');
+      expect(res.body.userId).toBe(userId);
+      expect(res.body.roomId).toBe(roomId);
+    });
+
     test('404 when no wishlist exists', async () => {
       await request(app.getHttpServer())
         .get(`/rooms/${roomId}/wishlist/${userId}`)

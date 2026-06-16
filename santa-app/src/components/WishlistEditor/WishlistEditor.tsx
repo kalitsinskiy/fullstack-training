@@ -1,28 +1,120 @@
+import { useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Field } from '../ui/Field';
 import { Button } from '../ui/button';
+import { api, ApiError } from '@/services/api';
+import type { WishlistItem, Wishlist } from '@/types/api';
 import { WishlistSchema, type WishlistInput } from '@/schemas/wishlist';
+import { useAuth } from '@/hooks/useAuth';
 
-export function WishlistEditor() {
+interface WishlistEditorProps {
+  roomId: string;
+}
+
+export function WishlistEditor({ roomId }: WishlistEditorProps) {
+  const { user } = useAuth();
+  const userId = user?.id;
+
+  const queryClient = useQueryClient();
+  const wishlistKey = ['rooms', roomId, 'wishlist', userId] as const;
+
+  function toWishlistPayload(
+    items: { name: string; url?: string; priority?: number }[]
+  ): WishlistItem[] {
+    return items.map((item) => ({
+      name: item.name.trim(),
+      ...(item.url && item.url.trim() ? { url: item.url.trim() } : {}),
+      ...(item.priority != null ? { priority: item.priority } : {}),
+    }));
+  }
+
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: wishlistKey,
+    queryFn: async ({ signal }) => {
+      try {
+        return await api.get<{ items: WishlistItem[] }>(`/api/rooms/${roomId}/wishlist/${userId}`, {
+          signal,
+        });
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 404) {
+          return { roomId, userId, items: [] } as Wishlist;
+        }
+
+        throw err;
+      }
+    },
+    enabled: !!roomId && !!userId,
+  });
+
   const {
     register,
     control,
     handleSubmit,
+    reset,
+    getValues,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm<WishlistInput>({
     resolver: zodResolver(WishlistSchema),
     defaultValues: { items: [{ name: '', url: '', priority: 1 }] },
   });
 
-  const { fields, append, remove } = useFieldArray({ control, name: 'items' });
+  const { fields, append } = useFieldArray({ control, name: 'items' });
 
-  const submit = (data: WishlistInput) => {
-    console.log('Wishlist:', data);
-  };
+  useEffect(() => {
+    if (data) {
+      reset({ items: data.items.length ? data.items : [{ name: '' }] });
+    }
+  }, [data, reset]);
+
+  const save = useMutation({
+    mutationFn: (items: WishlistInput['items']) =>
+      api.post<Wishlist>(`/api/rooms/${roomId}/wishlist`, { items: toWishlistPayload(items) }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: wishlistKey }),
+    onError: (err) =>
+      setError('root.serverError', {
+        message: err instanceof Error ? err.message : 'Could not save wishlist',
+      }),
+  });
+
+  const removeItem = useMutation({
+    mutationFn: (items: WishlistItem[]) =>
+      api.post<Wishlist>(`/api/rooms/${roomId}/wishlist`, { items: toWishlistPayload(items) }),
+    onMutate: async (nextItems) => {
+      await queryClient.cancelQueries({ queryKey: wishlistKey });
+      const previous = queryClient.getQueryData<Wishlist>(wishlistKey);
+
+      queryClient.setQueryData<Wishlist>(wishlistKey, (old) =>
+        old ? { ...old, items: nextItems } : old
+      );
+
+      return { previous };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.previous) queryClient.setQueryData(wishlistKey, ctx.previous);
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: wishlistKey }),
+  });
+
+  const submit = (formData: WishlistInput) => save.mutate(formData.items);
+
+  if (isLoading) return <p className="text-muted-foreground">Loading wishlist...</p>;
+  if (isError)
+    return (
+      <p role="alert" className="text-red-500">
+        {(error as Error).message}
+      </p>
+    );
 
   return (
     <form onSubmit={handleSubmit(submit)} noValidate className="flex flex-col gap-4">
+      {errors.root?.serverError && (
+        <p role="alert" className="text-[0.85rem] text-red-500">
+          {errors.root.serverError.message}
+        </p>
+      )}
       {errors.items?.root && (
         <p role="alert" className="text-[0.85rem] text-red-500">
           {errors.items.root.message}
@@ -64,8 +156,11 @@ export function WishlistEditor() {
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => remove(idx)}
-            disabled={fields.length === 1}
+            onClick={() => {
+              const next = getValues('items').filter((_, i) => i !== idx) as WishlistItem[];
+              removeItem.mutate(next);
+            }}
+            disabled={fields.length === 1 || removeItem.isPending}
             className="self-start"
           >
             Remove
@@ -81,8 +176,8 @@ export function WishlistEditor() {
         >
           + Add item
         </Button>
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Saving…' : 'Save'}
+        <Button type="submit" disabled={isSubmitting || save.isPending}>
+          {save.isPending ? 'Saving…' : 'Save'}
         </Button>
       </div>
     </form>

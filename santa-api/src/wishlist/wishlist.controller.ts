@@ -18,7 +18,9 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 import { UpdateWishlistDto } from './dto/update-wishlist.dto';
+import { WishlistResponseDto } from './dto/wishlist-response.dto';
 import { WishlistService, type Wishlist } from './wishlist.service';
+import { UsersService } from '../users/users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
@@ -27,7 +29,10 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 @Controller('rooms/:roomId/wishlist')
 @UseGuards(JwtAuthGuard)
 export class WishlistController {
-  constructor(private readonly wishlistService: WishlistService) {}
+  constructor(
+    private readonly wishlistService: WishlistService,
+    private readonly usersService: UsersService,
+  ) {}
 
   @Post()
   @HttpCode(HttpStatus.OK)
@@ -45,21 +50,28 @@ export class WishlistController {
   }
 
   @Get(':userId')
-  @ApiOperation({ summary: 'Read user`s wishlist in this room.' })
+  @ApiOperation({
+    summary: "Read a user's wishlist in this room (includes the owner's name).",
+  })
   @ApiParam({ name: 'roomId', description: 'Room ObjectId.' })
   @ApiParam({ name: 'userId', description: 'Target user ObjectId.' })
-  @ApiResponse({ status: 200, description: 'Wishlist found.' })
-  @ApiResponse({ status: 400, description: 'Wishlist not found.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Wishlist found.',
+    type: WishlistResponseDto,
+  })
+  @ApiResponse({ status: 404, description: 'Wishlist not found.' })
   async findOne(
     @Param('roomId') roomId: string,
     @Param('userId') userId: string,
-  ): Promise<Wishlist> {
+  ): Promise<WishlistResponseDto> {
     const wishlist = await this.wishlistService.get(roomId, userId);
     if (!wishlist) {
       throw new NotFoundException(
         `Wishlist for user ${userId} in room ${roomId} not found`,
       );
     }
-    return wishlist;
+    const owner = await this.usersService.findById(userId);
+    return { ...wishlist, userName: owner?.name ?? 'Unknown' };
   }
 }

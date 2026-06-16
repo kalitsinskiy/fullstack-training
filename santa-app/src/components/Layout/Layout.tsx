@@ -1,13 +1,15 @@
 import { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { CalendarPlus2, UserPlus } from 'lucide-react';
 import { NavLink, Outlet, useNavigate } from 'react-router';
 import { CreateRoomDialog } from '../CreateRoomDialog';
+import { JoinRoomDialog } from '../JoinRoomDialog';
 import { useAuth } from '../../hooks/useAuth';
 
 export function Layout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [createRoomOpen, setCreateRoomOpen] = useState(false);
+  const [joinRoomOpen, setJoinRoomOpen] = useState(false);
 
   function handleLogout() {
     logout();
@@ -23,7 +25,7 @@ export function Layout() {
         >
           Secret Santa
         </NavLink>
-        <nav className="flex items-center gap-6">
+        <nav className="flex items-center gap-4">
           <NavLink
             to="/rooms"
             className={({ isActive }) =>
@@ -36,17 +38,28 @@ export function Layout() {
           </NavLink>
           <button
             type="button"
-            onClick={() => setDialogOpen(true)}
+            onClick={() => setCreateRoomOpen(true)}
             aria-label="Create Room"
-            className="text-muted-foreground hover:bg-muted rounded-base flex items-center justify-center p-1.5 transition-colors"
+            className="text-muted-foreground hover:bg-muted rounded-base flex cursor-pointer items-center justify-center p-1.5 transition-colors"
           >
-            <Plus size={15} />
+            <CalendarPlus2 size={15} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setJoinRoomOpen(true)}
+            aria-label="Join Room"
+            className="text-muted-foreground hover:bg-muted rounded-base flex cursor-pointer items-center justify-center p-1.5 transition-colors"
+          >
+            <UserPlus size={15} />
           </button>
           <div className="flex items-center gap-4">
-            <span className="text-muted-foreground text-sm">{user?.name}</span>
+            <span className="text-muted-foreground text-sm">
+              Howdy, <strong>{user?.name}</strong>
+            </span>
+            <span className="text-muted-foreground">|</span>
             <button
               onClick={handleLogout}
-              className="text-muted-foreground hover:text-foreground text-sm font-medium"
+              className="text-muted-foreground hover:text-foreground cursor-pointer text-sm font-medium"
             >
               Logout
             </button>
@@ -54,7 +67,8 @@ export function Layout() {
         </nav>
       </header>
 
-      <CreateRoomDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+      <CreateRoomDialog open={createRoomOpen} onOpenChange={setCreateRoomOpen} />
+      <JoinRoomDialog open={joinRoomOpen} onOpenChange={setJoinRoomOpen} />
 
       <Outlet />
     </>

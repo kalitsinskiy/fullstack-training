@@ -1,51 +1,49 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Field } from '../ui/Field';
 import { api } from '@/services/api';
 import type { Room } from '@/types/api';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
+import { Field } from '../ui/Field';
+import { Button } from '../ui/button';
 
-interface CreateRoomDialogProps {
+interface JoinRoomDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export function CreateRoomDialog({ open, onOpenChange }: CreateRoomDialogProps) {
-  const [name, setName] = useState('');
+export function JoinRoomDialog({ open, onOpenChange }: JoinRoomDialogProps) {
+  const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
+
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
-  const create = useMutation({
-    mutationFn: (roomName: string) => api.post<Room>('/api/rooms', { name: roomName }),
+  const joinRoom = useMutation({
+    mutationFn: (inviteCode: string) => api.post<Room>(`/api/rooms/${inviteCode}/join`),
     onSuccess: (room) => {
       queryClient.invalidateQueries({ queryKey: ['rooms'] });
+      queryClient.invalidateQueries({ queryKey: ['rooms', room.id] });
       handleOpenChange(false);
       navigate(`/rooms/${room.id}`);
     },
-    onError: (err) => setError(err instanceof Error ? err.message : 'Could not create a room'),
+    onError: (err) => setError(err instanceof Error ? err.message : 'Could not join the room'),
   });
 
   function handleSubmit(e: React.SubmitEvent) {
     e.preventDefault();
 
-    if (!name.trim()) return;
+    const enveloped = code.trim().toUpperCase();
+
+    if (enveloped.length !== 6) return;
 
     setError(null);
-    create.mutate(name.trim());
+    joinRoom.mutate(enveloped);
   }
 
   function handleOpenChange(nextOpen: boolean) {
     if (!nextOpen) {
-      setName('');
+      setCode('');
       setError(null);
     }
 
@@ -54,9 +52,9 @@ export function CreateRoomDialog({ open, onOpenChange }: CreateRoomDialogProps) 
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[420px]">
+      <DialogContent className="sm:max-w[420px]">
         <DialogHeader>
-          <DialogTitle>Create Room</DialogTitle>
+          <DialogTitle>Join the room</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit}>
@@ -65,13 +63,15 @@ export function CreateRoomDialog({ open, onOpenChange }: CreateRoomDialogProps) 
               {error}
             </p>
           )}
+
           <div className="flex flex-col gap-2 py-4">
             <Field
-              label="Room name"
-              id="room-name"
-              placeholder="e.g. Office Party 2025"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              label="Invite code"
+              id="invite-code"
+              placeholder="6-character code"
+              value={code}
+              onChange={(e) => setCode(e.target.value.toUpperCase())}
+              maxLength={6}
               required
               autoFocus
             />
@@ -86,8 +86,12 @@ export function CreateRoomDialog({ open, onOpenChange }: CreateRoomDialogProps) 
             >
               Cancel
             </Button>
-            <Button type="submit" size="sm" disabled={!name.trim() || create.isPending}>
-              {create.isPending ? 'Creating…' : 'Create'}
+            <Button
+              type="submit"
+              size="sm"
+              disabled={code.trim().length !== 6 || joinRoom.isPending}
+            >
+              {joinRoom.isPending ? 'Joining...' : 'Join'}
             </Button>
           </DialogFooter>
         </form>
