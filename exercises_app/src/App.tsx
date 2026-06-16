@@ -1,17 +1,21 @@
-import { useState } from 'react'
-import './App.css'
-import Counter from '../exercises/counter'
-import TodoList from '../exercises/todo-list'
+import { useState } from 'react';
+import './App.css';
+import Counter from '../exercises/counter';
+import TodoList from '../exercises/todo-list';
+import ThemeSwitcherApp from '../exercises 2/theme-switcher';
+import PostList from '../exercises 2/use-fetch';
 
 const exercises = [
   { id: 'counter', label: 'Counter', component: <Counter /> },
   { id: 'todo-list', label: 'Todo List', component: <TodoList /> },
-]
+  { id: 'theme-switcher', label: 'Theme Switcher', component: <ThemeSwitcherApp /> },
+  { id: 'use-fetch', label: 'Use Fetch', component: <PostList /> },
+];
 
 function App() {
-  const [active, setActive] = useState(exercises[0].id)
+  const [active, setActive] = useState(exercises[0].id);
 
-  const current = exercises.find((e) => e.id === active)!
+  const current = exercises.find((e) => e.id === active)!;
 
   return (
     <div id="app">
@@ -27,11 +31,9 @@ function App() {
         ))}
       </nav>
 
-      <main id="exercise">
-        {current.component}
-      </main>
+      <main id="exercise">{current.component}</main>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;
