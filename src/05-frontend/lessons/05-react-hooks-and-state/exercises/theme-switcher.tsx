@@ -11,7 +11,7 @@
 //
 // The demo app at the bottom wires everything together.
 
-import { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode } from 'react';
 
 // ---- Types ----
 
@@ -53,6 +53,7 @@ const themes: Record<Theme, ThemeColors> = {
 // ---- TODO 1: Create the ThemeContext ----
 // Use createContext with a default value of null.
 // Type it as ThemeContextType | null.
+const ThemeContext = createContext<ThemeContextType | null>(null);
 
 // ---- TODO 2: Create the ThemeProvider ----
 // - Accept { children: ReactNode } as props
@@ -60,11 +61,24 @@ const themes: Record<Theme, ThemeColors> = {
 // - Compute colors from the themes object above
 // - Provide { theme, colors, toggleTheme } via context value
 // - Return <ThemeContext.Provider value={...}>{children}</ThemeContext.Provider>
+function ThemeProvider({ children }: { children: ReactNode }) {
+  const [theme, setTheme] = useState<Theme>('light');
+  const colors = themes[theme];
+  const toggleTheme = () => setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
+  return (
+    <ThemeContext.Provider value={{ theme, colors, toggleTheme }}>{children}</ThemeContext.Provider>
+  );
+}
 
 // ---- TODO 3: Create the useTheme hook ----
 // - Call useContext(ThemeContext)
 // - If context is null, throw an Error: 'useTheme must be used within a ThemeProvider'
 // - Return the context value
+function useTheme(): ThemeContextType {
+  const context = useContext(ThemeContext);
+  if (context === null) throw new Error('useTheme must be used within a ThemeProvider');
+  return context;
+}
 
 // ---- TODO 4: Create themed Header component ----
 // - Use useTheme() to get theme and colors
@@ -75,8 +89,34 @@ const themes: Record<Theme, ThemeColors> = {
 //   - A button that calls toggleTheme (show "Switch to Dark" / "Switch to Light")
 
 function Header() {
-  // TODO: Implement
-  return <header>Header — implement me</header>;
+  const { theme, colors, toggleTheme } = useTheme();
+  return (
+    <header
+      style={{
+        background: colors.primary,
+        color: '#fff',
+        padding: '1rem 1.5rem',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+      }}
+    >
+      <span style={{ fontWeight: 600, fontSize: '1.1rem' }}>Theme Switcher</span>
+      <button
+        onClick={toggleTheme}
+        style={{
+          background: 'rgba(255,255,255,0.2)',
+          color: '#fff',
+          border: '1px solid rgba(255,255,255,0.5)',
+          borderRadius: '4px',
+          padding: '0.25rem 0.75rem',
+          cursor: 'pointer',
+        }}
+      >
+        {theme === 'light' ? 'Switch to Dark' : 'Switch to Light'}
+      </button>
+    </header>
+  );
 }
 
 // ---- TODO 5: Create themed Card component ----
@@ -90,10 +130,19 @@ function Header() {
 //   - Title in <h3>, children below
 
 function Card({ title, children }: { title: string; children: ReactNode }) {
-  // TODO: Implement
+  const { colors } = useTheme();
   return (
-    <div>
-      <h3>{title}</h3>
+    <div
+      style={{
+        background: colors.cardBackground,
+        color: colors.text,
+        border: `1px solid ${colors.border}`,
+        borderRadius: '8px',
+        padding: '1.25rem',
+        marginBottom: '1rem',
+      }}
+    >
+      <h3 style={{ marginBottom: '0.5rem' }}>{title}</h3>
       {children}
     </div>
   );
@@ -109,8 +158,23 @@ function Card({ title, children }: { title: string; children: ReactNode }) {
 //   - onClick handler
 
 function Button({ children, onClick }: { children: ReactNode; onClick?: () => void }) {
-  // TODO: Implement
-  return <button onClick={onClick}>{children}</button>;
+  const { colors } = useTheme();
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        background: colors.primary,
+        color: '#fff',
+        border: 'none',
+        borderRadius: '4px',
+        padding: '0.4rem 1rem',
+        cursor: 'pointer',
+        marginTop: '0.5rem',
+      }}
+    >
+      {children}
+    </button>
+  );
 }
 
 // ---- Demo App (modify only to wrap with your ThemeProvider) ----
@@ -118,21 +182,23 @@ function Button({ children, onClick }: { children: ReactNode; onClick?: () => vo
 export default function ThemeSwitcherApp() {
   // TODO: Wrap with ThemeProvider
   return (
-    <div>
-      <Header />
-      <div style={{ padding: 20 }}>
-        <Card title="Welcome">
-          <p>This card should change appearance based on the current theme.</p>
-          <Button onClick={() => alert('Clicked!')}>Click Me</Button>
-        </Card>
-        <Card title="About Themes">
-          <p>
-            The light theme has a white background and dark text.
-            The dark theme has a dark background and light text.
-          </p>
-          <Button>Another Button</Button>
-        </Card>
+    <ThemeProvider>
+      <div>
+        <Header />
+        <div style={{ padding: 20 }}>
+          <Card title="Welcome">
+            <p>This card should change appearance based on the current theme.</p>
+            <Button onClick={() => alert('Clicked!')}>Click Me</Button>
+          </Card>
+          <Card title="About Themes">
+            <p>
+              The light theme has a white background and dark text. The dark theme has a dark
+              background and light text.
+            </p>
+            <Button>Another Button</Button>
+          </Card>
+        </div>
       </div>
-    </div>
+    </ThemeProvider>
   );
 }

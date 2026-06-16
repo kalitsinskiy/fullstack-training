@@ -16,7 +16,7 @@
 // Test your hook with the demo component at the bottom of this file.
 // You can run this in a Vite React app or CodeSandbox.
 
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 // ---- Types ----
 
@@ -31,29 +31,55 @@ interface UseFetchResult<T> {
 
 function useFetch<T>(url: string): UseFetchResult<T> {
   // TODO 1: Create state variables for data, loading, and error
+  const [data, setData] = useState<T | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // TODO 2: Create a fetchData function (async) that:
-  //   - Sets loading to true and error to null
-  //   - Fetches the URL
-  //   - If response is not OK, throws an error with the status
-  //   - Parses the JSON response
-  //   - Sets data to the parsed response
-  //   - Catches errors and sets the error message
-  //   - Sets loading to false in all cases
+  // TODO 4: Create a `refetch` function wrapped in useCallback
+  //   that triggers fetchData again
+  const [tick, setTick] = useState(0);
+  const refetch = useCallback(() => setTick((t) => t + 1), []);
 
   // TODO 3: Create a useEffect that:
   //   - Calls fetchData
   //   - Uses a `cancelled` flag for cleanup
   //   - Depends on `url`
   //   - Ensures state is NOT updated if `cancelled` is true
+  useEffect(() => {
+    let cancelled = false;
 
-  // TODO 4: Create a `refetch` function wrapped in useCallback
-  //   that triggers fetchData again
+    // TODO 2: Create a fetchData function (async) that:
+    //   - Sets loading to true and error to null
+    //   - Fetches the URL
+    //   - If response is not OK, throws an error with the status
+    //   - Parses the JSON response
+    //   - Sets data to the parsed response
+    //   - Catches errors and sets the error message
+    //   - Sets loading to false in all cases
+    async function fetchData() {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
+        const json: T = await response.json();
+        if (!cancelled) setData(json);
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : String(err));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    fetchData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [url, tick]);
 
   // TODO 5: Return { data, loading, error, refetch }
-
-  // Remove this placeholder and implement the hook:
-  return { data: null, loading: false, error: 'Not implemented', refetch: () => {} };
+  return { data, loading, error, refetch };
 }
 
 // ---- Demo Component (do not modify) ----

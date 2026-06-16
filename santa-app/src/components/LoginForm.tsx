@@ -1,11 +1,15 @@
 import { useState } from "react";
 import { clsx } from "clsx";
+import { useAuth } from "../contexts/AuthContext";
 
 export function LoginForm() {
+  const auth = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   function validateEmail(value: string): string | null {
     if (!value.trim()) return "Email is required";
@@ -30,7 +34,19 @@ export function LoginForm() {
     setEmailError(eErr);
     setPasswordError(pErr);
     if (eErr || pErr) return;
-    console.log("Login:", { email, password });
+    setSubmitting(true);
+    setSubmitError(null);
+    auth
+      .login(email, password)
+      .then(() => {
+        console.log("logged in", auth.user?.email);
+      })
+      .catch((err: unknown) => {
+        setSubmitError(err instanceof Error ? err.message : "Login failed");
+      })
+      .finally(() => {
+        setSubmitting(false);
+      });
   };
 
   return (
@@ -39,6 +55,12 @@ export function LoginForm() {
       className="rounded-card bg-surface p-card mx-auto w-full max-w-sm shadow-md"
     >
       <h2 className="text-brand mb-6 text-2xl font-semibold">Sign In</h2>
+
+      {submitError && (
+        <p className="text-danger mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm">
+          {submitError}
+        </p>
+      )}
 
       <div className="mb-4 flex flex-col gap-1">
         <label
@@ -82,16 +104,16 @@ export function LoginForm() {
 
       <button
         type="submit"
-        disabled={hasErrors}
+        disabled={hasErrors || submitting}
         className={clsx(
           "w-full rounded-md px-4 py-2 font-medium text-white transition-colors",
           "focus-visible:ring-brand focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
-          hasErrors
+          hasErrors || submitting
             ? "bg-brand/40 cursor-not-allowed"
             : "bg-brand hover:bg-brand-dark",
         )}
       >
-        Sign In
+        {submitting ? "Signing in…" : "Sign In"}
       </button>
     </form>
   );
