@@ -8,48 +8,48 @@ const mockRooms: Room[] = [
     id: "1",
     name: "Office Holiday Swap",
     code: "RM-7F2K9",
-    memberCount: 8,
-    status: "pending",
+    participantCount: 8,
+    status: "open",
   },
   {
     id: "2",
     name: "Family Gift Exchange",
     code: "RM-3QX1A",
-    memberCount: 12,
+    participantCount: 12,
     status: "drawn",
   },
   {
     id: "3",
     name: "Dev Team Secret Santa",
     code: "RM-9LM4P",
-    memberCount: 6,
+    participantCount: 6,
     status: "closed",
   },
   {
     id: "4",
     name: "Book Club Surprise",
     code: "RM-2VT8R",
-    memberCount: 5,
-    status: "pending",
+    participantCount: 5,
+    status: "open",
   },
   {
     id: "5",
     name: "Neighborhood Swap",
     code: "RM-6KD0Z",
-    memberCount: 10,
+    participantCount: 10,
     status: "drawn",
   },
   {
     id: "6",
     name: "Gaming Squad Santa",
     code: "RM-4WB7Y",
-    memberCount: 4,
+    participantCount: 4,
     status: "closed",
   },
 ];
 
-function handleOpenRoom(id: string) {
-  console.log("Open room", id);
+function handleJoinRoom(id: string) {
+  console.log("Join room", id);
 }
 
 function App() {
@@ -67,15 +67,18 @@ function App() {
         </h2>
         <div className="flex flex-col gap-6 lg:flex-row">
           <div className="flex-1">
-            <RoomList rooms={mockRooms} onOpenRoom={handleOpenRoom} />
+            <RoomList rooms={mockRooms} onJoinRoom={handleJoinRoom} />
           </div>
           <aside className="w-70 shrink-0">
             <h3 className="text-text/70 mb-2 text-sm font-medium">
               Sidebar preview (280px)
             </h3>
             <RoomCard
-              {...mockRooms[0]}
-              onOpen={() => handleOpenRoom(mockRooms[0].id)}
+              status="open"
+              name={mockRooms[0].name}
+              code={mockRooms[0].code}
+              participantCount={mockRooms[0].participantCount}
+              onJoin={() => handleJoinRoom(mockRooms[0].id)}
             />
           </aside>
         </div>
