@@ -1,4 +1,5 @@
 import { useState, type SyntheticEvent } from "react";
+import { useAuth } from "../hooks/useAuth";
 
 function validateEmail(value: string): string | null {
   if (!value) return "Email is required";
@@ -13,22 +14,35 @@ function validatePassword(value: string): string | null {
 }
 
 export function LoginForm() {
+  const auth = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const handleSubmit = (e: SyntheticEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     const emailErr = validateEmail(email);
     const passwordErr = validatePassword(password);
     setEmailError(emailErr);
     setPasswordError(passwordErr);
     if (emailErr || passwordErr) return;
-    console.log("Login payload:", { email, password });
+
+    try {
+      setSubmitting(true);
+      setSubmitError(null);
+      const user = await auth.login(email, password);
+      console.log("logged in", user.email);
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Login failed");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const isDisabled = !email || !password || !!emailError || !!passwordError;
+  const isDisabled = submitting || !email || !password || !!emailError || !!passwordError;
 
   const inputClass =
     "focus-visible:outline-brand rounded-md border border-gray-300 p-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2";
@@ -76,12 +90,18 @@ export function LoginForm() {
         {passwordError && <p className="text-danger text-sm">{passwordError}</p>}
       </fieldset>
 
+      {submitError && (
+        <p className="text-danger mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm">
+          {submitError}
+        </p>
+      )}
+
       <button
         type="submit"
         disabled={isDisabled}
         className="bg-brand hover:bg-brand-dark disabled:hover:bg-brand mt-4 w-full rounded-md p-2 font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50"
       >
-        Sign In
+        {submitting ? "Signing in…" : "Sign In"}
       </button>
     </form>
   );

@@ -1,4 +1,7 @@
 import { useState, type SyntheticEvent } from "react";
+import { useAuth } from "../hooks/useAuth";
+
+const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
 
 function validateName(value: string): string | null {
   if (!value) return "Name is required";
@@ -24,6 +27,7 @@ function validateConfirmPassword(value: string, password: string): string | null
 }
 
 export function RegisterForm() {
+  const auth = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -33,8 +37,10 @@ export function RegisterForm() {
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [confirmPasswordError, setConfirmPasswordError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const handleSubmit = (e: SyntheticEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     const nameErr = validateName(name);
     const emailErr = validateEmail(email);
@@ -45,10 +51,30 @@ export function RegisterForm() {
     setPasswordError(passwordErr);
     setConfirmPasswordError(confirmErr);
     if (nameErr || emailErr || passwordErr || confirmErr) return;
-    console.log("Register payload:", { name, email, password });
+
+    try {
+      setSubmitting(true);
+      setSubmitError(null);
+      const res = await fetch(`${BASE_URL}/api/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, displayName: name }),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "Registration failed");
+      }
+      const user = await auth.login(email, password);
+      console.log("registered and logged in", user.email);
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Registration failed");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const isDisabled =
+    submitting ||
     !name ||
     !email ||
     !password ||
@@ -145,12 +171,18 @@ export function RegisterForm() {
         )}
       </fieldset>
 
+      {submitError && (
+        <p className="text-danger mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm">
+          {submitError}
+        </p>
+      )}
+
       <button
         type="submit"
         disabled={isDisabled}
         className="bg-brand hover:bg-brand-dark disabled:hover:bg-brand mt-4 w-full rounded-md p-2 font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50"
       >
-        Create Account
+        {submitting ? "Creating account…" : "Create Account"}
       </button>
     </form>
   );
