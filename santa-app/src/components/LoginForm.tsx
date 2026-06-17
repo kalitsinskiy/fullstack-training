@@ -1,17 +1,21 @@
-import React, { useState, type ChangeEvent } from "react";
+import React, { useState } from "react";
 import type ValidationError from "../utils/ValidationError";
 import Validate from "../utils/Validation";
 import ValidationList from "./ValidationList";
+import { useAuth } from "../hooks/useAuth";
 
 export default function LoginForm() {
+  const auth = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [emailErrors, setEmailErrors] = useState<ValidationError[]>([]);
   const [passwordErrors, setPasswordErrors] = useState<ValidationError[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const isValid = email !== "" && password !== "";
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const emailValidationErrors = Validate.email(email);
     const passwordValidationErrors = Validate.password(password);
@@ -25,7 +29,19 @@ export default function LoginForm() {
       console.error("validation errors:");
       return;
     }
-    console.info("login:", { email, password });
+
+    try {
+      setSubmitting(true);
+      setSubmitError(null);
+      await auth.login(email, password);
+      console.log("logged in", auth.user?.email);
+      setEmail("");
+      setPassword("");
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Login failed");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -36,6 +52,15 @@ export default function LoginForm() {
     >
       <h3 className="text-lg font-semibold text-(--text)">Login</h3>
 
+      {submitError ? (
+        <div
+          role="alert"
+          className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+        >
+          {submitError}
+        </div>
+      ) : null}
+
       <label className="flex flex-col gap-1">
         <span className="text-sm text-(--muted)">Email</span>
         <input
@@ -43,6 +68,7 @@ export default function LoginForm() {
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          disabled={submitting}
           required
         />
         <ValidationList errors={emailErrors} />
@@ -55,6 +81,7 @@ export default function LoginForm() {
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          disabled={submitting}
           required
         />
         <ValidationList errors={passwordErrors} />
@@ -62,10 +89,10 @@ export default function LoginForm() {
 
       <button
         type="submit"
-        disabled={!isValid}
+        disabled={!isValid || submitting}
         className="bg-brand hover:bg-brand-dark mt-2 rounded-md px-4 py-2 font-semibold text-(--button-text) transition disabled:cursor-not-allowed disabled:opacity-60"
       >
-        Sign in
+        {submitting ? "Signing in..." : "Sign in"}
       </button>
     </form>
   );

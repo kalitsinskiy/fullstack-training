@@ -60,8 +60,8 @@ export class WishlistController {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
     return this.wishlistService.set(
-      new Types.ObjectId(room._id),
-      new Types.ObjectId(user._id),
+      new Types.ObjectId(room.id),
+      new Types.ObjectId(user.id),
       items,
     );
   }
@@ -97,8 +97,8 @@ export class WishlistController {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
     return this.wishlistService.set(
-      new Types.ObjectId(room._id),
-      new Types.ObjectId(user._id),
+      new Types.ObjectId(room.id),
+      new Types.ObjectId(user.id),
       updates.items,
     );
   }
@@ -128,8 +128,8 @@ export class WishlistController {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
     const deleted = await this.wishlistService.delete(
-      new Types.ObjectId(room._id),
-      new Types.ObjectId(user._id),
+      new Types.ObjectId(room.id),
+      new Types.ObjectId(user.id),
     );
     if (!deleted) {
       throw new NotFoundException(
@@ -163,8 +163,8 @@ export class WishlistController {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
     return this.wishlistService.get(
-      new Types.ObjectId(room._id),
-      new Types.ObjectId(user._id),
+      new Types.ObjectId(room.id),
+      new Types.ObjectId(user.id),
     );
   }
 }

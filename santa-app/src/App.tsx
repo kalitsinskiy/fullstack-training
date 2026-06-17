@@ -7,9 +7,11 @@ import LoginForm from "./components/LoginForm";
 import RegisterForm from "./components/RegisterForm";
 import RoomList from "./components/RoomList";
 import type { Room } from "./components/RoomList";
+import { useAuth } from "./hooks/useAuth";
 
 function App() {
   const [count, setCount] = useState(0);
+  const { user, logout, isLoading } = useAuth();
 
   const rooms: Room[] = [
     {
@@ -69,6 +71,25 @@ function App() {
         id="auth-forms"
         className="flex flex-col justify-center gap-6 bg-transparent p-8 lg:flex-row"
       >
+        <div className="w-80 rounded-lg border border-(--border) bg-(--surface) p-4 text-sm text-(--muted)">
+          <p className="mb-2 text-(--text)">Auth status</p>
+          {isLoading ? (
+            <p>Restoring session...</p>
+          ) : user ? (
+            <>
+              <p className="mb-3">Signed in as {user.email}</p>
+              <button
+                type="button"
+                onClick={logout}
+                className="rounded-md border border-(--border) px-3 py-2 text-(--text)"
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            <p>Not signed in</p>
+          )}
+        </div>
         <LoginForm />
         <RegisterForm />
       </section>
