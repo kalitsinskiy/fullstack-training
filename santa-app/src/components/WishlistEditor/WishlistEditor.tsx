@@ -11,9 +11,10 @@ import { useAuth } from '@/hooks/useAuth';
 
 interface WishlistEditorProps {
   roomId: string;
+  disabled?: false;
 }
 
-export function WishlistEditor({ roomId }: WishlistEditorProps) {
+export function WishlistEditor({ roomId, disabled = false }: WishlistEditorProps) {
   const { user } = useAuth();
   const userId = user?.id;
 
@@ -120,63 +121,75 @@ export function WishlistEditor({ roomId }: WishlistEditorProps) {
           {errors.items.root.message}
         </p>
       )}
-      {fields.map((field, idx) => (
-        <fieldset
-          key={field.id}
-          className="rounded-card border-border flex flex-col gap-3 border p-4"
-        >
-          <legend className="text-muted-foreground text-sm">Item {idx + 1}</legend>
+      {disabled && (
+        <p className="text-muted-foreground text-sm">This room is closed — wishlists are locked.</p>
+      )}
 
-          <Field
-            label="Name"
-            placeholder="E.g. Lego Car"
-            {...register(`items.${idx}.name`)}
-            error={errors.items?.[idx]?.name?.message}
-          />
-
-          <Field
-            label="URL (optional)"
-            placeholder="https://..."
-            {...register(`items.${idx}.url`)}
-            error={errors.items?.[idx]?.url?.message}
-          />
-
-          <Field
-            label="Priority (1-5, optional)"
-            type="number"
-            min={1}
-            max={5}
-            {...register(`items.${idx}.priority`, {
-              setValueAs: (v) => (v === '' ? undefined : Number(v)),
-            })}
-            error={errors.items?.[idx]?.priority?.message}
-          />
-
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              const next = getValues('items').filter((_, i) => i !== idx) as WishlistItem[];
-              removeItem.mutate(next);
-            }}
-            disabled={fields.length === 1 || removeItem.isPending}
-            className="self-start"
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {fields.map((field, idx) => (
+          <fieldset
+            key={field.id}
+            className="rounded-card border-border flex flex-col gap-3 border p-4"
           >
-            Remove
-          </Button>
-        </fieldset>
-      ))}
+            <legend className="text-muted-foreground text-sm">Item {idx + 1}</legend>
+
+            <Field
+              label="Name"
+              placeholder="E.g. Lego Car"
+              {...register(`items.${idx}.name`)}
+              disabled={disabled}
+              error={errors.items?.[idx]?.name?.message}
+            />
+
+            <Field
+              label="URL (optional)"
+              placeholder="https://..."
+              {...register(`items.${idx}.url`)}
+              disabled={disabled}
+              error={errors.items?.[idx]?.url?.message}
+            />
+
+            <Field
+              label="Priority (1-5, optional)"
+              type="number"
+              min={1}
+              max={5}
+              {...register(`items.${idx}.priority`, {
+                setValueAs: (v) => (v === '' ? undefined : Number(v)),
+              })}
+              disabled={disabled}
+              error={errors.items?.[idx]?.priority?.message}
+            />
+
+            {!disabled && (
+              <Button
+                type="button"
+                variant={fields.length <= 1 ? 'outline' : 'destructive'}
+                size="sm"
+                onClick={() => {
+                  const next = getValues('items').filter((_, i) => i !== idx) as WishlistItem[];
+                  removeItem.mutate(next);
+                }}
+                disabled={fields.length === 1 || removeItem.isPending}
+                className="self-start"
+              >
+                Remove
+              </Button>
+            )}
+          </fieldset>
+        ))}
+      </div>
 
       <div className="flex gap-3">
         <Button
           type="button"
           variant="outline"
           onClick={() => append({ name: '', url: '', priority: 1 })}
+          disabled={disabled}
         >
           + Add item
         </Button>
-        <Button type="submit" disabled={isSubmitting || save.isPending}>
+        <Button type="submit" disabled={disabled || isSubmitting || save.isPending}>
           {save.isPending ? 'Saving…' : 'Save'}
         </Button>
       </div>

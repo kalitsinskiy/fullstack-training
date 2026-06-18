@@ -1,0 +1,1 @@
+export { DeleteRoomButton } from './DeleteRoomButton';

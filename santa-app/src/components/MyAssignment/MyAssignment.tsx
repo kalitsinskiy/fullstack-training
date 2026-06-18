@@ -10,7 +10,7 @@ interface MyAssignmentProps {
 
 export function MyAssignment({ room }: MyAssignmentProps) {
   const { user } = useAuth();
-  const recipientId = room.status === 'drawn' ? room.assignments?.[user?.id ?? ''] : undefined;
+  const recipientId = room.status !== 'pending' ? room.assignments?.[user?.id ?? ''] : undefined;
 
   const { data } = useAssigneeWishlist(room.id, recipientId);
   const recipientName = data?.userName ?? 'your match';

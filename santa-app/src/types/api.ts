@@ -14,6 +14,8 @@ export interface Room {
   members: string[];
   status: RoomStatus;
   drawDate?: string;
+  exchangeDate?: string;
+  exchangePlace: string;
   assignments?: Record<string, string>;
   createdAt: string;
 }

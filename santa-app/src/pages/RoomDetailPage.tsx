@@ -6,6 +6,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { WishlistEditor } from '@/components/WishlistEditor';
 import { DrawButton } from '@/components/DrawButton';
 import { MyAssignment } from '@/components/MyAssignment';
+import { ExchangeScheduler } from '@/components/ExchangeScheduler';
+import { DeleteRoomButton } from '@/components/DeleteRoomButton';
 
 export function RoomsDetailedPage() {
   const { id } = useParams<{ id: string }>();
@@ -33,6 +35,7 @@ export function RoomsDetailedPage() {
   if (!room) return null;
 
   const isOwner = room.ownerId === user?.id;
+  const isClosed = room.status === 'closed';
 
   return (
     <main className="flex flex-col gap-6 px-[clamp(1rem,4vw,3rem)] py-[clamp(1.5rem,4vw,3rem)]">
@@ -44,14 +47,28 @@ export function RoomsDetailedPage() {
             | {room.status}
           </p>
         </div>
-        {isOwner && room.status === 'pending' && <DrawButton room={room} />}
+        <div className="flex items-start gap-2">
+          {isOwner && room.status === 'pending' && <DrawButton room={room} />}
+          {isOwner && <DeleteRoomButton roomId={room.id} />}
+        </div>
       </div>
+
+      {room.exchangeDate && (
+        <section className="rounded-card border-border border p-6">
+          <h2 className="text-foreground text-lg font-bold">Gift exchange</h2>
+          <p className="text-muted-foreground mt-1 text-sm">
+            {new Date(room.exchangeDate).toLocaleString()} | {room.exchangePlace}
+          </p>
+        </section>
+      )}
+
+      {isOwner && room.status === 'drawn' && <ExchangeScheduler room={room} />}
 
       <MyAssignment room={room} />
 
       <section className="flex-flex-col gap-3">
         <h2 className="text-foreground text-lg font-bold">My Wishlist</h2>
-        <WishlistEditor roomId={id} />
+        <WishlistEditor roomId={id} disabled={isClosed} />
       </section>
     </main>
   );

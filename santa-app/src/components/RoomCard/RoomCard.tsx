@@ -4,7 +4,7 @@ import type { Room } from '@/types/api';
 
 interface RoomCardProps {
   room: Room;
-  onJoin?: () => void;
+  // onJoin?: () => void;
   onOpen?: () => void;
 }
 
@@ -16,7 +16,7 @@ const badgeClasses = {
 
 const badgeLabels = { pending: 'Pending', drawn: 'Drawn', closed: 'Closed' };
 
-export function RoomCard({ room, onJoin, onOpen }: RoomCardProps) {
+export function RoomCard({ room, /* onJoin, */ onOpen }: RoomCardProps) {
   const { name, code, members, status } = room;
 
   return (
@@ -51,11 +51,11 @@ export function RoomCard({ room, onJoin, onOpen }: RoomCardProps) {
         </span>
 
         <span className="flex gap-2">
-          {status === 'pending' && onJoin && (
+          {/* {status === 'pending' && onJoin && (
             <Button variant="outline" size="sm" onClick={onJoin}>
               Join
             </Button>
-          )}
+          )} */}
           {onOpen && (
             <Button variant="outline" size="sm" onClick={onOpen}>
               View
