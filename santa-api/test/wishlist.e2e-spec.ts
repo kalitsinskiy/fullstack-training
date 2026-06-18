@@ -236,6 +236,7 @@ describe('WishlistController (e2e)', () => {
       expect(res.json()).toEqual({
         roomId,
         userId: user._id.toString(),
+        userName: 'Test User',
         items: [{ name: 'mug' }],
       });
     });

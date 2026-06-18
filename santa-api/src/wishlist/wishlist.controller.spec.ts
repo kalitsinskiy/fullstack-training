@@ -7,7 +7,11 @@ import { WishlistModule } from './wishlist.module';
 import { UsersModule } from '../users/users.module';
 import { AuthModule } from '../auth/auth.module';
 import { RoomsModule } from '../rooms/rooms.module';
-import { User, UserSchema, UserDocument } from '../users/schemas/users.schema';
+import {
+  Room as RoomSchemaClass,
+  RoomDocument,
+} from '../rooms/schemas/room.schema';
+import { User, UserDocument } from '../users/schemas/users.schema';
 import {
   startInMemoryMongo,
   stopInMemoryMongo,
@@ -16,6 +20,7 @@ import {
 describe('WishlistController (HTTP)', () => {
   let app: INestApplication;
   let userModel: Model<UserDocument>;
+  let roomModel: Model<RoomDocument>;
   let token: string;
   let userId: string;
   let roomId: string;
@@ -45,6 +50,9 @@ describe('WishlistController (HTTP)', () => {
     await app.init();
 
     userModel = moduleRef.get<Model<UserDocument>>(getModelToken(User.name));
+    roomModel = moduleRef.get<Model<RoomDocument>>(
+      getModelToken(RoomSchemaClass.name),
+    );
     await userModel.ensureIndexes();
   }, 30000);
 
@@ -146,6 +154,25 @@ describe('WishlistController (HTTP)', () => {
       await request(app.getHttpServer())
         .get(`/rooms/${roomId}/wishlist/${userId}`)
         .expect(401);
+    });
+
+    test('403 when saving a wishlist after the room is closed', async () => {
+      await roomModel.updateOne(
+        { _id: roomId },
+        {
+          $set: {
+            status: 'drawn',
+            drawDate: new Date(),
+            exchangeDate: new Date(Date.now() - 60_000),
+          },
+        },
+      );
+
+      await request(app.getHttpServer())
+        .post(`/rooms/${roomId}/wishlist`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ items: [{ name: 'Too Late' }] })
+        .expect(403);
     });
   });
 });

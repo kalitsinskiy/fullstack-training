@@ -7,6 +7,7 @@ import { RoomsModule } from './rooms.module';
 import { UsersModule } from '../users/users.module';
 import { AuthModule } from '../auth/auth.module';
 import { User, UserDocument } from '../users/schemas/users.schema';
+import { Room as RoomSchemaClass, RoomDocument } from './schemas/room.schema';
 import {
   startInMemoryMongo,
   stopInMemoryMongo,
@@ -15,6 +16,7 @@ import {
 describe('RoomsController (HTTP)', () => {
   let app: INestApplication;
   let userModel: Model<UserDocument>;
+  let roomModel: Model<RoomDocument>;
   let token: string;
   let userId: string;
 
@@ -42,6 +44,9 @@ describe('RoomsController (HTTP)', () => {
     await app.init();
 
     userModel = moduleRef.get<Model<UserDocument>>(getModelToken(User.name));
+    roomModel = moduleRef.get<Model<RoomDocument>>(
+      getModelToken(RoomSchemaClass.name),
+    );
     await userModel.ensureIndexes();
   }, 30000);
 
@@ -64,6 +69,28 @@ describe('RoomsController (HTTP)', () => {
     token = res.body.accessToken;
     userId = res.body.id;
   });
+
+  async function markDrawn(roomId: string, opts: { exchangeDate?: Date } = {}) {
+    await roomModel.updateOne(
+      { _id: roomId },
+      {
+        $set: {
+          status: 'drawn',
+          drawDate: new Date(),
+          ...(opts.exchangeDate ? { exchangeDate: opts.exchangeDate } : {}),
+        },
+      },
+    );
+  }
+
+  async function createRoom(name = 'Test Room') {
+    const res = await request(app.getHttpServer())
+      .post('/rooms')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name });
+
+    return res.body as { id: string; code: string };
+  }
 
   describe('POST /rooms', () => {
     test('201 + creates a room owned by the authenticated user', async () => {
@@ -308,6 +335,104 @@ describe('RoomsController (HTTP)', () => {
 
     test('401 without token', async () => {
       await request(app.getHttpServer()).post('/rooms/ABC123/join').expect(401);
+    });
+  });
+
+  describe('PATCH /rooms/:id (set exchange', () => {
+    test('200 when owner sets exchange "date & place" on a drawn room', async () => {
+      const room = await createRoom('Drawn Room');
+      await markDrawn(room.id);
+
+      const res = await request(app.getHttpServer())
+        .patch(`/rooms/${room.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          exchangeDate: '2099-12-24T18:00:00.000Z',
+          exchangePlace: 'Office kitchen',
+        })
+        .expect(200);
+
+      expect(res.body.exchangePlace).toBe('Office kitchen');
+      expect(res.body.exchangeDate).toBeDefined();
+      expect(res.body.status).toBe('drawn');
+    });
+
+    test('400 when cannot schedule berfore the draw (pending room)', async () => {
+      const room = await createRoom('Pending Room');
+      await request(app.getHttpServer())
+        .patch(`/rooms/${room.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ exchangeDate: '2099-12-24T18:00:00.000Z', exchangePlace: 'x' })
+        .expect(400);
+    });
+
+    test('400 with invalid date', async () => {
+      const room = await createRoom('Bad Date Room');
+      await markDrawn(room.id);
+      await request(app.getHttpServer())
+        .patch(`/rooms/${room.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ exchangeDate: 'not-a-date', exchangePlace: 'x' })
+        .expect(400);
+    });
+
+    test('403 — non-owner cannot set the exchange', async () => {
+      const room = await createRoom('Owned Room');
+      await markDrawn(room.id);
+
+      const other = await request(app.getHttpServer())
+        .post('/auth/register')
+        .send({
+          email: 'other@example.com',
+          password: 'SecretPass1',
+          displayName: 'Other',
+        });
+
+      await request(app.getHttpServer())
+        .patch(`/rooms/${room.id}`)
+        .set('Authorization', `Bearer ${other.body.accessToken}`)
+        .send({ exchangeDate: '2099-12-24T18:00:00.000Z', exchangePlace: 'x' })
+        .expect(403);
+    });
+  });
+
+  describe('DELETE /rooms/:id', () => {
+    test('204 when owner deletes room, then the room became 404s', async () => {
+      const room = await createRoom('To Delete');
+
+      await request(app.getHttpServer())
+        .delete(`/rooms/${room.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .expect(204);
+
+      await request(app.getHttpServer())
+        .get(`/rooms/${room.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .expect(404);
+    });
+
+    test('403 when non-owner tries to delete room', async () => {
+      const room = await createRoom('Protected Room');
+      const other = await request(app.getHttpServer())
+        .post('/auth/register')
+        .send({
+          email: 'other@example.com',
+          password: 'SecretPass1',
+          displayName: 'Other',
+        });
+
+      await request(app.getHttpServer())
+        .delete(`/rooms/${room.id}`)
+        .set('Authorization', `Bearer ${other.body.accessToken}`)
+        .expect(403);
+    });
+
+    test('404 on deleting a non-existent room', async () => {
+      const fakeId = new mongoose.Types.ObjectId().toString();
+      await request(app.getHttpServer())
+        .delete(`/rooms/${fakeId}`)
+        .set('Authorization', `Bearer ${token}`)
+        .expect(404);
     });
   });
 });

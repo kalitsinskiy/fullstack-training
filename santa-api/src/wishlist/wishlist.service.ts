@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ForbiddenException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import {
@@ -6,6 +6,7 @@ import {
   WishlistDocument,
   WishlistItem,
 } from './schemas/wishlist.schema';
+import { RoomsService } from '../rooms/rooms.service';
 
 export interface Wishlist {
   roomId: string;
@@ -18,6 +19,7 @@ export class WishlistService {
   constructor(
     @InjectModel(WishlistSchemaClass.name)
     private readonly wishlistModel: Model<WishlistDocument>,
+    private readonly roomsService: RoomsService,
   ) {}
 
   async set(
@@ -25,11 +27,19 @@ export class WishlistService {
     userId: string,
     items: WishlistItem[],
   ): Promise<Wishlist> {
+    const room = await this.roomsService.findById(roomId);
+
+    if (room?.status === 'closed')
+      throw new ForbiddenException(
+        'Wishlist is locked - the exchange date has passed',
+      );
+
     const doc = await this.wishlistModel.findOneAndUpdate(
       { userId, roomId },
       { $set: { items } },
       { upsert: true, new: true, runValidators: true },
     );
+
     return this.toPublic(doc);
   }
 

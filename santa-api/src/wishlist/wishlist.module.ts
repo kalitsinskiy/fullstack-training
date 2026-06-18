@@ -4,6 +4,7 @@ import { WishlistService } from './wishlist.service';
 import { WishlistController } from './wishlist.controller';
 import { Wishlist, WishlistSchema } from './schemas/wishlist.schema';
 import { UsersModule } from '../users/users.module';
+import { RoomsModule } from '../rooms/rooms.module';
 
 @Module({
   imports: [
@@ -11,6 +12,7 @@ import { UsersModule } from '../users/users.module';
       { name: Wishlist.name, schema: WishlistSchema },
     ]),
     UsersModule,
+    RoomsModule,
   ],
   providers: [WishlistService],
   controllers: [WishlistController],

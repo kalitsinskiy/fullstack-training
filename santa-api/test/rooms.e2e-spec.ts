@@ -10,6 +10,10 @@ import { ValidationPipe } from '@nestjs/common';
 import { startInMemoryMongo, stopInMemoryMongo } from './helpers/mongo';
 import { AppModule } from '../src/app.module';
 import { User, UserDocument } from '../src/users/schemas/users.schema';
+import {
+  Room as RoomSchemaClass,
+  RoomDocument,
+} from '../src/rooms/schemas/room.schema';
 import { userFixture } from './helpers/factories';
 import { tokenFor } from './helpers/auth-token';
 
@@ -55,12 +59,16 @@ describe('RoomsController (e2e)', () => {
   describe('Rooms with auth (e2e)', () => {
     let jwt: JwtService;
     let userModel: Model<UserDocument>;
+    let roomModel: Model<RoomDocument>;
     let owner: ReturnType<typeof userFixture>;
     let ownerToken: string;
 
     beforeAll(() => {
       jwt = app.get(JwtService);
       userModel = app.get<Model<UserDocument>>(getModelToken(User.name));
+      roomModel = app.get<Model<RoomDocument>>(
+        getModelToken(RoomSchemaClass.name),
+      );
     });
 
     beforeEach(async () => {
@@ -89,6 +97,39 @@ describe('RoomsController (e2e)', () => {
           url,
           headers: { authorization: `Bearer ${token}` },
         });
+
+    const authedPatch = (url: string, payload: unknown, token: string) =>
+      app
+        .getHttpAdapter()
+        .getInstance()
+        .inject({
+          method: 'PATCH',
+          url,
+          payload,
+          headers: { authorization: `Bearer ${token}` },
+        });
+
+    const authedDelete = (url: string, token: string) =>
+      app
+        .getHttpAdapter()
+        .getInstance()
+        .inject({
+          method: 'DELETE',
+          url,
+          headers: { authorization: `Bearer ${token}` },
+        });
+
+    const seedDrawn = (roomId: string, exchangeDate?: Date) =>
+      roomModel.updateOne(
+        { _id: roomId },
+        {
+          $set: {
+            status: 'drawn',
+            drawDate: new Date(),
+            ...(exchangeDate ? { exchangeDate } : {}),
+          },
+        },
+      );
 
     describe('POST /rooms (with JWT)', () => {
       test('returns 201 and sets ownerId from the JWT, not the body', async () => {
@@ -302,6 +343,147 @@ describe('RoomsController (e2e)', () => {
         );
 
         expect(res.statusCode).toBe(403);
+      });
+    });
+
+    describe('PATCH /rooms/:id (set exchange)', () => {
+      async function createDrawnRoom(exchangeDate?: Date) {
+        const res = await authedPost(
+          '/rooms',
+          { name: 'Exchange Room' },
+          ownerToken,
+        );
+        const room = res.json();
+        await seedDrawn(room.id, exchangeDate);
+        return room;
+      }
+
+      test('owner sets exchange "date & place" on a drawn room -> 200', async () => {
+        const room = await createDrawnRoom();
+
+        const res = await authedPatch(
+          `/rooms/${room.id}`,
+          {
+            exchangeDate: '2099-12-24T18:00:00.000Z',
+            exchangePlace: 'Office kitchen',
+          },
+          ownerToken,
+        );
+
+        expect(res.statusCode).toBe(200);
+
+        const body = res.json();
+
+        expect(body.exchangePlace).toBe('Office kitchen');
+        expect(body.exchangeDate).toBeDefined();
+        expect(body.status).toBe('drawn');
+      });
+
+      test('cannot schedule before the draw (pending room) -> 400', async () => {
+        const createRes = await authedPost(
+          '/rooms',
+          { name: 'Pending Room' },
+          ownerToken,
+        );
+        const room = createRes.json();
+
+        const res = await authedPatch(
+          `/rooms/${room.id}`,
+          { exchangeDate: '2099-12-24T18:00:00.000Z', exchangePlace: 'x' },
+          ownerToken,
+        );
+
+        expect(res.statusCode).toBe(400);
+      });
+
+      test('invalid date -> 400', async () => {
+        const room = await createDrawnRoom();
+
+        const res = await authedPatch(
+          `/rooms/${room.id}`,
+          { exchangeDate: 'not-a-date', exchangePlace: 'x' },
+          ownerToken,
+        );
+
+        expect(res.statusCode).toBe(400);
+      });
+
+      test('non-owner cannot set the exchange -> 403', async () => {
+        const room = await createDrawnRoom();
+
+        const stranger = userFixture({ email: 'stranger@test.com' });
+        await userModel.create(stranger);
+
+        const res = await authedPatch(
+          `/rooms/${room.id}`,
+          { exchangeDate: '2099-12-24T18:00:00.000Z', exchangePlace: 'x' },
+          tokenFor(jwt, stranger),
+        );
+
+        expect(res.statusCode).toBe(403);
+      });
+    });
+
+    describe('GET /rooms/:id (derive closed)', () => {
+      test('a drawn room past its exchange date reads as closed', async () => {
+        const createRes = await authedPost(
+          '/rooms',
+          { name: 'Closing Room' },
+          ownerToken,
+        );
+        const room = createRes.json();
+
+        await seedDrawn(room.id, new Date(Date.now() - 60_000)); // 1 min ago
+
+        const res = await authedGet(`/rooms/${room.id}`, ownerToken);
+
+        expect(res.statusCode).toBe(200);
+        expect(res.json().status).toBe('closed'); // derived; DB still stores 'drawn'
+      });
+    });
+
+    describe('DELETE /rooms/:id', () => {
+      test('owner deletes -> 204, then GET -> 404', async () => {
+        const createRes = await authedPost(
+          '/rooms',
+          { name: 'To Delete' },
+          ownerToken,
+        );
+        const room = createRes.json();
+
+        const del = await authedDelete(`/rooms/${room.id}`, ownerToken);
+        expect(del.statusCode).toBe(204);
+
+        const get = await authedGet(`/rooms/${room.id}`, ownerToken);
+        expect(get.statusCode).toBe(404);
+      });
+
+      test('non-owner cannot delete -> 403', async () => {
+        const createRes = await authedPost(
+          '/rooms',
+          { name: 'Protected' },
+          ownerToken,
+        );
+        const room = createRes.json();
+
+        const stranger = userFixture({ email: 'stranger@test.com' });
+        await userModel.create(stranger);
+
+        const res = await authedDelete(
+          `/rooms/${room.id}`,
+          tokenFor(jwt, stranger),
+        );
+
+        expect(res.statusCode).toBe(403);
+      });
+
+      test('unknown room id -> 404', async () => {
+        const res = await authedDelete(
+          `/rooms/${new Types.ObjectId().toString()}`,
+          ownerToken,
+        );
+
+        expect(res.statusCode).toBe(404);
       });
     });
   });

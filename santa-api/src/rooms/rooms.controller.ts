@@ -1,11 +1,13 @@
 import {
   Controller,
   Body,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
   NotFoundException,
   Param,
+  Patch,
   Post,
   Query,
   UseGuards,
@@ -21,6 +23,8 @@ import {
 } from '@nestjs/swagger';
 import { RoomsService, type Room } from './rooms.service';
 import { CreateRoomDto } from './dto/create-room.dto';
+import { SetExchangeDto } from './dto/set-exchange.dto';
+import { RoomResponseDto } from './dto/room-response.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { PaginatedResponse } from 'src/common/pagination';
@@ -118,5 +122,50 @@ export class RoomsController {
     @CurrentUser('id') userId: string,
   ): Promise<Room> {
     return this.roomsService.draw(id, userId);
+  }
+
+  @Patch(':id')
+  @ApiOperation({
+    summary: 'Set the exchange date & place (owner-only, after the draw).',
+  })
+  @ApiParam({ name: 'id', description: 'Room ObjectId' })
+  @ApiBody({ type: SetExchangeDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Exchange details saved.',
+    type: RoomResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Room is not drawn yet or invalid payload.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Not the owner, or room is closed.',
+  })
+  @ApiResponse({ status: 404, description: 'Room not found.' })
+  async setExchange(
+    @Param('id') id: string,
+    @CurrentUser('id') userId: 'string',
+    @Body() dto: SetExchangeDto,
+  ): Promise<Room> {
+    return this.roomsService.setExchange(id, userId, dto);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Delete a room (onwer-only)' })
+  @ApiParam({ name: 'id', description: 'Room ObjectId' })
+  @ApiResponse({ status: 204, description: 'Room deleted.' })
+  @ApiResponse({
+    status: 403,
+    description: 'Only the owner can delete the room.',
+  })
+  @ApiResponse({ status: 404, description: 'Room not found.' })
+  async remove(
+    @Param('id') id: string,
+    @CurrentUser('id') userId: string,
+  ): Promise<void> {
+    await this.roomsService.remove(id, userId);
   }
 }

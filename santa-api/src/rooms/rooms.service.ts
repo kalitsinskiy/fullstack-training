@@ -19,8 +19,10 @@ export interface Room {
   ownerId: string;
   code: string;
   members: string[];
-  status: 'pending' | 'drawn';
+  status: 'pending' | 'drawn' | 'closed';
   drawDate?: Date;
+  exchangeDate?: Date;
+  exchangePlace?: string;
   assignments?: Record<string, string>;
   createdAt: Date;
 }
@@ -116,6 +118,57 @@ export class RoomsService {
     return this.toPublic(doc);
   }
 
+  async setExchange(
+    roomId: string,
+    callerId: string,
+    input: { exchangeDate: string; exchangePlace: string },
+  ): Promise<Room> {
+    if (!Types.ObjectId.isValid(roomId)) {
+      throw new NotFoundException(`Room ${roomId} not found`);
+    }
+
+    const doc = await this.roomModel.findById(roomId);
+
+    if (!doc) throw new NotFoundException(`Room ${roomId} not found`);
+    if (doc.creatorId !== callerId)
+      throw new ForbiddenException(
+        'Only the room owner can schedule the exchange',
+      );
+
+    const effective = this.toPublic(doc).status;
+
+    if (effective === 'pending') {
+      throw new BadRequestException(
+        'Run the draw before scheduling the exchange',
+      );
+    }
+
+    if (effective === 'closed') {
+      throw new ForbiddenException(
+        'Room is closed — the exchange date has passed',
+      );
+    }
+
+    doc.exchangeDate = new Date(input.exchangeDate);
+    doc.exchangePlace = input.exchangePlace;
+    await doc.save();
+
+    return this.toPublic(doc);
+  }
+
+  async remove(roomId: string, callerId: string): Promise<void> {
+    if (!Types.ObjectId.isValid(roomId))
+      throw new NotFoundException(`Room ${roomId} not found`);
+
+    const doc = await this.roomModel.findById(roomId);
+
+    if (!doc) throw new NotFoundException(`Room ${roomId} not found`);
+    if (doc.creatorId !== callerId)
+      throw new ForbiddenException('Only the room owner can delete the room');
+
+    await doc.deleteOne();
+  }
+
   private async generateUniqueCode(): Promise<string> {
     while (true) {
       const code = Math.random().toString(36).slice(2, 8).toUpperCase();
@@ -150,16 +203,23 @@ export class RoomsService {
   }
 
   private toPublic(doc: RoomDocument): Room {
+    const isClosed =
+      doc.status === 'drawn' &&
+      !!doc.exchangeDate &&
+      doc.exchangeDate.getTime() <= Date.now();
+
     return {
       id: doc._id.toString(),
       name: doc.name,
       ownerId: doc.creatorId,
       code: doc.inviteCode,
       members: doc.participants,
-      status: doc.status,
+      status: isClosed ? 'closed' : doc.status,
       drawDate: doc.drawDate,
+      exchangeDate: doc.exchangeDate,
+      exchangePlace: doc.exchangePlace,
       assignments: doc.assignments,
-      createdAt: doc.get('createdAt'),
+      createdAt: doc.get('createdAt') as Date,
     };
   }
 }

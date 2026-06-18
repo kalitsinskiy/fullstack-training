@@ -11,6 +11,7 @@ import {
   startInMemoryMongo,
   stopInMemoryMongo,
 } from '../../test/helpers/mongo';
+import { RoomsService } from '../rooms/rooms.service';
 
 describe('WishlistService', () => {
   let service: WishlistService;
@@ -26,7 +27,13 @@ describe('WishlistService', () => {
           { name: WishlistSchemaClass.name, schema: WishlistSchema },
         ]),
       ],
-      providers: [WishlistService],
+      providers: [
+        WishlistService,
+        {
+          provide: RoomsService,
+          useValue: { findById: async () => ({ status: 'drawn' }) },
+        },
+      ],
     }).compile();
 
     service = module.get<WishlistService>(WishlistService);

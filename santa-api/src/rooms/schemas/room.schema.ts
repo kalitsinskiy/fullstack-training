@@ -23,6 +23,12 @@ export class Room {
   @Prop()
   drawDate?: Date;
 
+  @Prop()
+  exchangeDate?: Date;
+
+  @Prop()
+  exchangePlace?: string;
+
   @Prop({ type: MongooseSchema.Types.Mixed })
   assignments?: Record<string, string>;
 }
