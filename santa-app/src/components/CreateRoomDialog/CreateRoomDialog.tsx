@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Field } from '../ui/Field';
 import { api } from '@/services/api';
 import type { Room } from '@/types/api';
+import { FormError } from '../ui/FormError';
 
 interface CreateRoomDialogProps {
   open: boolean;
@@ -60,11 +61,8 @@ export function CreateRoomDialog({ open, onOpenChange }: CreateRoomDialogProps) 
         </DialogHeader>
 
         <form onSubmit={handleSubmit}>
-          {error && (
-            <p role="alert" className="mb-2 text-[0.85rem] text-red-500">
-              {error}
-            </p>
-          )}
+          <FormError>{error}</FormError>
+
           <div className="flex flex-col gap-2 py-4">
             <Field
               label="Room name"

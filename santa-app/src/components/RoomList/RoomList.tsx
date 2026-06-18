@@ -2,6 +2,8 @@ import { useNavigate } from 'react-router';
 import { RoomCard } from '../RoomCard';
 import { Button } from '@/components/ui/button';
 import type { Room } from '@/types/api';
+import { Heading } from '../ui/Heading';
+import { Muted } from '../ui/Muted';
 
 export function RoomList({ rooms }: { rooms: Room[] }) {
   const navigate = useNavigate();
@@ -9,12 +11,12 @@ export function RoomList({ rooms }: { rooms: Room[] }) {
   return (
     <main className="flex-1">
       <div className="px-[clamp(1rem,4vw,3rem)] pt-[clamp(1.5rem,4vw,3rem)]">
-        <h2 className="text-foreground text-2xl font-bold tracking-[-0.02em]">My Rooms</h2>
+        <Heading level="page">My Rooms</Heading>
       </div>
 
       {rooms.length === 0 ? (
         <div className="flex flex-col items-center gap-4 p-[clamp(1rem,4vw,3rem)] text-center">
-          <p className="text-muted-foreground">No rooms yet.</p>
+          <Muted>No rooms yet.</Muted>
           <Button onClick={() => console.log('TODO: create flow')}>Create Room</Button>
         </div>
       ) : (

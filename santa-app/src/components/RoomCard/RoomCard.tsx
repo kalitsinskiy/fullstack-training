@@ -1,6 +1,7 @@
 import { clsx } from 'clsx';
 import { Button } from '@/components/ui/button';
 import type { Room } from '@/types/api';
+import { Muted } from '../ui/Muted';
 
 interface RoomCardProps {
   room: Room;
@@ -32,12 +33,10 @@ export function RoomCard({ room, /* onJoin, */ onOpen }: RoomCardProps) {
     >
       <div className="flex flex-col gap-1 @sm:flex-row @sm:items-baseline @sm:gap-3">
         <span className="text-foreground text-base font-bold">{name}</span>
-        <span className="text-muted-foreground font-mono text-[0.78rem] tracking-[0.08em]">
-          {code}
-        </span>
+        <Muted className="font-mono text-[0.78rem] tracking-[0.08em]">{code}</Muted>
       </div>
 
-      <p className="text-muted-foreground text-[0.85rem]">{members.length} participants</p>
+      <Muted className="text-[0.85rem]">{members.length} participants</Muted>
 
       <div className="mt-auto flex items-center justify-between pt-2">
         <span

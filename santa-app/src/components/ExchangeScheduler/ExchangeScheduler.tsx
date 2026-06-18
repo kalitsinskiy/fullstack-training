@@ -7,6 +7,8 @@ import { api } from '@/services/api';
 import type { Room } from '@/types/api';
 import { ExchangeSchema, type ExchangeInput } from '@/schemas/rooms';
 import { toLocalInput } from '@/utils/stringTransformer';
+import { FormError } from '../ui/FormError';
+import { Heading } from '../ui/Heading';
 
 interface ExchangeSchedulerProps {
   room: Room;
@@ -45,12 +47,10 @@ export function ExchangeScheduler({ room }: ExchangeSchedulerProps) {
 
   return (
     <section className="rounded-card border-border flex flex-col gap-3 border p-6">
-      <h2 className="text-foreground text-lg font-bold">Gift exchange</h2>
-      {errors.root?.serverError && (
-        <p role="alert" className="text-[0.85rem] text-red-500">
-          {errors.root.serverError.message}
-        </p>
-      )}
+      <Heading>Gift exchange</Heading>
+
+      <FormError>{errors.root?.serverError.message}</FormError>
+
       <form onSubmit={handleSubmit(submit)} className="flex flex-col gap-3">
         <Field
           label="Date & Time"

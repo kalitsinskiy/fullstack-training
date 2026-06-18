@@ -6,6 +6,7 @@ import type { Room } from '@/types/api';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Field } from '../ui/Field';
 import { Button } from '../ui/button';
+import { FormError } from '../ui/FormError';
 
 interface JoinRoomDialogProps {
   open: boolean;
@@ -58,11 +59,7 @@ export function JoinRoomDialog({ open, onOpenChange }: JoinRoomDialogProps) {
         </DialogHeader>
 
         <form onSubmit={handleSubmit}>
-          {error && (
-            <p role="alert" className="mb-2 text-[0.85rem] text-red-500">
-              {error}
-            </p>
-          )}
+          <FormError>{error}</FormError>
 
           <div className="flex flex-col gap-2 py-4">
             <Field

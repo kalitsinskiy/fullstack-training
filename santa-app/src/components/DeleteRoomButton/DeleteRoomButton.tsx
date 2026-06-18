@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { api } from '@/services/api';
+import { FormError } from '../ui/FormError';
 
 interface DeleteRoomButtonProps {
   roomId: string;
@@ -44,11 +45,9 @@ export function DeleteRoomButton({ roomId }: DeleteRoomButtonProps) {
           <DialogHeader>
             <DialogTitle>Delete this room?</DialogTitle>
           </DialogHeader>
-          {error && (
-            <p role="alert" className="text-[0.85rem] text-red-500">
-              {error}
-            </p>
-          )}
+
+          <FormError>{error}</FormError>
+
           <p className="text-muted-foreground py-2 text-sm">
             This permanently removes the room for everyone.
             <br /> This can't be undone.

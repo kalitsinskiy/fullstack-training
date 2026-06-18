@@ -8,6 +8,9 @@ import { api, ApiError } from '@/services/api';
 import type { WishlistItem, Wishlist } from '@/types/api';
 import { WishlistSchema, type WishlistInput } from '@/schemas/wishlist';
 import { useAuth } from '@/hooks/useAuth';
+import { StatusMessage } from '../ui/StatusMessage/StatusMessage';
+import { FormError } from '../ui/FormError';
+import { Muted } from '../ui/Muted';
 
 interface WishlistEditorProps {
   roomId: string;
@@ -101,29 +104,15 @@ export function WishlistEditor({ roomId, disabled = false }: WishlistEditorProps
 
   const submit = (formData: WishlistInput) => save.mutate(formData.items);
 
-  if (isLoading) return <p className="text-muted-foreground">Loading wishlist...</p>;
-  if (isError)
-    return (
-      <p role="alert" className="text-red-500">
-        {(error as Error).message}
-      </p>
-    );
+  if (isLoading) return <StatusMessage>Loading wishlist...</StatusMessage>;
+  if (isError) return <StatusMessage variant="error">{(error as Error).message}</StatusMessage>;
 
   return (
     <form onSubmit={handleSubmit(submit)} noValidate className="flex flex-col gap-4">
-      {errors.root?.serverError && (
-        <p role="alert" className="text-[0.85rem] text-red-500">
-          {errors.root.serverError.message}
-        </p>
-      )}
-      {errors.items?.root && (
-        <p role="alert" className="text-[0.85rem] text-red-500">
-          {errors.items.root.message}
-        </p>
-      )}
-      {disabled && (
-        <p className="text-muted-foreground text-sm">This room is closed — wishlists are locked.</p>
-      )}
+      <FormError>{errors.root?.serverError.message}</FormError>
+      <FormError>{errors.items?.root?.message}</FormError>
+
+      {disabled && <Muted>This room is closed — wishlists are locked.</Muted>}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {fields.map((field, idx) => (

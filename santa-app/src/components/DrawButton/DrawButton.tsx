@@ -4,6 +4,8 @@ import { api } from '@/services/api';
 import type { Room } from '@/types/api';
 import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
+import { FormError } from '../ui/FormError';
+import { Muted } from '../ui/Muted';
 
 interface DrawButtonProps {
   room: Room;
@@ -47,15 +49,14 @@ export function DrawButton({ room }: DrawButtonProps) {
           <DialogHeader>
             <DialogTitle>Run the Secret Santa draw?</DialogTitle>
           </DialogHeader>
-          {error && (
-            <p role="alert" className="text-[0.85rem] text-red-500">
-              {error}
-            </p>
-          )}
-          <p className="text-muted-foreground py-2 text-sm">
+
+          <FormError>{error}</FormError>
+
+          <Muted className="py-2">
             This assigns every participant a recipient and can't be undone. No one can join after
             the draw.
-          </p>
+          </Muted>
+
           <DialogFooter className="gap-2">
             <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)}>
               Cancel

@@ -1,4 +1,5 @@
 import { useAssigneeWishlist } from '@/hooks/useAssigneeWishlist';
+import { StatusMessage } from '../ui/StatusMessage/StatusMessage';
 
 interface AssigneeWishlistProps {
   roomId: string;
@@ -18,23 +19,15 @@ function safeHttpUrl(raw?: string): string | null {
 export function AssigneeWishlist({ roomId, userId }: AssigneeWishlistProps) {
   const { data, isLoading, isError, error } = useAssigneeWishlist(roomId, userId);
 
-  if (isLoading)
-    return <p className="text-muted-foreground text-sm">Loading your assignee's wishlist…</p>;
-
-  if (isError)
-    return (
-      <p role="alert" className="text-sm text-red-500">
-        {(error as Error).message}
-      </p>
-    );
-
+  if (isLoading) return <StatusMessage>Loading your assignee's wishlist…</StatusMessage>;
+  if (isError) return <StatusMessage variant="error">{(error as Error).message}</StatusMessage>;
   if (!data || data.items.length === 0) {
     return (
-      <p className="text-muted-foreground text-sm">
+      <StatusMessage>
         {data?.userName
           ? `${data.userName} has not added any wishlist items yet.`
           : 'Your assignee has not added any wishlist items yet.'}
-      </p>
+      </StatusMessage>
     );
   }
 

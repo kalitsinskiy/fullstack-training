@@ -8,6 +8,9 @@ import { DrawButton } from '@/components/DrawButton';
 import { MyAssignment } from '@/components/MyAssignment';
 import { ExchangeScheduler } from '@/components/ExchangeScheduler';
 import { DeleteRoomButton } from '@/components/DeleteRoomButton';
+import { StatusMessage } from '@/components/ui/StatusMessage/StatusMessage';
+import { Heading } from '@/components/ui/Heading';
+import { Muted } from '@/components/ui/Muted';
 
 export function RoomsDetailedPage() {
   const { id } = useParams<{ id: string }>();
@@ -24,14 +27,9 @@ export function RoomsDetailedPage() {
     enabled: !!id,
   });
 
-  if (!id) return <p>Room not found.</p>;
-  if (isLoading) return <p className="text-muted-foreground p-6">Loading room…</p>;
-  if (isError)
-    return (
-      <p role="alert" className="p-6 text-red-500">
-        {(error as Error).message}
-      </p>
-    );
+  if (!id) return <StatusMessage>Room not found.</StatusMessage>;
+  if (isLoading) return <StatusMessage>Loading room…</StatusMessage>;
+  if (isError) return <StatusMessage variant="error">{(error as Error).message}</StatusMessage>;
   if (!room) return null;
 
   const isOwner = room.ownerId === user?.id;
@@ -41,11 +39,11 @@ export function RoomsDetailedPage() {
     <main className="flex flex-col gap-6 px-[clamp(1rem,4vw,3rem)] py-[clamp(1.5rem,4vw,3rem)]">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-foreground text-2xl font-bold tracking-[-0.02em]">{room.name}</h1>
-          <p className="text-muted-foreground text-sm">
+          <Heading level="page">{room.name}</Heading>
+          <Muted>
             Code <span className="font-mono">{room.code}</span> | {room.members.length} participants
             | {room.status}
-          </p>
+          </Muted>
         </div>
         <div className="flex items-start gap-2">
           {isOwner && room.status === 'pending' && <DrawButton room={room} />}
@@ -55,10 +53,10 @@ export function RoomsDetailedPage() {
 
       {room.exchangeDate && (
         <section className="rounded-card border-border border p-6">
-          <h2 className="text-foreground text-lg font-bold">Gift exchange</h2>
-          <p className="text-muted-foreground mt-1 text-sm">
+          <Heading>Gift exchange</Heading>
+          <Muted className="mt-1">
             {new Date(room.exchangeDate).toLocaleString()} | {room.exchangePlace}
-          </p>
+          </Muted>
         </section>
       )}
 
@@ -67,7 +65,7 @@ export function RoomsDetailedPage() {
       <MyAssignment room={room} />
 
       <section className="flex-flex-col gap-3">
-        <h2 className="text-foreground text-lg font-bold">My Wishlist</h2>
+        <Heading>My Wishlist</Heading>
         <WishlistEditor roomId={id} disabled={isClosed} />
       </section>
     </main>

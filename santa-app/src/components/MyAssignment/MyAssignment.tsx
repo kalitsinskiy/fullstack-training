@@ -3,6 +3,8 @@ import { useAssigneeWishlist } from '@/hooks/useAssigneeWishlist';
 import type { Room } from '@/types/api';
 import { AssigneeWishlist } from '../AssigneeWishlist';
 import { Gift } from 'lucide-react';
+import { Heading } from '../ui/Heading';
+import { Muted } from '../ui/Muted';
 
 interface MyAssignmentProps {
   room: Room;
@@ -18,22 +20,22 @@ export function MyAssignment({ room }: MyAssignmentProps) {
   if (!recipientId) {
     return (
       <section className="rounded-card border-border border p-6">
-        <h2 className="text-foreground text-lg font-bold">Your assignment</h2>
-        <p className="text-muted-foreground mt-2 text-sm">
+        <Heading>Your assignment</Heading>
+        <Muted className="mt-2">
           Awaiting draw — your match appears once the room owner runs the draw.
-        </p>
+        </Muted>
       </section>
     );
   }
 
   return (
     <section className="rounded-card border-border border p-6">
-      <h2 className="text-foreground text-lg font-bold">
+      <Heading>
         You're the Secret Santa to{' '}
         <span className="text-brand-soft flex items-center gap-2">
           {recipientName} <Gift size={15} className="text-brand-soft" />
         </span>
-      </h2>
+      </Heading>
       <div className="mt-3">
         <AssigneeWishlist roomId={room.id} userId={recipientId} />
       </div>
