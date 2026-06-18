@@ -3,9 +3,12 @@ import type ValidationError from "../utils/ValidationError";
 import Validate from "../utils/Validation";
 import ValidationList from "./ValidationList";
 import { useAuth } from "../hooks/useAuth";
+import { Navigate, useLocation, useNavigate } from "react-router";
 
 export default function LoginForm() {
   const auth = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [emailErrors, setEmailErrors] = useState<ValidationError[]>([]);
@@ -14,6 +17,13 @@ export default function LoginForm() {
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const isValid = email !== "" && password !== "";
+
+  // Where the user was heading before being bounced — fall back to /rooms
+  const state = location.state as { from?: { pathname?: string } } | null;
+  const from = state?.from?.pathname ?? "/rooms";
+
+  // If already logged in (e.g. they clicked /login by mistake), bounce to destination
+  if (auth.isAuthenticated) return <Navigate to={from} replace />;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -34,9 +44,7 @@ export default function LoginForm() {
       setSubmitting(true);
       setSubmitError(null);
       await auth.login(email, password);
-      console.log("logged in", auth.user?.email);
-      setEmail("");
-      setPassword("");
+      navigate(from, { replace: true });
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Login failed");
     } finally {

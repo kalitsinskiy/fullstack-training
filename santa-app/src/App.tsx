@@ -1,201 +1,30 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import viteLogo from "./assets/vite.svg";
-import heroImg from "./assets/hero.png";
 import "./App.css";
+import { Layout } from "./components/Layout";
 import LoginForm from "./components/LoginForm";
+import { NotFoundPage } from "./components/NotFoundPage";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 import RegisterForm from "./components/RegisterForm";
+import { RoomDetailsPage } from "./components/RoomDetailsPage";
 import RoomList from "./components/RoomList";
-import type { Room } from "./components/RoomList";
-import { useAuth } from "./hooks/useAuth";
+import { WishlistPage } from "./components/WishlistPage";
+import { BrowserRouter, Route, Routes } from "react-router";
 
 function App() {
-  const [count, setCount] = useState(0);
-  const { user, logout, isLoading } = useAuth();
-
-  const rooms: Room[] = [
-    {
-      id: "1",
-      name: "Holiday Secret Santa",
-      code: "HS-9123",
-      participantCount: 16,
-      status: "open",
-    },
-    {
-      id: "2",
-      name: "Family Gift Swap",
-      code: "FS-2024",
-      participantCount: 10,
-      status: "drawn",
-    },
-    {
-      id: "3",
-      name: "Office Holiday Party",
-      code: "OH-4512",
-      participantCount: 24,
-      status: "closed",
-    },
-    {
-      id: "4",
-      name: "Friends Gift Exchange",
-      code: "FG-3701",
-      participantCount: 8,
-      status: "open",
-    },
-  ];
-
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <section
-        id="auth-forms"
-        className="flex flex-col justify-center gap-6 bg-transparent p-8 lg:flex-row"
-      >
-        <div className="w-80 rounded-lg border border-(--border) bg-(--surface) p-4 text-sm text-(--muted)">
-          <p className="mb-2 text-(--text)">Auth status</p>
-          {isLoading ? (
-            <p>Restoring session...</p>
-          ) : user ? (
-            <>
-              <p className="mb-3">Signed in as {user.email}</p>
-              <button
-                type="button"
-                onClick={logout}
-                className="rounded-md border border-(--border) px-3 py-2 text-(--text)"
-              >
-                Logout
-              </button>
-            </>
-          ) : (
-            <p>Not signed in</p>
-          )}
-        </div>
-        <LoginForm />
-        <RegisterForm />
-      </section>
-
-      <section className="bg-(--bg)">
-        <div className="mx-auto max-w-6xl p-6">
-          <div className="mb-6 space-y-2 text-center">
-            <p className="text-sm tracking-[0.28em] text-(--muted) uppercase">
-              Rooms
-            </p>
-            <h2 className="text-3xl font-semibold text-(--text)">Your rooms</h2>
-            <p className="mx-auto max-w-2xl text-sm text-(--muted)">
-              A responsive room grid that adapts to available width and uses
-              container queries inside each card.
-            </p>
-          </div>
-          <RoomList rooms={rooms} />
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<LoginForm />} />
+        <Route path="/register" element={<RegisterForm />} />
+        <Route element={<ProtectedRoute />}>
+          <Route element={<Layout />}>
+            <Route path="/rooms" element={<RoomList />} />
+            <Route path="/rooms/:id" element={<RoomDetailsPage />} />
+            <Route path="/rooms/:id/wishlist" element={<WishlistPage />} />
+          </Route>
+        </Route>
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 

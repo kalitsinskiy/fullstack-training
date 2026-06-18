@@ -1,20 +1,11 @@
 export type RoomStatus = "open" | "drawn" | "closed";
-export type RoomCardProps =
-  | {
-      status: "open";
-      name: string;
-      code: string;
-      participantCount: number;
-      onJoin: () => void;
-    }
-  | {
-      status: "drawn";
-      name: string;
-      code: string;
-      participantCount: number;
-      onView: () => void;
-    }
-  | { status: "closed"; name: string; code: string; participantCount: number }; // no action
+export interface RoomCardProps {
+  status: RoomStatus;
+  name: string;
+  code: string;
+  participantCount: number;
+  onOpen: () => void;
+}
 
 const statusStyles: Record<RoomStatus, string> = {
   open: "bg-amber-100 text-amber-800",
@@ -23,6 +14,12 @@ const statusStyles: Record<RoomStatus, string> = {
 };
 
 export default function RoomCard(props: RoomCardProps) {
+  const actionLabel = props.status === "drawn" ? "View" : "Open";
+  const actionClassName =
+    props.status === "drawn"
+      ? "focus-visible:ring-brand bg-brand-secondary hover:bg-brand-secondary-dark"
+      : "bg-brand hover:bg-brand-dark focus-visible:ring-brand";
+
   return (
     <article className="group [container-type:inline-size] rounded-3xl bg-(--surface) shadow-sm ring-1 ring-(--border) transition hover:-translate-y-0.5 hover:shadow-md">
       <div className="@container:(flex-row justify-between) flex flex-col items-center gap-4 p-5">
@@ -50,25 +47,13 @@ export default function RoomCard(props: RoomCardProps) {
             </span>
           </div>
         </div>
-        {props.status === "open" && (
-          <button
-            type="button"
-            onClick={props.onJoin}
-            className="bg-brand hover:bg-brand-dark focus-visible:ring-brand inline-flex h-11 min-w-[7rem] cursor-pointer items-center justify-center rounded-full px-4 text-sm font-semibold text-(--button-text) transition focus:outline-none focus-visible:ring-2"
-          >
-            Join
-          </button>
-        )}
-
-        {props.status === "drawn" && (
-          <button
-            type="button"
-            onClick={props.onView}
-            className="focus-visible:ring-brand bg-brand-secondary hover:bg-brand-secondary-dark inline-flex h-11 min-w-[7rem] cursor-pointer items-center justify-center rounded-full px-4 text-sm font-semibold text-(--button-text) transition focus:outline-none focus-visible:ring-2"
-          >
-            View
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={props.onOpen}
+          className={`${actionClassName} inline-flex h-11 min-w-[7rem] cursor-pointer items-center justify-center rounded-full px-4 text-sm font-semibold text-(--button-text) transition focus:outline-none focus-visible:ring-2`}
+        >
+          {actionLabel}
+        </button>
       </div>
     </article>
   );
