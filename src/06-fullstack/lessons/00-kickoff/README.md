@@ -202,6 +202,9 @@ copy out what you want.
 Nothing is mandatory — the template unblocks you, it doesn't replace your work.
 See [`template/README.md`](template/README.md) for copy/run details.
 
+> Whichever option you pick, copy the template's `docker-compose.yml` to the repo
+> root — the older root compose has both backends commented out and stale images.
+
 > Either way, the **API contract** is the source of truth:
 > [`template/santa-api/docs/api-contract.md`](template/santa-api/docs/api-contract.md),
 > mirrored by `santa-app/src/types/api.ts`.

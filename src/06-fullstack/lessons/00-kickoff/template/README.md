@@ -38,6 +38,10 @@ cp -R src/06-fullstack/lessons/00-kickoff/template/santa-app/. santa-app/
 **Option C — keep your own.** Ignore the template entirely and keep building on
 your Block-04 work. Use this as a reference to compare against.
 
+> **Regardless of the option**, take the template's `docker-compose.yml` into the
+> repo root (`cp "$T/docker-compose.yml" docker-compose.yml`) — the older root
+> compose has both backends commented out and stale image versions.
+
 > The trailing `/.` overlays *contents* onto your existing folders (so your
 > Block-04 `examples/`/`exercises/` stay). Don't copy `template/`'s own
 > `README.md` to the root, and never edit files **inside** `template/` — it's the
