@@ -236,6 +236,33 @@ Answer for yourself: *why does the build stage run `npm ci` (all deps) but the
 production stage run `npm ci --omit=dev`?* (Hint: `@nestjs/cli` / `tsc` are only
 needed to build.)
 
+#### Two hardening details the backend images ship with
+
+- **Non-root user.** The production stage ends with `USER node` — the `node:alpine`
+  images include an unprivileged `node` user. Running as root inside a container is
+  a common foot-gun: if the process is compromised, root-in-container is a step
+  toward root-on-host. Switch to `node` after the last `COPY`/`RUN` that needs
+  write access.
+- **Backend healthchecks.** `depends_on: { condition: service_healthy }` only
+  helps if the dependency *declares* a healthcheck. Infra images do; your backends
+  should too, so Compose (and orchestrators) know when they're actually ready —
+  not just "process started". Both backends expose a health route
+  (`GET /api/health` on santa-api, `GET /health` on santa-notifications), so the
+  compose healthcheck just calls it. The image already has Node (with global
+  `fetch`), so no `curl`/`wget` is needed:
+
+  ```yaml
+  healthcheck:
+    test: ["CMD", "node", "-e", "fetch('http://localhost:3001/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+    interval: 10s
+    timeout: 5s
+    retries: 5
+    start_period: 25s   # grace period while the app boots
+  ```
+
+  (You could equally put a `HEALTHCHECK` instruction in the Dockerfile; in compose
+  it's more visible and overridable per-environment.)
+
 ### Step 2: Dockerize the frontend (santa-app) — your turn
 
 The client runs on Vite (`npm run dev`) day-to-day, but production ships as static
