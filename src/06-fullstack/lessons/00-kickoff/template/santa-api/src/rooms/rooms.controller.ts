@@ -80,6 +80,7 @@ export class RoomsController {
     type: RoomResponseDto,
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Not a room participant' })
   @ApiResponse({ status: 404, description: 'Room not found' })
   findById(
     @Param('id') id: string,
@@ -102,6 +103,7 @@ export class RoomsController {
   })
   @ApiResponse({ status: 400, description: 'Invalid invite code' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Draw already completed' })
   @ApiResponse({ status: 404, description: 'Room not found' })
   join(
     @Param('id') id: string,
@@ -151,6 +153,7 @@ export class RoomsController {
   @ApiResponse({ status: 200, description: 'Your assignment' })
   @ApiResponse({ status: 400, description: 'Draw not completed yet' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Not a room participant' })
   @ApiResponse({ status: 404, description: 'Room or assignment not found' })
   getAssignment(
     @Param('id') id: string,
