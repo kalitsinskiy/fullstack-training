@@ -40,6 +40,14 @@ tokenized (fills → `Santa` variables, text → named styles).
 | Notifications | [36-2](https://www.figma.com/design/vzwQuXGRqBQNUzpMlHtbvR/Secret-Santa-%E2%80%94-Mockups?node-id=36-2) | [45-2](https://www.figma.com/design/vzwQuXGRqBQNUzpMlHtbvR/Secret-Santa-%E2%80%94-Mockups?node-id=45-2) |
 | Profile | [36-41](https://www.figma.com/design/vzwQuXGRqBQNUzpMlHtbvR/Secret-Santa-%E2%80%94-Mockups?node-id=36-41) | [45-54](https://www.figma.com/design/vzwQuXGRqBQNUzpMlHtbvR/Secret-Santa-%E2%80%94-Mockups?node-id=45-54) |
 
+## Per-screen icons & app parity
+
+Each screen uses specific [lucide](https://lucide.dev) icons (nav + in-content),
+all available via the `lucide-react` dependency — the route→icon map is in
+`src/components/layout/navItems.ts`. See **[`ALIGNMENT.md`](ALIGNMENT.md)** for the
+full per-screen icon inventory and the list of Figma frame edits that bring the
+mockups in line with the built app (e.g. the Messages two-chat toggle).
+
 ## Responsive contract
 
 - **Mobile:** single column, fixed top bar, bottom tab navigation.
