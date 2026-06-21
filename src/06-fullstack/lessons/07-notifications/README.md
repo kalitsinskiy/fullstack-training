@@ -296,6 +296,17 @@ SERVICE_API_KEY=super-secret-service-key-change-in-production
 
 ### Step 2: Create the Notification Schema
 
+> ⚠️ You already have a Notification model from earlier lessons (a `message`
+> field, an enum `type`, `roomId`, `messageId`). Don't create a second, divergent
+> one — **reuse and extend** it. The `title`/`body` split below is illustrative;
+> if your model uses a single `message`, keep that and just make sure it has
+> `userId` (indexed) and `read`. Keep one model across L06/L07.
+>
+> Also note Step 3 adds `fastify.authenticate` to the notification routes — that's
+> what finally closes the IDOR (read your OWN notifications, derived from the JWT,
+> not a `?userId=` query). Wire that auth preHandler (verify the shared
+> `JWT_SECRET` santa-api signs with) and scope every query to `request.user`.
+
 ```typescript
 // src/models/notification.ts
 import mongoose, { Schema, Document } from 'mongoose';
