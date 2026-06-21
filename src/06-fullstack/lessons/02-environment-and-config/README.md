@@ -274,10 +274,14 @@ The code stays the same. Only the environment variables change.
 
 2. Update `AppModule` to import `ConfigModule.forRoot()` with a Joi validation schema. Validate these variables:
    - `PORT` (number, default 3001)
-   - `NODE_ENV` (string, one of: development / staging / production)
+   - `NODE_ENV` (string, one of: development / staging / production / **test**)
    - `MONGO_URL` (string, required)
    - `JWT_SECRET` (string, required)
    - `JWT_EXPIRATION` (string, default "7d")
+
+   > Include `test` in the `NODE_ENV` enum. Jest sets `NODE_ENV=test`, so a schema
+   > that only allows dev/staging/production will fail validation and break every
+   > test the moment you add `ConfigModule`.
 
 3. Make `ConfigModule` global (`isGlobal: true`) so `ConfigService` is available everywhere without extra imports.
 
@@ -293,8 +297,14 @@ and decorates `fastify.config`. **Extend** it (don't recreate it) to:
 2. Validate that required variables (`MONGO_URL`) are present; throw a clear error
    listing all missing variables if any are absent (so the service fails fast).
 3. Keep it registered before the DB connection (it already is, in `app.ts`).
-4. Update `src/db.ts` to read the URI from `fastify.config.MONGO_URL` instead of
-   `process.env.MONGO_URL ?? '…'`.
+4. Update `src/db.ts` to read the URI from `fastify.config.mongoUrl` instead of
+   `process.env.MONGO_URL ?? '…'`. Since `buildApp()` now needs config before it's
+   ready, in `server.ts` call `await app.ready()` **before** `connectDb(app.config.mongoUrl)`.
+
+> ⚠️ Once the plugin requires `MONGO_URL`, your component test breaks: it calls
+> `buildApp(); await app.ready()` without that env var, so the plugin throws. Fix
+> the test setup (`test/helpers/db.ts`) to export the in-memory URI before the app
+> builds: `process.env.MONGO_URL = mongo.getUri()` inside `setupTestDb()`.
 
 ### Step 3: Create .env.example files
 
