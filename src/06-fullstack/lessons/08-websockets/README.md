@@ -583,9 +583,12 @@ useEffect(() => {
 - **Redis adapter works with your existing ioredis.** No need to add `redis`
   (node-redis) — `createAdapter(pub, sub)` accepts ioredis clients (`new Redis(url)`
   + `.duplicate()`), which you already use for caching/presence.
-- **Auto-join rooms (Step 3) needs a santa-api endpoint.** `getUserRooms` requires
-  a service-key route on santa-api (e.g. `GET /internal/users/:id/rooms`) — the
-  per-user `notification` push works without it; room-level broadcasts (Step 8) need it.
+- **Room-level live updates don't need `getUserRooms`.** Instead of auto-joining
+  every room on connect (Step 3, which needs a `getUserRooms` endpoint), have the
+  **RoomDetailPage emit `join-room` when it opens** (and `leave-room` on unmount),
+  then broadcast `room:member-joined` / `room:draw-completed` from the consumer and
+  refetch on receipt. You only need `getUserRooms` if you want room events while
+  the user is NOT on that room's page.
 
 ## Verification
 
