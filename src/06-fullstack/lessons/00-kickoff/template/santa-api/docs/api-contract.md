@@ -188,7 +188,9 @@ Errors: `400` (fewer than 3 participants / already drawn), `401`, `403` (missing
 
 ### `GET /rooms/:id/assignment`
 
-Your giftee for a drawn room. Only a participant may read it.
+Your giftee for a drawn room. Only a participant may read it; a non-participant
+(or unknown id) gets `404` — same as `GET /rooms/:id`, the API never leaks a
+room's existence.
 
 Response `200`:
 
@@ -202,7 +204,7 @@ Response `200`:
 }
 ```
 
-Errors: `400` (draw not done yet), `401`, `403`, `404`
+Errors: `400` (draw not done yet), `401`, `404` (not found / not a participant)
 
 ### `PATCH /rooms/:id`
 

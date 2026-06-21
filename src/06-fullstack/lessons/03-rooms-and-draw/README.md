@@ -149,7 +149,7 @@ if (room.participants.length < 3) {
   throw new BadRequestException('Need at least 3 participants to draw');
 }
 
-if (room.createdBy.toString() !== userId) {
+if (room.creatorId.toString() !== userId) {
   throw new ForbiddenException('Only the room creator can trigger the draw');
 }
 ```
@@ -256,61 +256,54 @@ trigger it again and confirm it is rejected (already drawn).
 
 ```bash
 # 1. Start the stack
-docker-compose up --build
+docker compose up --build
 
-# 2. Register two users and create a room (you should have these from earlier lessons)
-# Register users (adjust to your API)
-curl -X POST http://localhost:3001/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Alice", "email": "alice@test.com", "password": "password123"}'
+# API base is /api; registration takes { email, password, displayName }.
+# 2. Register three users
+curl -s -X POST http://localhost:3001/api/auth/register -H "Content-Type: application/json" \
+  -d '{"displayName": "Alice", "email": "alice@test.com", "password": "Passw0rd!"}'
+curl -s -X POST http://localhost:3001/api/auth/register -H "Content-Type: application/json" \
+  -d '{"displayName": "Bob", "email": "bob@test.com", "password": "Passw0rd!"}'
+curl -s -X POST http://localhost:3001/api/auth/register -H "Content-Type: application/json" \
+  -d '{"displayName": "Charlie", "email": "charlie@test.com", "password": "Passw0rd!"}'
 
-curl -X POST http://localhost:3001/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Bob", "email": "bob@test.com", "password": "password123"}'
+login() { curl -s -X POST http://localhost:3001/api/auth/login -H "Content-Type: application/json" \
+  -d "{\"email\": \"$1\", \"password\": \"Passw0rd!\"}" | jq -r '.accessToken'; }
+TOKEN_ALICE=$(login alice@test.com)
+TOKEN_BOB=$(login bob@test.com)
+TOKEN_CHARLIE=$(login charlie@test.com)
 
-curl -X POST http://localhost:3001/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Charlie", "email": "charlie@test.com", "password": "password123"}'
+# 3. Alice creates a room; capture its id and invite code
+ROOM=$(curl -s -X POST http://localhost:3001/api/rooms \
+  -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN_ALICE" \
+  -d '{"name": "Office Party"}')
+ROOM_ID=$(echo "$ROOM" | jq -r '.id')
+CODE=$(echo "$ROOM" | jq -r '.inviteCode')
 
-# 3. Login as Alice and create a room
-TOKEN_ALICE=$(curl -s -X POST http://localhost:3001/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email": "alice@test.com", "password": "password123"}' | jq -r '.accessToken')
+# 4. Bob and Charlie join with the invite code
+for T in "$TOKEN_BOB" "$TOKEN_CHARLIE"; do
+  curl -s -X POST "http://localhost:3001/api/rooms/$ROOM_ID/join" \
+    -H "Content-Type: application/json" -H "Authorization: Bearer $T" \
+    -d "{\"inviteCode\": \"$CODE\"}" > /dev/null
+done
 
-ROOM_ID=$(curl -s -X POST http://localhost:3001/rooms \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $TOKEN_ALICE" \
-  -d '{"name": "Office Party"}' | jq -r '._id')
-
-# 4. Have Bob and Charlie join the room
-# (use your invite/join flow)
-
-# 5. Try to draw with less than 3 participants (should fail)
-curl -X POST "http://localhost:3001/rooms/$ROOM_ID/draw" \
+# 5. Creator runs the draw (now that there are 3 participants)
+curl -i -X POST "http://localhost:3001/api/rooms/$ROOM_ID/draw" \
   -H "Authorization: Bearer $TOKEN_ALICE"
-# Expected: 400 "Need at least 3 participants"
+# Expected: 200, room with status "drawn" (with < 3 participants it would be 400)
 
-# 6. After all three have joined, trigger the draw
-curl -X POST "http://localhost:3001/rooms/$ROOM_ID/draw" \
-  -H "Authorization: Bearer $TOKEN_ALICE"
-# Expected: 201 with assignments
-
-# 7. Try to draw again (should fail)
-curl -X POST "http://localhost:3001/rooms/$ROOM_ID/draw" \
+# 6. Draw again → rejected
+curl -i -X POST "http://localhost:3001/api/rooms/$ROOM_ID/draw" \
   -H "Authorization: Bearer $TOKEN_ALICE"
 # Expected: 400 "Draw has already been performed"
 
-# 8. Get Alice's assignment
-curl "http://localhost:3001/rooms/$ROOM_ID/assignment" \
-  -H "Authorization: Bearer $TOKEN_ALICE"
-# Expected: { "receiver": { "name": "Bob" or "Charlie", ... } }
-
-# 9. Verify Bob cannot trigger a draw (he's not the creator)
-TOKEN_BOB=$(curl -s -X POST http://localhost:3001/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email": "bob@test.com", "password": "password123"}' | jq -r '.accessToken')
-
-curl -X POST "http://localhost:3001/rooms/$ROOM_ID/draw" \
+# 7. Non-creator (Bob) cannot draw
+curl -i -X POST "http://localhost:3001/api/rooms/$ROOM_ID/draw" \
   -H "Authorization: Bearer $TOKEN_BOB"
 # Expected: 403 Forbidden
+
+# 8. Each user sees only their OWN assignment
+curl "http://localhost:3001/api/rooms/$ROOM_ID/assignment" \
+  -H "Authorization: Bearer $TOKEN_ALICE"
+# Expected: { "receiver": { "id": "...", "displayName": "Bob" | "Charlie", "wishlist": [] } }
 ```
