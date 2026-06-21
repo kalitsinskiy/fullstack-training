@@ -2,13 +2,22 @@
 
 ## Quick Overview
 
-Secret Santa is more fun when participants can send anonymous hints to their assigned person. This feature is architecturally interesting: the sender must be verified (they can only message the person they were assigned), but the recipient must never learn who sent the message. santa-notifications acts as a mediator -- it verifies the sender's assignment via HTTP to santa-api, stores the message with the real senderId, but never exposes it to the recipient. Messages are pushed in real-time via Socket.IO.
+Secret Santa is more fun when participants can chat with the people they're
+matched with. Each participant has **two** relationships in a room: the **giftee**
+they drew (they're allowed to know who it is) and their own **Secret Santa** (who
+must stay anonymous). So the Messages screen is **two separate, named chats**, and
+each chat is **two-way**. The architecturally interesting part: the recipient is
+never addressed by a raw id from the client — santa-notifications acts as a
+mediator that resolves the recipient from the assignment graph, stores the message
+with the real `senderId`, but never exposes the Secret Santa's identity. Messages
+are pushed in real-time via Socket.IO.
 
 > **Build the UI from the mockup.** Frontend lives on the **Messages** screen —
 > Figma frames [mobile](https://www.figma.com/design/vzwQuXGRqBQNUzpMlHtbvR/Secret-Santa-%E2%80%94-Mockups?node-id=34-2) ·
 > [desktop](https://www.figma.com/design/vzwQuXGRqBQNUzpMlHtbvR/Secret-Santa-%E2%80%94-Mockups?node-id=44-2) (see [`santa-app/docs/mockups/`](../00-kickoff/template/santa-app/docs/mockups/)).
-> Flesh out `santa-app/src/pages/MessagesPage.tsx` (two-tone chat bubbles,
-> incoming left / outgoing right), following `docs/design-system.md`.
+> Flesh out the room messages page (two-tone chat bubbles, your own messages
+> right / the other party's left) with a **switcher between the two chats**
+> ("your giftee" / "your Secret Santa"), following `docs/design-system.md`.
 
 ## Key Concepts
 
@@ -67,8 +76,11 @@ Privacy by design means building privacy into the system architecture, not bolti
 **Rules for anonymous messaging:**
 1. **Store senderId** -- you need it for auditing, moderation, and preventing abuse.
 2. **Never return senderId** to the recipient -- strip it in the API response layer.
-3. **Verify before storing** -- only allow a sender to message their assigned person.
-4. **No metadata leaks** -- ensure timestamps, socket events, and error messages do not reveal the sender.
+3. **Resolve, don't trust** -- the client sends `to: 'giftee' | 'santa'`, never a
+   raw recipient id. The server resolves the recipient from the assignment graph,
+   so a client can only ever reach its own two relationships.
+4. **No metadata leaks** -- ensure timestamps, socket events, and error messages do
+   not reveal the sender, and never return the Secret Santa's id or name.
 
 ```typescript
 // WRONG -- senderId leaks to recipient
@@ -92,45 +104,49 @@ return res.json({
 
 ### Message Relay Flow
 
-The complete flow for sending an anonymous message:
+The client never names a recipient by id — it says **which relationship** it's
+messaging (`to: 'giftee' | 'santa'`) and the server resolves the actual user:
 
 ```
-1. Sender clicks "Send" in santa-app
-   -> POST http://localhost:3002/messages
+1. Sender clicks "Send" in santa-app (in the "your Secret Santa" chat)
+   -> POST http://localhost:3002/api/messages
       Headers: { Authorization: Bearer <sender-jwt> }
-      Body: { recipientId: "bob123", roomId: "room456", text: "You'll love your gift!" }
+      Body: { roomId: "room456", to: "santa", text: "thanks!" }
 
 2. santa-notifications receives the request
-   -> Extracts sender's userId from JWT: "alice789"
+   -> Extracts sender's userId from JWT: "bob123"
 
-3. santa-notifications calls santa-api to verify assignment
-   -> GET http://localhost:3001/rooms/room456/assignment
-      Headers: { Authorization: Bearer <sender-jwt> }
-   -> Response: { assignedTo: "bob123" }
+3. santa-notifications asks santa-api for bob's relationships (service key)
+   -> GET http://localhost:3001/api/internal/rooms/room456/relations/bob123
+   -> Response: { gifteeId: "charlie", santaId: "alice789" }
 
-4. Verification: does event.assignedTo === recipientId?
-   -> "bob123" === "bob123" ✓
+4. Resolve recipient from `to`: to=="santa" -> recipientId = santaId = "alice789"
+   (to=="giftee" would pick gifteeId; null -> 403, the draw isn't done)
 
 5. Store message in MongoDB
-   -> { senderId: "alice789", recipientId: "bob123", roomId: "room456",
-        text: "You'll love your gift!", createdAt: now }
+   -> { senderId: "bob123", recipientId: "alice789", roomId: "room456",
+        text: "thanks!", createdAt: now }
 
 6. Push to recipient via Socket.IO (WITHOUT senderId)
-   -> io.to("user:bob123").emit("message:received", {
-        roomId: "room456", text: "You'll love your gift!", createdAt: now
+   -> the message is the mirror relationship for the recipient: bob is alice's
+      giftee, so it lands in alice's "giftee" chat
+   -> io.to("user:alice789").emit("message:received", {
+        id, roomId: "room456", text: "thanks!", createdAt: now,
+        direction: "in", thread: "giftee"   // never senderId
       })
-
-7. Publish event to RabbitMQ
-   -> { type: "message.sent", roomId: "room456", recipientId: "bob123" }
 ```
+
+`thread` tells the recipient which of their two chats the message belongs to, and
+is the **mirror** of the sender's side: messaging your *giftee* arrives in their
+*santa* chat, and messaging your *santa* arrives in their *giftee* chat.
 
 ### Data Modeling for Messages
 
 ```typescript
 // The schema stores senderId -- but it is NEVER included in API responses to the recipient
 interface IMessage {
-  senderId: string;      // stored for auditing, never returned to recipient
-  recipientId: string;   // the person receiving the message
+  senderId: string;      // stored for auditing, never returned to a client
+  recipientId: string;   // server-resolved from the assignment graph (giftee/santa)
   roomId: string;        // which Secret Santa room this belongs to
   text: string;          // the message content
   createdAt: Date;       // when it was sent
@@ -169,8 +185,9 @@ const MessageSchema = new Schema<IMessage>(
   { timestamps: true },
 );
 
-// For listing messages received by a user in a room
+// A thread is two-way, so index both sides of a (user, room) conversation.
 MessageSchema.index({ recipientId: 1, roomId: 1, createdAt: -1 });
+MessageSchema.index({ senderId: 1, roomId: 1, createdAt: -1 });
 
 export const Message = mongoose.model<IMessage>('Message', MessageSchema);
 ```
@@ -273,70 +290,75 @@ export async function messageRoutes(fastify: FastifyInstance) {
 }
 ```
 
-> **Contract note.** The course's assignment endpoint returns
-> `{ receiver: { id, displayName, wishlist } }` — there is no flat `assignedTo`
-> field. Verify against `receiver.id`:
-> `if (assignment.receiver.id !== recipientId) { /* 403 */ }`. The snippets here
-> use `assignedTo` only to illustrate the idea.
+> **⚠️ Build the two-relationship version, not the snippet above.** The snippet
+> takes a raw `recipientId` and only lets you message your giftee. The real
+> contract is:
 >
-> Also: `/rooms/:id/assignment` is **user-scoped** (it reads the caller's JWT),
-> not a `/internal` route — forward the sender's `Authorization` header, not the
-> service key. And the draw needs **at least 3 participants**, so set up three
-> accounts when testing, not two.
+> - **Body:** `{ roomId, to: 'giftee' | 'santa', text }` — no `recipientId`.
+> - **Resolve the recipient server-side** from the assignment graph. Add a
+>   service-key `/internal` endpoint on santa-api that returns both relationships
+>   for a user:
+>   `GET /api/internal/rooms/:roomId/relations/:userId → { gifteeId, santaId }`
+>   (return `null`s when the room isn't drawn). `recipientId = to === 'giftee' ?
+>   gifteeId : santaId`; a `null` recipient → **403** with a generic message.
+> - **Compute the recipient's thread** as the mirror of `to`
+>   (`to === 'giftee' ? 'santa' : 'giftee'`) and include it in the socket payload
+>   as `thread`, alongside `direction: 'in'` — but **never** `senderId`.
+> - **Return** the sender's own message with `direction: 'out'` and `thread: to`.
+>
+> Resolving the recipient on the server (rather than trusting a client-supplied
+> id) is what lets someone reply to their Secret Santa without ever learning who
+> it is — the `santaId` is used only for routing and never sent to the client.
 
-Add the `getAssignment` method to `SantaApiClient`:
+Add the relations lookup to `SantaApiClient` (service key, internal route):
 
 ```typescript
 // In santa-api-client.ts
-async getAssignment(
+getRelations(
   roomId: string,
-  authHeader: string,
-): Promise<{ assignedTo: string }> {
-  return this.getWithAuth(`/rooms/${roomId}/assignment`, authHeader);
-}
-
-private async getWithAuth<T>(path: string, authHeader: string): Promise<T> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-  try {
-    const res = await fetch(`${this.baseUrl}${path}`, {
-      headers: { Authorization: authHeader },
-      signal: controller.signal,
-    });
-    if (!res.ok) throw new Error(`santa-api responded with ${res.status}`);
-    return res.json();
-  } finally {
-    clearTimeout(timeoutId);
-  }
+  userId: string,
+): Promise<{ gifteeId: string | null; santaId: string | null }> {
+  // X-Service-Key, wrapped in the same retry + circuit-breaker as the others.
+  return this.get(`/api/internal/rooms/${roomId}/relations/${userId}`);
 }
 ```
 
-### Step 3: Implement GET /messages/:roomId
+### Step 3: Implement GET /messages/:roomId — both threads
 
-Return messages received by the current user in a specific room. **senderId must be excluded.**
+Return the caller's **two conversations** for the room. Resolve the caller's
+`{ gifteeId, santaId }` (the same relations lookup), then for each relationship
+fetch the messages exchanged **in both directions** with that person:
 
 ```typescript
-  fastify.get(
-    '/messages/:roomId',
-    { preHandler: [fastify.authenticate] },
-    async (request, reply) => {
-      const userId = request.user.sub;
-      const { roomId } = request.params as { roomId: string };
+  // conversation between the caller (me) and one other party
+  const docs = await Message.find({
+    roomId,
+    $or: [
+      { senderId: me, recipientId: other },
+      { senderId: other, recipientId: me },
+    ],
+  })
+    .sort({ createdAt: 1 })
+    .lean();
 
-      const messages = await Message.find(
-        { recipientId: userId, roomId },
-        { senderId: 0 }, // EXCLUDE senderId from results
-      )
-        .sort({ createdAt: 1 })
-        .lean();
-
-      return { data: messages };
-    },
-  );
+  // map to { id, roomId, text, createdAt, direction } —
+  // direction = senderId === me ? 'out' : 'in'. NEVER include senderId.
 ```
 
-**Critical**: the `{ senderId: 0 }` projection in the Mongoose query ensures senderId is never returned. This is the primary privacy safeguard.
+Shape the response so the two chats are clearly separated:
+
+```jsonc
+{
+  // named — the caller is allowed to know their giftee
+  "giftee": { "id": "...", "name": "Bob", "messages": [ /* {id,text,createdAt,direction} */ ] },
+  // anonymous — NO id, NO name, ever
+  "santa":  { "messages": [ /* ... */ ] }
+}
+```
+
+Each side is `null` until the draw is done. **Critical**: never put `senderId`
+in any message object, and never put the Secret Santa's `id`/`name` in the
+`santa` block — `direction` is all the client needs to place a bubble left/right.
 
 ### Step 4: Build the MessagesPage in santa-app
 
@@ -346,12 +368,18 @@ Return messages received by the current user in a specific room. **senderId must
 > **only to show structure** — port it to shadcn components + the design tokens;
 > don't `npm install @mui/*`.
 >
-> Two course-stack specifics the snippet gets wrong: `useSocket()` returns the
-> socket **directly** (`const socket = useSocket()`, not `const { socket } = …`),
-> and the recipient id comes from `assignment.receiver.id` (see the contract note
-> in Step 2). Messaging is also **per-room** — scope the page to a `roomId`
-> (e.g. `/rooms/:id/messages`) rather than a single global Messages screen, since
-> the santa-notifications client lives on `VITE_WS_URL` (:3002), not `VITE_API_URL`.
+> The snippet is a **single** received-only list — build the **two-chat** version
+> instead: a switcher between "your giftee" (labelled with their name) and "your
+> Secret Santa" (anonymous), each a two-way bubble thread (your messages right,
+> the other party's left). Send with `{ roomId, to, text }` where `to` is the
+> active chat; on an incoming socket message, route it by its `thread` field into
+> the matching list.
+>
+> Course-stack specifics the snippet gets wrong: `useSocket()` returns the socket
+> **directly** (`const socket = useSocket()`, not `const { socket } = …`).
+> Messaging is **per-room** — scope the page to a `roomId` (e.g.
+> `/rooms/:id/messages`), and the santa-notifications client lives on
+> `VITE_WS_URL` (:3002), not `VITE_API_URL`.
 
 ```tsx
 // src/pages/MessagesPage.tsx
@@ -527,48 +555,50 @@ cd santa-notifications && npm run start:dev
 cd santa-app && npm run dev
 ```
 
-Test the messaging API:
+Set up a room with **at least 3 participants** and run the draw (the draw needs
+3+). Suppose the cycle is Alice → Bob → Charlie → Alice, so Alice's giftee is Bob
+and Alice's Secret Santa is Charlie.
 
 ```bash
-# Login as Alice (who is assigned to Bob)
-ALICE_TOKEN=$(curl -s -X POST http://localhost:3001/auth/login \
-  -H 'Content-Type: application/json' \
+ALICE=$(curl -s -X POST http://localhost:3001/api/auth/login -H 'Content-Type: application/json' \
   -d '{"email":"alice@test.com","password":"password123"}' | jq -r '.accessToken')
 
-# Send anonymous message from Alice to Bob
-curl -s -X POST http://localhost:3002/messages \
-  -H "Authorization: Bearer $ALICE_TOKEN" \
+# Alice messages her giftee, then her (anonymous) Secret Santa — no recipient id.
+curl -s -X POST http://localhost:3002/api/messages -H "Authorization: Bearer $ALICE" \
   -H 'Content-Type: application/json' \
-  -d '{"recipientId":"BOB_USER_ID","roomId":"ROOM_ID","text":"Hope you like puzzles!"}' | jq
+  -d '{"roomId":"ROOM_ID","to":"giftee","text":"hope you like puzzles!"}' | jq
+curl -s -X POST http://localhost:3002/api/messages -H "Authorization: Bearer $ALICE" \
+  -H 'Content-Type: application/json' \
+  -d '{"roomId":"ROOM_ID","to":"santa","text":"thanks, santa!"}' | jq
 
-# Login as Bob
-BOB_TOKEN=$(curl -s -X POST http://localhost:3001/auth/login \
-  -H 'Content-Type: application/json' \
+# Bob reads his two threads. His "santa" thread holds Alice's hint — with the
+# text but NO senderId, and the santa block has NO id/name.
+BOB=$(curl -s -X POST http://localhost:3001/api/auth/login -H 'Content-Type: application/json' \
   -d '{"email":"bob@test.com","password":"password123"}' | jq -r '.accessToken')
+curl -s http://localhost:3002/api/messages/ROOM_ID -H "Authorization: Bearer $BOB" | jq
+# Verify: no "senderId" anywhere, and santa = { messages: [...] } (no id/name).
 
-# Bob reads messages -- should see the text but NOT the senderId
-curl -s http://localhost:3002/messages/ROOM_ID \
-  -H "Authorization: Bearer $BOB_TOKEN" | jq
-
-# Verify: the response should NOT contain "senderId" or "alice"
-```
-
-Test privacy:
-
-```bash
-# Try to send to someone who is NOT your assigned person -- should get 403
-curl -s -X POST http://localhost:3002/messages \
-  -H "Authorization: Bearer $ALICE_TOKEN" \
+# Bidirectional: Bob replies to HIS santa (= Alice). It lands in Alice's giftee chat.
+curl -s -X POST http://localhost:3002/api/messages -H "Authorization: Bearer $BOB" \
   -H 'Content-Type: application/json' \
-  -d '{"recipientId":"CHARLIE_USER_ID","roomId":"ROOM_ID","text":"Wrong person"}' | jq
-# Expected: { "message": "You can only message your assigned person" }
+  -d '{"roomId":"ROOM_ID","to":"santa","text":"thank you, mystery santa!"}' | jq
 ```
+
+Privacy / anonymity checks:
+
+- A `to` of `giftee`/`santa` with no assignment yet (room not drawn) → **403**
+  with a generic message (never "you aren't assigned to X").
+- The `santa` block and every `message:received` payload contain **no** `senderId`
+  and **no** Secret Santa id/name.
+- A client cannot message an arbitrary user — there's no `recipientId` to set.
 
 Test in the browser:
-1. Open two browser tabs: Alice and Bob, both in the same room.
-2. Navigate to the Messages page from the room detail.
-3. Alice sends a message.
-4. Bob should see the message appear in real-time (via Socket.IO) with no indication of who sent it.
+1. Open two tabs: Alice and Bob, in the same drawn room, on the room's Messages page.
+2. Alice's "Bob" chat and Bob's "Your Secret Santa" chat are the **same conversation
+   under different names**.
+3. Alice sends in her "Bob" chat → Bob sees it instantly in "Your Secret Santa"
+   (left bubble, no sender shown). Bob replies there → Alice sees it instantly in
+   her "Bob" chat (left bubble).
 
 ## Learn More
 
