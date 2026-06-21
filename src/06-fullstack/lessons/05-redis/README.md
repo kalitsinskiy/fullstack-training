@@ -395,7 +395,29 @@ Instead of storing invite codes in MongoDB (where they would need a background j
 
 ### Step 6: Redis-based rate limiting for auth endpoints
 
-Implement rate limiting for login and registration endpoints using Redis:
+> ℹ️ The template **already** rate-limits auth via `@nestjs/throttler` `@Throttle`
+> decorators (login 5/min, register 3/min) — that's the 429 you may have already
+> hit. So you do NOT need a second custom guard (it would be redundant and, at
+> equal limits, never even fire). The real Redis upgrade is to back the **existing
+> throttler with Redis storage** so limits are shared across API instances:
+>
+> ```ts
+> // npm i @nest-lab/throttler-storage-redis ioredis
+> ThrottlerModule.forRootAsync({
+>   inject: [ConfigService],
+>   useFactory: (c: ConfigService) => ({
+>     throttlers: [{ ttl: 60_000, limit: 100 }],
+>     storage: new ThrottlerStorageRedisService(c.getOrThrow('REDIS_URL')),
+>   }),
+> });
+> ```
+>
+> ⚠️ Disable the Redis storage under `NODE_ENV=test` — otherwise counters persist
+> in Redis across the per-test app instances and trip the limit mid-suite (keep
+> the default in-memory storage for tests).
+
+If you'd rather build a limiter from scratch (the manual approach below), do it
+INSTEAD of the throttler, not on top of it:
 
 1. Create a `RateLimiterService` (or add methods to `RedisService`) that:
    - Takes a key (e.g., `ratelimit:login:{ip}`), a limit (e.g., 5), and a window (e.g., 60 seconds)
