@@ -299,7 +299,10 @@ santa-api:
    - Handles graceful shutdown (close connection on app termination)
    - Logs connection status
 
-3. Add `REDIS_URL` to your config validation schema.
+3. Add `REDIS_URL` to your config validation schema. Give it a **default**
+   (`Joi.string().default('redis://localhost:6379')`) rather than `.required()` —
+   a required value with no default breaks tests and local runs that don't set it
+   (same trap as `NODE_ENV` in Lesson 02).
 
 ```typescript
 @Injectable()
@@ -342,6 +345,14 @@ Update your room-fetching logic to use cache-aside:
 2. On cache hit, parse the JSON and return it (skip the database query).
 3. On cache miss, query MongoDB, store the result in Redis with a **5-minute TTL**, and return it.
 4. Log cache hits and misses for debugging (e.g., `logger.debug('Room cache HIT: room:123')`).
+
+> ⚠️ Cache only the **caller-agnostic** room data. If your room response includes
+> per-caller fields (e.g. `viewerPermissions` from Lesson 04), do NOT cache those
+> — cache the shared shape under `room:{id}` and compute the per-caller bits after
+> the cache lookup, or every viewer will get the first viewer's permissions.
+>
+> ⚠️ Cache-aside puts Redis on the read path, so your tests now need a reachable
+> Redis (point `REDIS_URL` at one, or override/mock `RedisService` in tests).
 
 ### Step 4: Invalidate cache on room updates
 

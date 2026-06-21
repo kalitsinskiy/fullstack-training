@@ -338,6 +338,12 @@ The anonymous `/app/node_modules` volume is the key trick: the bind-mount would
 otherwise hide the container's `node_modules` (built for Linux) behind the host's
 (built for your OS) — that volume preserves the container's.
 
+> ⚠️ Gotcha: that anonymous volume **persists across rebuilds**, so after you add
+> a dependency a plain `--build` is not enough — the stale volume shadows the
+> freshly-installed `node_modules` and you'll get "Cannot find module 'x'". Renew
+> it: `docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+> --renew-anon-volumes santa-api`.
+
 ---
 
 ## Verification
