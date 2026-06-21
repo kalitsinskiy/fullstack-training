@@ -158,9 +158,11 @@ Errors: `401`
 
 ### `GET /rooms/:id`
 
-Requires `room:view`. Response `200`: the room shape. Only a participant may read it.
+Requires `room:view`. Response `200`: the room shape. Only a participant may read
+it; a non-participant (or an unknown id) gets `404` — the API never reveals that a
+room exists to someone who isn't in it.
 
-Errors: `401`, `403`, `404`
+Errors: `401`, `404`
 
 ### `POST /rooms/:id/join`
 

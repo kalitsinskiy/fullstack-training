@@ -85,7 +85,7 @@ describe('Rooms (HTTP)', () => {
   it.todo(
     "GET /api/rooms?page=1&limit=2 → returns the caller's rooms, paginated",
   );
-  it.todo('GET /api/rooms/:id → 403 for a user who is not a member');
+  it.todo('GET /api/rooms/:id → 404 for a user who is not a member');
   it.todo(
     'POST /api/rooms/:id/join → adds the caller when the invite code matches',
   );

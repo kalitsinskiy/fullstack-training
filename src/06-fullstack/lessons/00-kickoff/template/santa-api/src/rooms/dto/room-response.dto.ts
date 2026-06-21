@@ -54,10 +54,11 @@ export class RoomResponseDto {
   })
   drawDate?: string;
 
-  @ApiProperty({
-    description: "The caller's effective permissions for this room",
+  @ApiPropertyOptional({
+    description:
+      "The caller's effective permissions for this room (from Lesson 04 onward)",
     example: ['room:view', 'wishlist:set'],
     isArray: true,
   })
-  viewerPermissions!: Permission[];
+  viewerPermissions?: Permission[];
 }

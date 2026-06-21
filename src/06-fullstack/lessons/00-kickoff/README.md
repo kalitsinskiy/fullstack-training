@@ -156,7 +156,7 @@ bodies (each has a `TODO` describing what it should do):
 |---|---|---|
 | `auth/auth.service.ts` | `register`, `login` (bcrypt hash/compare, sign JWT) | — |
 | `users/users.service.ts` | `create`, `findByEmail`, `findById`, `updateCurrentUser` | — |
-| `rooms/rooms.service.ts` | `create`, `findByUser`, `findById`, `findByIdForUser`, `join` | `draw`, `getAssignment` → **Lesson 03** |
+| `rooms/rooms.service.ts` | `create`, `findByUser`, `findByIdForUser`, `join` | `draw`, `getAssignment` → **Lesson 03** |
 | `wishlist/wishlist.service.ts` | `set`, `get` | — |
 
 **Your spec, three sources that agree:**

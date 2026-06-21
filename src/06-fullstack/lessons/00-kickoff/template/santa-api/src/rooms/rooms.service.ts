@@ -39,14 +39,9 @@ export class RoomsService {
     );
   }
 
-  // TODO (Kickoff): return a room by id (no membership check).
-  findById(id: string): Promise<Room> {
-    throw new NotImplementedException(
-      'RoomsService.findById is not implemented',
-    );
-  }
-
   // TODO (Kickoff): return a room by id, but only if the user is a participant.
+  // A non-participant (or unknown id) must be indistinguishable: throw
+  // NotFoundException (404) in both cases — don't reveal that the room exists.
   findByIdForUser(id: string, userId: string): Promise<Room> {
     throw new NotImplementedException(
       'RoomsService.findByIdForUser is not implemented',

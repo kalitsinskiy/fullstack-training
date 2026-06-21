@@ -16,8 +16,12 @@ export interface Room {
   participantCount: number;
   status: 'pending' | 'drawn';
   drawDate?: string;
-  /** The caller's effective permissions for THIS room — single source for FE gating. */
-  viewerPermissions: Permission[];
+  /**
+   * The caller's effective permissions for THIS room — the single source for FE
+   * gating. Optional: populated from Lesson 04 onward (the authorization lesson);
+   * earlier lessons may omit it.
+   */
+  viewerPermissions?: Permission[];
 }
 
 /** Persisted giver -> receiver pairing produced by the draw. */

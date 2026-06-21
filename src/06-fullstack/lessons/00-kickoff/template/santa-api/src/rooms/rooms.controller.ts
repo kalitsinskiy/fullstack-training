@@ -86,8 +86,10 @@ export class RoomsController {
     type: RoomResponseDto,
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Not a room participant' })
-  @ApiResponse({ status: 404, description: 'Room not found' })
+  @ApiResponse({
+    status: 404,
+    description: 'Room not found, or the caller is not a participant',
+  })
   findById(
     @Param('id') id: string,
     @CurrentUser('id') userId: string,
