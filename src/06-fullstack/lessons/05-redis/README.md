@@ -232,6 +232,11 @@ async isRateLimited(key: string, limit: number, windowSeconds: number): Promise<
 
 ### 8. Redis CLI Basics
 
+> Prefer a GUI? [Medis](https://getmedis.com/) or
+> [RedisInsight](https://redis.io/insight/) connect to `localhost:6379` and let
+> you browse keys, watch TTLs tick down, and run `MONITOR` visually — handy for
+> watching the cache populate and invalidate.
+
 Useful commands for debugging:
 
 ```bash

@@ -449,7 +449,7 @@ docker-compose up --build
 
 # 2. Open the RabbitMQ Management UI
 # Open http://localhost:15672 in your browser
-# Login: santa / santa
+# Login: santa / santa123  (RABBITMQ_DEFAULT_USER / RABBITMQ_DEFAULT_PASS in compose)
 # You should see the exchange "santa.events" and queue "notifications.events"
 
 # 3. Create a room (this should publish a room.created event)

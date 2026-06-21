@@ -344,6 +344,20 @@ otherwise hide the container's `node_modules` (built for Linux) behind the host'
 > it: `docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 > --renew-anon-volumes santa-api`.
 
+### Inspecting the running services (GUI, optional)
+
+The CLI (`docker compose exec … mongosh / redis-cli`) is enough, but a GUI is
+nicer for poking around. The infra ports are published to your host, so point any
+client at `localhost`:
+
+| Service | Tool | Connect to |
+|---------|------|------------|
+| MongoDB | [MongoDB Compass](https://www.mongodb.com/products/compass) | `mongodb://localhost:27017` |
+| Redis | [Medis](https://getmedis.com/) or [RedisInsight](https://redis.io/insight/) | `localhost:6379` |
+| RabbitMQ | built-in **Management UI** (ships with the `-management` image) | http://localhost:15672 (user/pass `santa` / `santa123`) |
+
+These connect to the containers via the published ports — no extra setup.
+
 ---
 
 ## Verification
