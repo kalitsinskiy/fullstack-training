@@ -12,6 +12,29 @@ Secret Santa is more fun when participants can send anonymous hints to their ass
 
 ## Key Concepts
 
+### Two threads per person, not one
+
+Each participant has **two distinct relationships** in a room, and they should be
+two **separate, named chats** — merging them into one timeline is confusing
+(you'd see your outgoing hints to your giftee interleaved with incoming hints
+from a *different* person, your Santa):
+
+- **Your giftee** — the person you drew. You're *allowed* to know who it is, so
+  name the chat after them ("Bob"). You can message them; they can reply.
+- **Your Secret Santa** — whoever drew you. You must **never** learn who it is,
+  so the chat is named generically ("Your Secret Santa"). They message you; you
+  can reply anonymously.
+
+The same A→B conversation therefore appears under **different names depending on
+who's looking**: in the Santa's list it's titled with the giftee's name; in the
+giftee's list it's "Your Secret Santa". Replying to your Santa is the interesting
+case — you don't know their id, so the **server resolves the recipient** from the
+assignment graph (a service-key `/internal` lookup that returns
+`{ gifteeId, santaId }` for a user). The `santaId` is used only for routing and
+is never sent to the giftee's client. The send endpoint takes
+`{ roomId, to: 'giftee' | 'santa', text }` rather than a raw `recipientId`, so a
+client can never address an arbitrary user — only its own two relationships.
+
 ### Service as Mediator Pattern
 
 In a direct communication model, the sender would call santa-api directly to send a message. But that leaks the sender's identity in the API response. Instead, we use santa-notifications as a **mediator**:
