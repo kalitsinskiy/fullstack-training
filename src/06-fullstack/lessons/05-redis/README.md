@@ -393,6 +393,13 @@ Instead of storing invite codes in MongoDB (where they would need a background j
 
 3. Optionally, delete the invite code after use (single-use) or leave it until TTL expires (multi-use).
 
+4. **Add a join-by-code endpoint** (`POST /rooms/join` with `{ inviteCode }`) that
+   resolves `invite:{code}` → roomId from Redis and then joins. This is what the
+   frontend actually needs: an invitee has the code, **not** the room id — and a
+   non-member can't open `GET /rooms/:id` (404) to discover it. Without this, "join
+   with a code" can't work from the UI. (The `RoomsService.joinByCode` stub is
+   provided.)
+
 ### Step 6: Redis-based rate limiting for auth endpoints
 
 > ℹ️ The template **already** rate-limits auth via `@nestjs/throttler` `@Throttle`

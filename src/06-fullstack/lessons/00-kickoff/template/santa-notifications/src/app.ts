@@ -1,4 +1,5 @@
 import Fastify, { FastifyError } from 'fastify';
+import cors from '@fastify/cors';
 import ajvFormats from 'ajv-formats';
 
 import configPlugin from './plugins/config';
@@ -28,6 +29,13 @@ export function buildApp() {
     },
   });
 
+  // CORS so the browser SPA (Vite :5173) can read notifications directly.
+  app.register(cors, {
+    origin: process.env.CORS_ORIGIN
+      ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
+      : ['http://localhost:5173'],
+    methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+  });
   app.register(configPlugin);
   app.register(timingPlugin);
   app.register(healthRoutes);

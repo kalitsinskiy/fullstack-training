@@ -97,6 +97,22 @@ export class RoomsController {
     return this.roomsService.findByIdForUser(id, userId);
   }
 
+  @Post('join')
+  @ApiOperation({ summary: 'Join a room using only its invite code' })
+  @ApiResponse({
+    status: 201,
+    description: 'Room joined successfully',
+    type: RoomResponseDto,
+  })
+  @ApiResponse({ status: 400, description: 'Invalid or expired invite code' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  joinByCode(
+    @Body() body: JoinRoomDto,
+    @CurrentUser('id') userId: string,
+  ): Promise<Room> {
+    return this.roomsService.joinByCode(body.inviteCode, userId);
+  }
+
   @Post(':id/join')
   @ApiOperation({ summary: 'Join a room by id using its invite code' })
   @ApiParam({

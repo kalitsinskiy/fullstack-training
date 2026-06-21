@@ -59,6 +59,16 @@ export class RoomsService {
     throw new NotImplementedException('RoomsService.join is not implemented');
   }
 
+  // TODO (Lesson 05): join using ONLY the invite code. Invitees have the code,
+  // not the room id (and a non-member can't open the room to find it). Resolve
+  // invite:{code} -> roomId from Redis (you store it in create()), then run the
+  // same join logic. 400 if the code is missing/expired.
+  joinByCode(inviteCode: string, userId: string): Promise<Room> {
+    throw new NotImplementedException(
+      'RoomsService.joinByCode is not implemented',
+    );
+  }
+
   // TODO (Lesson 03): only the creator may draw, and only once, with >= 3 participants.
   // Produce a derangement (Sattolo / Fisher–Yates with rejection — no self-assignment)
   // and persist ALL assignments in a single document write (atomic, no transaction).

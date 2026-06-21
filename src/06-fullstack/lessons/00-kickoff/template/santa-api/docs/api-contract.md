@@ -168,6 +168,17 @@ room exists to someone who isn't in it.
 
 Errors: `401`, `404`
 
+### `POST /rooms/join`
+
+Join using ONLY the invite code (invitees have the code, not the room id). The
+code is resolved to a room via Redis (`invite:{code}`, set on create — Lesson 05).
+
+Request: `{ "inviteCode": "Q7X4LM" }`
+
+Response `201`: the room shape (caller added to `participants`).
+
+Errors: `400` (invalid/expired code), `401`
+
 ### `POST /rooms/:id/join`
 
 Request: `{ "inviteCode": "Q7X4LM" }`
