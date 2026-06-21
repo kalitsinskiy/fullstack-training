@@ -57,13 +57,14 @@ Unlike blocks 04-05, there are no separate exercises — the app **is** the exer
 | 01 | [Docker & Infrastructure](lessons/01-docker-and-infrastructure/) | Docker, Dockerfile, docker-compose | Dockerfiles for both backends, docker-compose with MongoDB |
 | 02 | [Environment & Config](lessons/02-environment-and-config/) | dotenv, config validation, 12-factor | EnvService for both backends, .env files, Vite env vars |
 | 03 | [Rooms & Draw](lessons/03-rooms-and-draw/) | Derangement algorithm, MongoDB transactions | Draw endpoint, assignments, atomic transaction, draw UI |
-| 04 | [Redis](lessons/04-redis/) | Redis, caching, TTL, rate limiting | Redis in compose, room caching, invite code expiry |
-| 05 | [RabbitMQ](lessons/05-rabbitmq/) | RabbitMQ, exchanges, queues, DLQ | Event publishing and consuming between services |
-| 06 | [Notifications](lessons/06-notifications/) | HTTP adapter, circuit breaker | Notification endpoints, HTTP inter-service calls, notification UI |
-| 07 | [WebSockets](lessons/07-websockets/) | Socket.IO, JWT auth for WS, Redis adapter | Real-time push, useSocket hook, toast notifications |
-| 08 | [Anonymous Messaging](lessons/08-anonymous-messaging/) | Service mediator, privacy patterns | Anonymous message relay, chat UI, real-time delivery |
-| 09 | [Testing Microservices](lessons/09-testing-microservices/) | E2E testing, integration tests | Cross-service tests, E2E critical paths |
-| 10 | [CI/CD & Deployment](lessons/10-ci-cd-and-deployment/) | GitHub Actions, Husky, cloud deploy | CI pipeline, deploy to cloud (free tiers) |
+| 04 | [Authorization: Roles & Permissions](lessons/04-authorization-roles-permissions/) | NestJS guards, custom decorators, permission-based authz | Room owner/member roles, RoomPermissionsGuard, owner-only endpoints, FE permission gating |
+| 05 | [Redis](lessons/05-redis/) | Redis, caching, TTL, rate limiting | Redis in compose, room caching, invite code expiry |
+| 06 | [RabbitMQ](lessons/06-rabbitmq/) | RabbitMQ, exchanges, queues, DLQ | Event publishing and consuming between services |
+| 07 | [Notifications](lessons/07-notifications/) | HTTP adapter, circuit breaker | Notification endpoints, HTTP inter-service calls, notification UI |
+| 08 | [WebSockets](lessons/08-websockets/) | Socket.IO, JWT auth for WS, Redis adapter | Real-time push, useSocket hook, toast notifications |
+| 09 | [Anonymous Messaging](lessons/09-anonymous-messaging/) | Service mediator, privacy patterns | Anonymous message relay, chat UI, real-time delivery |
+| 10 | [Testing Microservices](lessons/10-testing-microservices/) | E2E testing, integration tests | Cross-service tests, E2E critical paths |
+| 11 | [CI/CD & Deployment](lessons/11-ci-cd-and-deployment/) | GitHub Actions, Husky, cloud deploy | CI pipeline, deploy to cloud (free tiers) |
 
 ## Secret Santa Features
 
@@ -74,12 +75,13 @@ Unlike blocks 04-05, there are no separate exercises — the app **is** the exer
 | Join Room | 04-05 (NestJS) | 07 (API) | — |
 | Wishlists | 04-05 (NestJS) | 07 (API) | — |
 | The Draw | — | — | 03 (Rooms & Draw) |
-| Redis Caching | — | — | 04 (Redis) |
-| Event-Driven Notifications | — | — | 05-06 (RabbitMQ, Notifications) |
-| Real-Time Push | — | — | 07 (WebSockets) |
-| Anonymous Messages | — | — | 08 (Anonymous Messaging) |
+| Roles & Permissions | — | — | 04 (Authorization) |
+| Redis Caching | — | — | 05 (Redis) |
+| Event-Driven Notifications | — | — | 06-07 (RabbitMQ, Notifications) |
+| Real-Time Push | — | — | 08 (WebSockets) |
+| Anonymous Messages | — | — | 09 (Anonymous Messaging) |
 | Docker Infrastructure | — | — | 01 (Docker) |
-| Deployment | — | — | 10 (CI/CD) |
+| Deployment | — | — | 11 (CI/CD) |
 
 ## Infrastructure
 

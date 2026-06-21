@@ -1,4 +1,4 @@
-# Lesson 04: Redis
+# Lesson 05: Redis
 
 ## Quick Overview
 

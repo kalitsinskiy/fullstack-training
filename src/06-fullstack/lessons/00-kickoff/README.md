@@ -222,13 +222,14 @@ Each lesson adds one capability across the stack. No separate exercises — the
 | 01 | Docker & Infrastructure | Dockerfiles, full compose stack |
 | 02 | Environment & Config | Typed env for all three apps |
 | 03 | Rooms & Draw | Derangement, single-document atomic draw, room + draw UI |
-| 04 | Redis | Caching, TTL invite codes, rate limiting |
-| 05 | RabbitMQ | Event publish/consume between services |
-| 06 | Notifications | HTTP inter-service calls, notifications UI |
-| 07 | WebSockets | Real-time push, `useSocket`, toasts |
-| 08 | Anonymous Messaging | Mediator relay, chat UI |
-| 09 | Testing Microservices | Cross-service + Playwright E2E |
-| 10 | CI/CD & Deployment | Local hooks + manual deploy to free tiers |
+| 04 | Authorization: Roles & Permissions | Owner/member roles, permission guard, owner-only endpoints, FE gating |
+| 05 | Redis | Caching, TTL invite codes, rate limiting |
+| 06 | RabbitMQ | Event publish/consume between services |
+| 07 | Notifications | HTTP inter-service calls, notifications UI |
+| 08 | WebSockets | Real-time push, `useSocket`, toasts |
+| 09 | Anonymous Messaging | Mediator relay, chat UI |
+| 10 | Testing Microservices | Cross-service + Playwright E2E |
+| 11 | CI/CD & Deployment | Local hooks + manual deploy to free tiers |
 
 ## How to work
 

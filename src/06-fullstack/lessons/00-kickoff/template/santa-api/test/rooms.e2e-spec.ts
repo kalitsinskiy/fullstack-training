@@ -97,4 +97,29 @@ describe('Rooms (HTTP)', () => {
   it.todo(
     'GET /api/rooms/:id/assignment → returns the giftee + wishlist after the draw',
   );
+
+  // 👇 Lesson 04 — Authorization: roles & permissions.
+  // Gate by PERMISSION, never by role. A missing permission → 403; a non-member → 404.
+  it.todo('room response includes viewerPermissions for the caller');
+  it.todo('owner can run the draw (POST /api/rooms/:id/draw → 200)');
+  it.todo('member running the draw is rejected (POST /api/rooms/:id/draw → 403)');
+  it.todo('owner can edit the room (PATCH /api/rooms/:id → 200)');
+  it.todo('member editing the room is rejected (PATCH /api/rooms/:id → 403)');
+  it.todo('owner can delete the room (DELETE /api/rooms/:id → 204)');
+  it.todo('member deleting the room is rejected (DELETE /api/rooms/:id → 403)');
+  it.todo(
+    'owner can kick a member (DELETE /api/rooms/:id/members/:userId → 204)',
+  );
+  it.todo(
+    'member cannot kick anyone (DELETE /api/rooms/:id/members/:userId → 403)',
+  );
+  it.todo(
+    'kicking the owner is rejected (DELETE /api/rooms/:id/members/:ownerId → 400)',
+  );
+  it.todo(
+    'owner can regenerate the invite code (POST /api/rooms/:id/invite-code/regenerate → 200)',
+  );
+  it.todo('member cannot regenerate the invite code (→ 403)');
+  it.todo('a non-member gets 404 on any guarded room route');
+  it.todo('a member can still GET /api/rooms/:id and PUT the wishlist');
 });

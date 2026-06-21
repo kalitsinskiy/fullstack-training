@@ -1,4 +1,4 @@
-# Lesson 05: RabbitMQ
+# Lesson 06: RabbitMQ
 
 ## Quick Overview
 

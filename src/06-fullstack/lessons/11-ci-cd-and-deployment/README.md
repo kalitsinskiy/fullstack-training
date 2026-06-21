@@ -1,4 +1,4 @@
-# Lesson 10: CI/CD and Deployment
+# Lesson 11: CI/CD and Deployment
 
 ## Quick Overview
 

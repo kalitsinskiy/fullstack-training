@@ -87,10 +87,35 @@ Response `200`: same shape as `GET /users/me`
 
 Errors: `400`, `401`
 
+## Roles & Permissions
+
+Access to room features is decided **by permission, never by role**. Each
+participant has a room-scoped role (`owner` or `member`); a role is just a named
+preset of permissions:
+
+| Permission | `owner` | `member` |
+|------------|:------:|:--------:|
+| `room:view` | ✅ | ✅ |
+| `wishlist:set` | ✅ | ✅ |
+| `room:draw` | ✅ | — |
+| `room:invite` | ✅ | — |
+| `room:kick` | ✅ | — |
+| `room:edit` | ✅ | — |
+| `room:delete` | ✅ | — |
+
+The room creator is the `owner`; everyone who joins is a `member`. Every room
+object includes `viewerPermissions` — the calling user's effective permissions
+for that room, which the frontend uses to gate UI. A request lacking the required
+permission gets `403`; a non-member gets `404`.
+
+> Adding a new role is a one-line change to the role→permission preset on the
+> backend — no guard, route, or frontend change.
+
 ## Rooms
 
 **Room shape** (returned by every room endpoint below). Participants are populated
-to `{ id, displayName }`; `participantCount` is the number of members.
+to `{ id, displayName, role }`; `participantCount` is the number of members;
+`viewerPermissions` is the caller's permissions for this room.
 
 ```json
 {
@@ -99,11 +124,12 @@ to `{ id, displayName }`; `participantCount` is the number of members.
   "creatorId": "665f0c2ab7d13a5e8b1c4d1a",
   "inviteCode": "Q7X4LM",
   "participants": [
-    { "id": "665f0c2ab7d13a5e8b1c4d1a", "displayName": "Mariia" }
+    { "id": "665f0c2ab7d13a5e8b1c4d1a", "displayName": "Mariia", "role": "owner" }
   ],
   "participantCount": 1,
   "status": "pending",
-  "drawDate": null
+  "drawDate": null,
+  "viewerPermissions": ["room:view", "room:draw", "room:invite", "room:kick", "room:edit", "room:delete", "wishlist:set"]
 }
 ```
 
@@ -113,7 +139,7 @@ to `{ id, displayName }`; `participantCount` is the number of members.
 
 Request: `{ "name": "New Year team building" }`
 
-Response `201`: the room shape (creator is the first participant).
+Response `201`: the room shape (creator is the first participant, with role `owner`).
 
 Errors: `400`, `401`
 
@@ -132,7 +158,7 @@ Errors: `401`
 
 ### `GET /rooms/:id`
 
-Response `200`: the room shape. Only a participant may read it.
+Requires `room:view`. Response `200`: the room shape. Only a participant may read it.
 
 Errors: `401`, `403`, `404`
 
@@ -146,13 +172,13 @@ Errors: `400` (wrong invite code), `401`, `403` (draw already done), `404`
 
 ### `POST /rooms/:id/draw`
 
-Creator-only. Requires at least 3 participants and a `pending` room. Produces a
-derangement (no one is their own giftee) and saves all assignments in a single
-atomic document write.
+Requires `room:draw` (owner-only). Requires at least 3 participants and a
+`pending` room. Produces a derangement (no one is their own giftee) and saves all
+assignments in a single atomic document write.
 
 Response `200`: the room shape with `status: "drawn"` and `drawDate` set.
 
-Errors: `400` (fewer than 3 participants / already drawn), `401`, `403` (not the creator), `404`
+Errors: `400` (fewer than 3 participants / already drawn), `401`, `403` (missing `room:draw`), `404`
 
 ### `GET /rooms/:id/assignment`
 
@@ -172,13 +198,49 @@ Response `200`:
 
 Errors: `400` (draw not done yet), `401`, `403`, `404`
 
+### `PATCH /rooms/:id`
+
+Requires `room:edit` (owner-only). Edit room fields.
+
+Request: `{ "name": "Renamed room" }`
+
+Response `200`: the room shape.
+
+Errors: `400`, `401`, `403` (missing `room:edit`), `404`
+
+### `DELETE /rooms/:id`
+
+Requires `room:delete` (owner-only). Deletes the room.
+
+Response `204`: no content.
+
+Errors: `401`, `403` (missing `room:delete`), `404`
+
+### `DELETE /rooms/:id/members/:userId`
+
+Requires `room:kick` (owner-only). Removes a member from the room. The owner
+cannot be removed.
+
+Response `204`: no content.
+
+Errors: `400` (cannot remove the owner), `401`, `403` (missing `room:kick`), `404` (room or member not found)
+
+### `POST /rooms/:id/invite-code/regenerate`
+
+Requires `room:invite` (owner-only). Generates a fresh unique invite code,
+invalidating the old one.
+
+Response `200`: the room shape with the new `inviteCode`.
+
+Errors: `401`, `403` (missing `room:invite`), `404`
+
 ## Wishlist
 
 A wishlist is a list of plain strings, scoped to `{ roomId, userId }`.
 
 ### `PUT /rooms/:roomId/wishlist`
 
-Upserts the caller's wishlist for the room.
+Requires `wishlist:set` (any participant). Upserts the caller's wishlist for the room.
 
 Request: `{ "items": ["Wool socks", "A good book"] }`
 
@@ -192,11 +254,12 @@ Response `200`:
 }
 ```
 
-Errors: `400`, `401`
+Errors: `400`, `401`, `403` (missing `wishlist:set`), `404`
 
 ### `GET /rooms/:roomId/wishlist/:userId`
 
-Response `200`: the wishlist shape above. If the user has **no** wishlist yet,
-returns an **empty** one (`"items": []`) — not a `404`.
+Requires `room:view` (any participant of the room). Response `200`: the wishlist
+shape above. If the user has **no** wishlist yet, returns an **empty** one
+(`"items": []`) — not a `404`.
 
-Errors: `401`
+Errors: `401`, `403` (missing `room:view`), `404` (room not found / caller is not a participant)

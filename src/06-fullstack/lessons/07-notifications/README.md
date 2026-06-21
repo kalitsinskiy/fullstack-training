@@ -1,4 +1,4 @@
-# Lesson 06: Notifications
+# Lesson 07: Notifications
 
 ## Quick Overview
 
@@ -408,7 +408,7 @@ export async function notificationRoutes(fastify: FastifyInstance) {
 
 ### Step 5: Wire RabbitMQ Events to Notifications
 
-Update the RabbitMQ consumer from Lesson 05 to create notifications when events arrive.
+Update the RabbitMQ consumer from Lesson 06 to create notifications when events arrive.
 
 ```typescript
 // src/consumers/event-consumer.ts

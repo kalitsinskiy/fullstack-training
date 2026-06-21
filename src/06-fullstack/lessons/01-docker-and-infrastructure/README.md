@@ -267,7 +267,7 @@ files behind a web server. Write it yourself:
    so the image knows where the API lives.
 
 > Day-to-day you'll still run the client with `npm run dev` for hot-reload — the
-> Dockerfile is for production builds and deployment (Lesson 10).
+> Dockerfile is for production builds and deployment (Lesson 11).
 
 ### Step 3 (optional): Add santa-app to compose
 

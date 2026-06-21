@@ -1,4 +1,4 @@
-# Lesson 07: WebSockets
+# Lesson 08: WebSockets
 
 ## Quick Overview
 
@@ -360,16 +360,16 @@ io.on('connection', async (socket) => {
 });
 ```
 
-You will need to add a `getUserRooms` method to the `SantaApiClient` from Lesson 06, and a corresponding endpoint in santa-api (e.g., `GET /users/:id/rooms`).
+You will need to add a `getUserRooms` method to the `SantaApiClient` from Lesson 07, and a corresponding endpoint in santa-api (e.g., `GET /users/:id/rooms`).
 
 ### Step 4: Push Notifications via Socket.IO
 
-When the RabbitMQ consumer creates a notification (from Lesson 06), also push it via Socket.IO:
+When the RabbitMQ consumer creates a notification (from Lesson 07), also push it via Socket.IO:
 
 ```typescript
 // In your event consumer
 async function handleDrawCompleted(event: DrawCompletedEvent) {
-  const notifications = await createDrawNotifications(event); // from Lesson 06
+  const notifications = await createDrawNotifications(event); // from Lesson 07
 
   // Push to each participant via Socket.IO
   for (const notification of notifications) {

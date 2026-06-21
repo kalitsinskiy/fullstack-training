@@ -1,4 +1,4 @@
-# Lesson 08: Anonymous Messaging
+# Lesson 09: Anonymous Messaging
 
 ## Quick Overview
 
