@@ -236,7 +236,7 @@ rabbitmq:
     - '15672:15672'  # Management UI
   environment:
     RABBITMQ_DEFAULT_USER: santa
-    RABBITMQ_DEFAULT_PASS: santa
+    RABBITMQ_DEFAULT_PASS: santa123
   volumes:
     - rabbitmq-data:/var/lib/rabbitmq
   healthcheck:
@@ -250,7 +250,7 @@ Add `rabbitmq-data` to the volumes section. Add `RABBITMQ_URL` to the environmen
 
 ```yaml
 environment:
-  - RABBITMQ_URL=amqp://santa:santa@rabbitmq:5672
+  - RABBITMQ_URL=amqp://santa:santa123@rabbitmq:5672
 ```
 
 Update both services to depend on RabbitMQ with `condition: service_healthy`.
@@ -348,6 +348,14 @@ return room;
      - `wishlist.updated`
    - Consumes messages from the queue
    - For each event, creates a `Notification` document in MongoDB
+
+> ⚠️ If you already built the Notification model in an earlier lesson, it's likely
+> **per-user** (`userId` required) with a fixed `type` enum and no `messageId`. Event
+> notifications are **room-scoped** and need idempotency. Adapt the model
+> additively: make `userId` optional, add `roomId` and a unique-sparse `messageId`,
+> and either broaden `type` or map each routing key onto an existing enum value in
+> the consumer. (Relaxing `userId` may ripple into routes that assumed it — handle
+> the `null` case there.)
 
 3. Create a Notification schema if you do not have one:
 
