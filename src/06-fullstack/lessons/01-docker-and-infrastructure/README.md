@@ -302,6 +302,42 @@ If you want the whole stack in one `docker compose up`, add a `santa-app` servic
 that builds from `./santa-app` with `args: { VITE_API_URL: http://localhost:3001 }`
 and maps `5173:80`. Keep it optional — the default workflow is Vite for the client.
 
+### Step 4: Dev vs prod images (hot reload)
+
+The production `Dockerfile` ships a small, immutable image (`node dist/...`) — but
+it has to rebuild on every code change, which is painful while developing. So each
+backend also ships a **`Dockerfile.dev`**: a single stage with all dependencies
+that runs the **watch** command (`npm run start:dev` for santa-api, `npm run dev`
+for santa-notifications).
+
+A second compose file, **`docker-compose.dev.yml`**, overlays the base stack to
+use those dev images, set `NODE_ENV=development`, and **bind-mount the source**
+into the container so edits on the host restart the in-container server:
+
+```yaml
+services:
+  santa-api:
+    build: { context: ./santa-api, dockerfile: Dockerfile.dev }
+    environment: { NODE_ENV: development }
+    volumes:
+      - ./santa-api:/app
+      - /app/node_modules   # keep the container's Linux deps, not the host's
+```
+
+Run each mode:
+
+```bash
+# Production images (default)
+docker compose up --build
+
+# Dev — hot reload: base + dev overlay
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+```
+
+The anonymous `/app/node_modules` volume is the key trick: the bind-mount would
+otherwise hide the container's `node_modules` (built for Linux) behind the host's
+(built for your OS) — that volume preserves the container's.
+
 ---
 
 ## Verification
