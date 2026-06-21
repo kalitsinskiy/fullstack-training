@@ -583,6 +583,11 @@ useEffect(() => {
 - **Redis adapter works with your existing ioredis.** No need to add `redis`
   (node-redis) — `createAdapter(pub, sub)` accepts ioredis clients (`new Redis(url)`
   + `.duplicate()`), which you already use for caching/presence.
+- **Authorize `join-room` — it's an IDOR otherwise.** A naive
+  `socket.on('join-room', id => socket.join(...))` lets any authenticated user
+  subscribe to ANY room's channel and receive its broadcasts. Verify membership
+  first (validate the id is an ObjectId, fetch the room via the service-key client,
+  check `socket.data.userId` is in `memberIds`) and reject with an ack otherwise.
 - **Room-level live updates don't need `getUserRooms`.** Instead of auto-joining
   every room on connect (Step 3, which needs a `getUserRooms` endpoint), have the
   **RoomDetailPage emit `join-room` when it opens** (and `leave-room` on unmount),
