@@ -217,7 +217,12 @@ export async function messageRoutes(fastify: FastifyInstance) {
       });
 
       // 4. Push to recipient via Socket.IO (no senderId!)
-      const io = fastify.io; // assuming you decorated fastify with the io instance
+      // NOTE: Socket.IO is created in server.ts *after* app.listen() (it attaches
+      // to Fastify's HTTP server), but routes are registered during buildApp().
+      // So `fastify.io` isn't available at registration time — read `io` lazily
+      // through a tiny module-level registry (e.g. realtime.ts: setIO/getIO) that
+      // server.ts populates once the socket server exists.
+      const io = getIO(); // null-safe: io?.to(...) until the server is up
       io.to(`user:${recipientId}`).emit('message:received', {
         id: message._id,
         roomId: message.roomId,
@@ -244,6 +249,17 @@ export async function messageRoutes(fastify: FastifyInstance) {
   );
 }
 ```
+
+> **Contract note.** The course's assignment endpoint returns
+> `{ receiver: { id, displayName, wishlist } }` — there is no flat `assignedTo`
+> field. Verify against `receiver.id`:
+> `if (assignment.receiver.id !== recipientId) { /* 403 */ }`. The snippets here
+> use `assignedTo` only to illustrate the idea.
+>
+> Also: `/rooms/:id/assignment` is **user-scoped** (it reads the caller's JWT),
+> not a `/internal` route — forward the sender's `Authorization` header, not the
+> service key. And the draw needs **at least 3 participants**, so set up three
+> accounts when testing, not two.
 
 Add the `getAssignment` method to `SantaApiClient`:
 
@@ -306,6 +322,13 @@ Return messages received by the current user in a specific room. **senderId must
 > `RoomDetailPage` and the chat-bubble mockup above. The snippet below uses MUI
 > **only to show structure** — port it to shadcn components + the design tokens;
 > don't `npm install @mui/*`.
+>
+> Two course-stack specifics the snippet gets wrong: `useSocket()` returns the
+> socket **directly** (`const socket = useSocket()`, not `const { socket } = …`),
+> and the recipient id comes from `assignment.receiver.id` (see the contract note
+> in Step 2). Messaging is also **per-room** — scope the page to a `roomId`
+> (e.g. `/rooms/:id/messages`) rather than a single global Messages screen, since
+> the santa-notifications client lives on `VITE_WS_URL` (:3002), not `VITE_API_URL`.
 
 ```tsx
 // src/pages/MessagesPage.tsx
