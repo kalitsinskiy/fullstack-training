@@ -568,6 +568,25 @@ useEffect(() => {
 }, [socket, roomId]);
 ```
 
+## Gotchas found in practice
+
+- **One shared socket, not one per component.** `useSocket()` as written opens a
+  NEW connection every time it's called — mount it in two components and you get
+  two WebSockets per user (double presence, double events). Provide a single
+  socket via a React context/provider and consume that everywhere
+  (`SocketNotifications`, `RoomDetailPage`, …).
+- **Presence is multi-connection.** A naive `SADD online:users` / `SREM` on
+  connect/disconnect goes wrong when a user has two tabs (one closing removes them
+  while the other is still open) or on an unclean disconnect (stale entries
+  linger). Track a per-user socket-id set (or a ref count) and only mark offline
+  when the last one drops.
+- **Redis adapter works with your existing ioredis.** No need to add `redis`
+  (node-redis) — `createAdapter(pub, sub)` accepts ioredis clients (`new Redis(url)`
+  + `.duplicate()`), which you already use for caching/presence.
+- **Auto-join rooms (Step 3) needs a santa-api endpoint.** `getUserRooms` requires
+  a service-key route on santa-api (e.g. `GET /internal/users/:id/rooms`) — the
+  per-user `notification` push works without it; room-level broadcasts (Step 8) need it.
+
 ## Verification
 
 Test WebSocket connection:
