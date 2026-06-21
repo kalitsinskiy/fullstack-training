@@ -181,6 +181,30 @@ example**) — you should land on the rooms dashboard and be able to create a ro
 > The `RegisterPage` UI is itself a stub you build later from the mockups; for now
 > Swagger (http://localhost:3001/docs) or the curl above creates your first user.
 
+### Stretch — unique room names per creator (optional improvement)
+
+Right now nothing stops one user from creating several rooms all called
+"Office Santa" — confusing when they open their dashboard. Make a room name
+**unique per creator** (different users may still reuse the same name):
+
+- Add a compound unique index in `room.schema.ts`:
+  `RoomSchema.index({ creatorId: 1, name: 1 }, { unique: true })`.
+- In `RoomsService.create`, catch the duplicate-key error (Mongo `code === 11000`)
+  and throw `ConflictException` → the API returns **409** instead of a 500.
+- Trim the name before saving. (Optional: make it case-insensitive with a
+  collation `{ locale: 'en', strength: 2 }` on the index so "Office" and "office"
+  collide too.)
+- Document the new `409` on `POST /rooms` and turn the `it.todo` for it green.
+
+This is scoped to ONE creator on purpose — it's a UX guard against your own
+duplicates, not a system-wide name reservation.
+
+> ⚠️ Gotcha: a unique index will **silently fail to build** if the collection
+> already contains duplicates — Mongoose `autoIndex` swallows the error, so the
+> constraint just appears not to work. Remove existing duplicates first, then
+> confirm the index exists (`db.rooms.getIndexes()`); in code you can force a
+> rebuild with `RoomModel.syncIndexes()`.
+
 ---
 
 ## 5. Choose your starting point

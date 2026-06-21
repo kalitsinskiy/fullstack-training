@@ -143,6 +143,10 @@ Response `201`: the room shape (creator is the first participant, with role `own
 
 Errors: `400`, `401`
 
+> Stretch (Kickoff §4): if you enforce unique room names per creator, the same
+> creator reusing a name returns `409`. Names are NOT globally unique — different
+> users may reuse a name.
+
 ### `GET /rooms?page=1&limit=10`
 
 Response `200`: `{ "data": [ <room> ], "meta": { "total", "page", "limit", "totalPages" } }`

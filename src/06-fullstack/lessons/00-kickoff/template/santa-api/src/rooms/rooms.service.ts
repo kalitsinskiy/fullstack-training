@@ -25,6 +25,10 @@ export class RoomsService {
 
   // TODO (Kickoff): create a room with a unique invite code; the creator is the
   // first participant with role 'owner'. Status starts as 'pending'.
+  // STRETCH (optional, see Kickoff §4): make the name unique PER CREATOR — add a
+  // compound unique index { creatorId, name } and translate the duplicate-key
+  // error (code 11000) into a 409 ConflictException. Don't make names globally
+  // unique — different users may reuse a name.
   create(dto: CreateRoomDto, creatorId: string): Promise<Room> {
     throw new NotImplementedException('RoomsService.create is not implemented');
   }

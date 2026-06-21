@@ -83,6 +83,9 @@ describe('Rooms (HTTP)', () => {
   // 👇 Implement RoomsService, then turn each of these into a real test.
   it.todo('POST /api/rooms → 201 returns a room for an authenticated user');
   it.todo(
+    'POST /api/rooms → 409 when the SAME creator reuses a room name (stretch); a different user may reuse it',
+  );
+  it.todo(
     "GET /api/rooms?page=1&limit=2 → returns the caller's rooms, paginated",
   );
   it.todo('GET /api/rooms/:id → 404 for a user who is not a member');
