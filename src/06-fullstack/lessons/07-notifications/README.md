@@ -294,6 +294,17 @@ SANTA_API_URL=http://localhost:3001
 SERVICE_API_KEY=super-secret-service-key-change-in-production
 ```
 
+> ⚠️ You also need the **santa-api side** of these calls — they don't exist yet.
+> santa-api has no `GET /users/:id` (only `/users/me`), and `GET /rooms/:id` is
+> JWT- + membership-gated, so the notifications service (not a member) can't use
+> them. Add a small `ServiceKeyGuard` (accepts the `X-Service-Key` header) and
+> dedicated **internal endpoints** for the client to call, e.g.
+> `GET /internal/users/:id` → `{ id, displayName, email }` and
+> `GET /internal/rooms/:id` → `{ id, name, memberIds }`. Keeping them separate
+> (rather than loosening the user-facing routes) avoids weakening real auth. The
+> client should call those paths (mind the global `/api` prefix:
+> `/api/internal/...`).
+
 ### Step 2: Create the Notification Schema
 
 > ⚠️ You already have a Notification model from earlier lessons (a `message`
