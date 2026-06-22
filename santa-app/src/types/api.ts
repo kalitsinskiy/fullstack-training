@@ -4,7 +4,7 @@ export interface User {
   name: string;
 }
 
-export type RoomStatus = 'pending' | 'drawn';
+export type RoomStatus = 'pending' | 'drawn' | 'closed';
 
 export interface Room {
   id: string;

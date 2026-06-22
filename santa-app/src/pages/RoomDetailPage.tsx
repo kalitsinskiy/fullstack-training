@@ -3,6 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '@/services/api';
 import type { Room } from '@/types/api';
 import { useAuth } from '@/hooks/useAuth';
+import { ErrorBoundary } from 'react-error-boundary';
+import { ErrorFallback } from '@/components/ErrorFallback';
 import { WishlistEditor } from '@/components/WishlistEditor';
 import { DrawButton } from '@/components/DrawButton';
 import { MyAssignment } from '@/components/MyAssignment';
@@ -66,7 +68,9 @@ export function RoomsDetailedPage() {
 
       <section className="flex-flex-col gap-3">
         <Heading>My Wishlist</Heading>
-        <WishlistEditor roomId={id} disabled={isClosed} />
+        <ErrorBoundary FallbackComponent={ErrorFallback}>
+          <WishlistEditor roomId={id} disabled={isClosed} />
+        </ErrorBoundary>
       </section>
     </main>
   );

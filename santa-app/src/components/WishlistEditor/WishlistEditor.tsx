@@ -14,7 +14,7 @@ import { Muted } from '../ui/Muted';
 
 interface WishlistEditorProps {
   roomId: string;
-  disabled?: false;
+  disabled?: boolean;
 }
 
 export function WishlistEditor({ roomId, disabled = false }: WishlistEditorProps) {

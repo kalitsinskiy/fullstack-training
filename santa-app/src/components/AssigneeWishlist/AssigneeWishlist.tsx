@@ -1,9 +1,15 @@
+import { useOptimistic, useState, useTransition } from 'react';
 import { useAssigneeWishlist } from '@/hooks/useAssigneeWishlist';
 import { StatusMessage } from '../ui/StatusMessage/StatusMessage';
 
 interface AssigneeWishlistProps {
   roomId: string;
   userId: string;
+}
+
+interface OptimisticState {
+  bought: Set<string>;
+  pendingKey: string | null;
 }
 
 function safeHttpUrl(raw?: string): string | null {
@@ -16,8 +22,52 @@ function safeHttpUrl(raw?: string): string | null {
   }
 }
 
+async function fakePersistBought(): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, 400));
+}
+
 export function AssigneeWishlist({ roomId, userId }: AssigneeWishlistProps) {
   const { data, isLoading, isError, error } = useAssigneeWishlist(roomId, userId);
+
+  const [bought, setBought] = useState<Set<string>>(new Set());
+  const [, startTransition] = useTransition();
+
+  const [optimistic, applyOptimistic] = useOptimistic<OptimisticState, string>(
+    { bought, pendingKey: null },
+    (state, key) => {
+      const next = new Set(state.bought);
+
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+
+      return { bought: next, pendingKey: key };
+    }
+  );
+
+  async function toggleBought(key: string) {
+    startTransition(async () => {
+      applyOptimistic(key);
+      try {
+        await fakePersistBought();
+        setBought((prev) => {
+          const next = new Set(prev);
+
+          if (next.has(key)) {
+            next.delete(key);
+          } else {
+            next.add(key);
+          }
+
+          return next;
+        });
+      } catch (err) {
+        console.log(err);
+      }
+    });
+  }
 
   if (isLoading) return <StatusMessage>Loading your assignee's wishlist…</StatusMessage>;
   if (isError) return <StatusMessage variant="error">{(error as Error).message}</StatusMessage>;
@@ -36,23 +86,46 @@ export function AssigneeWishlist({ roomId, userId }: AssigneeWishlistProps) {
       <ul className="flex flex-col gap-2">
         {data.items.map((item, i) => {
           const safeUrl = safeHttpUrl(item.url);
+          const key = String(i);
+          const isBought = optimistic.bought.has(key);
+          const isSaving = optimistic.pendingKey === key;
+
           return (
             <li
               key={i}
-              className="rounded-base border-border flex items-center justify-between border p-3"
+              className="rounded-base border-border flex items-center justify-between gap-3 border p-3"
             >
-              {safeUrl ? (
-                <a
-                  href={safeUrl}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className="text-brand-soft text-sm hover:underline"
+              <span className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => toggleBought(key)}
+                  aria-label={isBought ? 'Mark as not bought' : 'Mark as bought'}
+                  className="flex items-center"
+                  disabled={isSaving}
                 >
-                  {item.name}
-                </a>
-              ) : (
-                <span className="text-foreground text-sm">{item.name}</span>
-              )}
+                  <input type="checkbox" checked={isBought} readOnly tabIndex={-1} />
+                </button>
+
+                {safeUrl ? (
+                  <a
+                    href={safeUrl}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className={`text-brand-soft text-sm hover:underline ${isBought ? 'line-through opacity-60' : ''}`}
+                  >
+                    {item.name}
+                  </a>
+                ) : (
+                  <span
+                    className={`text-foreground text-sm ${isBought ? 'line-through opacity-60' : ''}`}
+                  >
+                    {item.name}
+                  </span>
+                )}
+
+                {isSaving && <span className="text-muted-foreground text-xs">saving…</span>}
+              </span>
+
               {item.priority != null && (
                 <span className="text-muted-foreground text-xs">priority {item.priority}</span>
               )}

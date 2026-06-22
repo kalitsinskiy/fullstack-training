@@ -1,14 +1,18 @@
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { CalendarPlus2, UserPlus } from 'lucide-react';
-import { NavLink, Outlet, useNavigate } from 'react-router';
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router';
+import { ErrorBoundary } from 'react-error-boundary';
+import { ErrorFallback } from '../ErrorFallback';
 import { CreateRoomDialog } from '../CreateRoomDialog';
 import { JoinRoomDialog } from '../JoinRoomDialog';
 import { useAuth } from '../../hooks/useAuth';
 import { ThemeToggle } from '../ThemeToggle/TheeToggle';
+import { StatusMessage } from '../ui/StatusMessage/StatusMessage';
 
 export function Layout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [createRoomOpen, setCreateRoomOpen] = useState(false);
   const [joinRoomOpen, setJoinRoomOpen] = useState(false);
 
@@ -74,7 +78,11 @@ export function Layout() {
       <CreateRoomDialog open={createRoomOpen} onOpenChange={setCreateRoomOpen} />
       <JoinRoomDialog open={joinRoomOpen} onOpenChange={setJoinRoomOpen} />
 
-      <Outlet />
+      <ErrorBoundary FallbackComponent={ErrorFallback} resetKeys={[location.pathname]}>
+        <Suspense fallback={<StatusMessage className="p-6 text-center">Loading...</StatusMessage>}>
+          <Outlet />
+        </Suspense>
+      </ErrorBoundary>
     </>
   );
 }

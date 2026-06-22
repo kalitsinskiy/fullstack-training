@@ -7,6 +7,7 @@ interface RoomCardProps {
   room: Room;
   // onJoin?: () => void;
   onOpen?: () => void;
+  onMouseEnter?: () => void;
 }
 
 const badgeClasses = {
@@ -17,7 +18,7 @@ const badgeClasses = {
 
 const badgeLabels = { pending: 'Pending', drawn: 'Drawn', closed: 'Closed' };
 
-export function RoomCard({ room, /* onJoin, */ onOpen }: RoomCardProps) {
+export function RoomCard({ room, /* onJoin, */ onOpen, onMouseEnter }: RoomCardProps) {
   const { name, code, members, status } = room;
 
   return (
@@ -30,6 +31,7 @@ export function RoomCard({ room, /* onJoin, */ onOpen }: RoomCardProps) {
         'transition-[transform,box-shadow] duration-150',
         'hover:-translate-y-0.5 hover:shadow-lg'
       )}
+      onMouseEnter={onMouseEnter}
     >
       <div className="flex flex-col gap-1 @sm:flex-row @sm:items-baseline @sm:gap-3">
         <span className="text-foreground text-base font-bold">{name}</span>

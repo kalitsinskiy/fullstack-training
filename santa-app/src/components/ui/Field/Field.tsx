@@ -5,9 +5,10 @@ import { Label } from '@/components/ui/label';
 interface FieldProps extends React.ComponentPropsWithoutRef<'input'> {
   label: string;
   error?: string;
+  ref?: React.Ref<HTMLInputElement>;
 }
 
-export function Field({ label, error, id, name, className, ...rest }: FieldProps) {
+export function Field({ label, error, id, name, className, ref, ...rest }: FieldProps) {
   const autoId = useId();
   const fieldId = id ?? name ?? autoId;
   const errorId = `${fieldId}-error`;
@@ -16,6 +17,7 @@ export function Field({ label, error, id, name, className, ...rest }: FieldProps
     <div className="flex flex-col gap-1.5">
       <Label htmlFor={fieldId}>{label}</Label>
       <Input
+        ref={ref}
         id={fieldId}
         name={name}
         aria-invalid={!!error}
