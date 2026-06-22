@@ -40,6 +40,18 @@ export class Room {
   @Prop()
   drawDate?: Date;
 
+  // Suggested per-gift budget (optional): amount + currency symbol.
+  @Prop()
+  budget?: number;
+
+  @Prop()
+  currency?: string;
+
+  // The day participants exchange gifts — set when the owner runs the draw,
+  // editable afterwards.
+  @Prop()
+  exchangeDate?: Date;
+
   @Prop({
     type: [
       {

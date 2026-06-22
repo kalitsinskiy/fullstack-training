@@ -198,11 +198,21 @@ Create the draw endpoint in your rooms or assignments controller:
    - Room status must not be "drawn" already
 3. **Generate assignments** using the derangement function.
 4. **Save atomically** with one `findByIdAndUpdate` — set `status: 'drawn'`,
-   `drawDate`, and the `assignments` array in the same call. A single-document
-   write is atomic, so there is nothing to roll back.
+   `drawDate`, `exchangeDate`, and the `assignments` array in the same call. A
+   single-document write is atomic, so there is nothing to roll back.
 5. **Return** the updated room (or just a success message).
 
 Make sure your Room schema has a `status` field (`'pending' | 'drawn'`, default `'pending'`).
+
+> **The draw sets the gift-exchange date.** The request body carries a **required**
+> `exchangeDate` (ISO 8601) — `{ "exchangeDate": "2026-12-24" }` (see the API
+> contract). Picking it at draw time means everyone learns the day the moment
+> names are drawn. Store it on the room as `exchangeDate` and reject the draw
+> (`400`) if it's missing/invalid. It stays editable afterwards via
+> `PATCH /rooms/:id` (owner only).
+>
+> **Gift budget** is set earlier, when the room is **created**: optional `budget`
+> (number) + `currency` (`$ € £ ₴ zł`), stored on the room and shown to everyone.
 
 ### Step 4: Implement GET /rooms/:id/assignment
 
@@ -234,13 +244,39 @@ In **santa-app**, on the room detail page:
    - The room has fewer than 3 participants
    - The draw has already happened (room status is "drawn")
 
-2. **Trigger the draw**: When clicked, call `POST /api/rooms/:id/draw`. Show a loading state while the request is in flight.
+2. **Trigger the draw**: Clicking "Draw Names" opens a **dialog with a calendar**
+   (date picker) where the owner picks the **gift-exchange date** — the draw button
+   in the dialog stays disabled until a date is chosen. Confirming calls
+   `POST /api/rooms/:id/draw` with `{ exchangeDate }`. Show a loading state while
+   the request is in flight. After the draw, display the exchange date to **all**
+   participants on the room page, and let the owner change it (`PATCH /rooms/:id`).
 
 3. **Show assignment**: After the draw, call `GET /api/rooms/:id/assignment` and display the result:
    - "You are giving a gift to: **Alice**"
    - Show Alice's wishlist items
 
 4. **Handle errors**: Show user-friendly messages for cases like "not enough participants" or "draw already performed."
+
+#### Building the calendar
+
+The date picker is [`react-day-picker`](https://daypicker.dev) (`npm i
+react-day-picker date-fns`). How it should look and behave (see the
+`room-draw-dialog.png` mockup and `design/design-system.md`):
+
+- **Render it inline inside the Dialog — NOT wrapped in a Popover.** A
+  popover-wrapped day-picker dismisses on the day/nav clicks, so dates won't
+  select and the month arrows close it. The Dialog is already the surface.
+- `mode="single"`, controlled via `selected` / `onSelect`; `weekStartsOn={1}`
+  (Monday); `disabled={{ before: today }}` so past days can't be chosen.
+- **Theme it to the palette** — by default react-day-picker is blue. Override its
+  `.rdp-root` CSS vars with a higher-specificity wrapper class (e.g. `.santa-cal`):
+  `--rdp-accent-color: hsl(var(--primary))`, today/​chevrons in `--primary`,
+  selected day = primary fill + `--primary-foreground` text, and
+  `font-family: inherit` (its default font isn't the app's). Import
+  `react-day-picker/style.css` once.
+- Show the chosen date as a readout (`date-fns` `format(d, 'EEE, d MMM yyyy')`) and
+  keep the confirm button disabled until a date is picked. Reuse the same inline
+  `Calendar` in a small Dialog for the owner's "Change date" action.
 
 ### Step 6: Verify the draw is atomic
 

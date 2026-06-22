@@ -22,6 +22,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import type { PaginatedResponse } from '../common/pagination';
 import { CreateRoomDto } from './dto/create-room.dto';
+import { DrawRoomDto } from './dto/draw-room.dto';
 import { JoinRoomDto } from './dto/join-room.dto';
 import { PaginatedRoomsResponseDto } from './dto/paginated-rooms-response.dto';
 import { RoomResponseDto } from './dto/room-response.dto';
@@ -163,9 +164,10 @@ export class RoomsController {
   @ApiResponse({ status: 404, description: 'Room not found' })
   draw(
     @Param('id') id: string,
+    @Body() body: DrawRoomDto,
     @CurrentUser('id') userId: string,
   ): Promise<Room> {
-    return this.roomsService.draw(id, userId);
+    return this.roomsService.draw(id, userId, body.exchangeDate);
   }
 
   @Get(':id/assignment')

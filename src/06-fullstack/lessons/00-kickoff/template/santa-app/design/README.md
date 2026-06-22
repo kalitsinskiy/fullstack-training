@@ -29,6 +29,19 @@ brand badge, snowflake decor, the Messages giftee / Secret-Santa two-chat toggle
 | Notifications | `screens/mobile/notifications.png` | `screens/desktop/notifications.png` | `/notifications` |
 | Profile | `screens/mobile/profile.png` | `screens/desktop/profile.png` | `/profile` |
 
+**Overlays** (modal/toast state, not a route):
+- `screens/*/notification-popup.png` — a live `sonner` toast (e.g. "Oksana joined
+  …"). Toasts appear top-of-screen for real-time notifications (`notification`
+  event) and incoming anonymous messages (`message:received`); the bell badge
+  top-right tracks the unread count. Who sees which event is in
+  [`../../santa-notifications/docs/api-contract.md`](../../santa-notifications/docs/api-contract.md)
+  (the notification matrix).
+- `screens/*/room-draw-dialog.png` — the **Run the draw** dialog with the inline
+  `Calendar` for picking the required gift-exchange date.
+
+Room screens show the per-gift **budget** (peach banner on the room, chip on the
+list card).
+
 ## Fonts
 
 Loaded once via Google Fonts in [`../index.html`](../index.html); use the Tailwind

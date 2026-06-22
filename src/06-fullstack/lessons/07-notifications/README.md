@@ -25,6 +25,13 @@ In the Secret Santa system, we use **both**:
 - **Async**: santa-api publishes `draw.completed` to RabbitMQ; santa-notifications consumes it.
 - **Sync**: santa-notifications calls santa-api via HTTP to fetch user/room details it needs to build a notification message.
 
+> **What raises a notification** (consumer fans out one per recipient, pushed live
+> over the WebSocket): `user.joined` (notify existing members), `draw.completed`
+> (everyone), `wishlist.updated` (others), and `room.date_changed` (everyone — the
+> owner moved the gift-exchange day). A **new anonymous message** also pops a live
+> toast for its recipient via the `message:received` socket push (Lesson 09) — the
+> client listens for it globally, not only on the open chat.
+
 ### HTTP Client in Node.js
 
 Three main options:

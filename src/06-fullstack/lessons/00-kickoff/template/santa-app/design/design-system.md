@@ -127,8 +127,19 @@ Already in the baseline (`src/components/ui/`):
 | Label | `label.tsx` | — |
 | Card | `card.tsx` | Header/Title/Description/Content/Footer |
 | Toaster | `sonner.tsx` | `toast.success` / `toast.error` |
+| Dialog | `dialog.tsx` | Radix dialog — draw confirmation, change-date |
+| Calendar | `calendar.tsx` | `react-day-picker` (inline), accent = `--primary`, week starts Mon, past days disabled |
 
 App-level helpers: `PageHeader`, `EmptyState`, `AppLayout`, `Sidebar`, `BottomNav`.
+
+> **Budget & exchange date.** Room create has a per-gift budget = currency `select`
+> (`$ € £ ₴ zł`) + number `Input`, shown as e.g. `₴500 per gift`. Running the draw
+> opens a `Dialog` with the `Calendar` (required) to set the gift-exchange date;
+> after the draw it's shown to everyone and the owner can change it (another Dialog).
+>
+> Render the `Calendar` **inline inside the Dialog**, not wrapped in a Popover — a
+> popover-wrapped day-picker dismisses on day/nav clicks, so dates won't select and
+> the month arrows close it.
 
 **Exact specs** (as built in the mockups — so you don't need to measure):
 

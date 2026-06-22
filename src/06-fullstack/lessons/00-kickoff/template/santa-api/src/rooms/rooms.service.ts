@@ -72,7 +72,8 @@ export class RoomsService {
   // TODO (Lesson 03): only the creator may draw, and only once, with >= 3 participants.
   // Produce a derangement (Sattolo / Fisher–Yates with rejection — no self-assignment)
   // and persist ALL assignments in a single document write (atomic, no transaction).
-  draw(id: string, requesterId: string): Promise<Room> {
+  // Save `exchangeDate` (required) so every participant sees the gift-exchange day.
+  draw(id: string, requesterId: string, exchangeDate: string): Promise<Room> {
     throw new NotImplementedException('RoomsService.draw is not implemented');
   }
 

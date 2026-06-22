@@ -379,6 +379,12 @@ in any message object, and never put the Secret Santa's `id`/`name` in the
 > Messaging is **per-room** — scope the page to a `roomId` (e.g.
 > `/rooms/:id/messages`), and the santa-notifications client lives on
 > `VITE_WS_URL` (:3002), not `VITE_API_URL`.
+>
+> **Notify the recipient anywhere.** Also listen for `message:received` in a
+> **global** component (the one mounted in the app shell, beside the notifications
+> listener) and pop a `sonner` toast — otherwise a recipient who isn't on the chat
+> page never learns a message arrived. The open thread still appends it; the global
+> listener just adds the toast.
 
 ```tsx
 // src/pages/MessagesPage.tsx
