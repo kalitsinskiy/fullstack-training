@@ -1,5 +1,8 @@
 import { useState, type SyntheticEvent } from "react";
 import { useAuth } from "../hooks/useAuth";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 function validateEmail(value: string): string | null {
   if (!value) return "Email is required";
@@ -44,9 +47,6 @@ export function LoginForm({ onSuccess }: { onSuccess?: () => void }) {
 
   const isDisabled = submitting || !email || !password || !!emailError || !!passwordError;
 
-  const inputClass =
-    "focus-visible:outline-brand rounded-md border border-gray-300 p-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2";
-
   return (
     <form
       onSubmit={handleSubmit}
@@ -55,37 +55,33 @@ export function LoginForm({ onSuccess }: { onSuccess?: () => void }) {
       <fieldset className="flex flex-col gap-3 rounded-md border border-gray-200 p-4">
         <legend className="text-brand px-2 font-semibold">Sign in</legend>
 
-        <label htmlFor="login-email" className="font-medium">
-          Email Address
-        </label>
-        <input
+        <Label htmlFor="login-email">Email Address</Label>
+        <Input
           id="login-email"
           type="email"
           placeholder="you@example.com"
           value={email}
+          aria-invalid={!!emailError}
           onChange={(e) => {
             setEmail(e.target.value);
             setEmailError(null);
           }}
           onBlur={(e) => setEmailError(validateEmail(e.target.value))}
-          className={inputClass}
         />
         {emailError && <p className="text-danger text-sm">{emailError}</p>}
 
-        <label htmlFor="login-password" className="font-medium">
-          Password
-        </label>
-        <input
+        <Label htmlFor="login-password">Password</Label>
+        <Input
           id="login-password"
           type="password"
           placeholder="Your password"
           value={password}
+          aria-invalid={!!passwordError}
           onChange={(e) => {
             setPassword(e.target.value);
             setPasswordError(null);
           }}
           onBlur={(e) => setPasswordError(validatePassword(e.target.value))}
-          className={inputClass}
         />
         {passwordError && <p className="text-danger text-sm">{passwordError}</p>}
       </fieldset>
@@ -96,13 +92,9 @@ export function LoginForm({ onSuccess }: { onSuccess?: () => void }) {
         </p>
       )}
 
-      <button
-        type="submit"
-        disabled={isDisabled}
-        className="bg-brand hover:bg-brand-dark disabled:hover:bg-brand mt-4 w-full rounded-md p-2 font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-      >
+      <Button type="submit" disabled={isDisabled} className="mt-4 w-full">
         {submitting ? "Signing in…" : "Sign In"}
-      </button>
+      </Button>
     </form>
   );
 }

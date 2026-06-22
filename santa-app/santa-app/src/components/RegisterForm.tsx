@@ -1,5 +1,8 @@
 import { useState, type SyntheticEvent } from "react";
 import { useAuth } from "../hooks/useAuth";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
 
@@ -84,9 +87,6 @@ export function RegisterForm({ onSuccess }: { onSuccess?: () => void }) {
     !!passwordError ||
     !!confirmPasswordError;
 
-  const inputClass =
-    "focus-visible:outline-brand rounded-md border border-gray-300 p-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2";
-
   return (
     <form
       onSubmit={handleSubmit}
@@ -95,48 +95,43 @@ export function RegisterForm({ onSuccess }: { onSuccess?: () => void }) {
       <fieldset className="flex flex-col gap-3 rounded-md border border-gray-200 p-4">
         <legend className="text-brand px-2 font-semibold">Account details</legend>
 
-        <label htmlFor="register-name" className="font-medium">
-          Full Name
-        </label>
-        <input
+        <Label htmlFor="register-name">Full Name</Label>
+        <Input
           id="register-name"
           type="text"
           placeholder="John Doe"
           value={name}
+          aria-invalid={!!nameError}
           onChange={(e) => {
             setName(e.target.value);
             setNameError(null);
           }}
           onBlur={(e) => setNameError(validateName(e.target.value))}
-          className={inputClass}
         />
         {nameError && <p className="text-danger text-sm">{nameError}</p>}
 
-        <label htmlFor="register-email" className="font-medium">
-          Email Address
-        </label>
-        <input
+        <Label htmlFor="register-email">Email Address</Label>
+        <Input
           id="register-email"
           type="email"
           placeholder="you@example.com"
           value={email}
+          aria-invalid={!!emailError}
           onChange={(e) => {
             setEmail(e.target.value);
             setEmailError(null);
           }}
           onBlur={(e) => setEmailError(validateEmail(e.target.value))}
-          className={inputClass}
         />
         {emailError && <p className="text-danger text-sm">{emailError}</p>}
 
-        <label htmlFor="register-password" className="font-medium">
-          Password
-        </label>
-        <input
+        <Label htmlFor="register-password">Password</Label>
+        <Input
           id="register-password"
           type="password"
           placeholder="At least 8 characters"
           value={password}
+          aria-invalid={!!passwordError}
           onChange={(e) => {
             setPassword(e.target.value);
             setPasswordError(null);
@@ -145,18 +140,16 @@ export function RegisterForm({ onSuccess }: { onSuccess?: () => void }) {
             }
           }}
           onBlur={(e) => setPasswordError(validatePassword(e.target.value))}
-          className={inputClass}
         />
         {passwordError && <p className="text-danger text-sm">{passwordError}</p>}
 
-        <label htmlFor="register-confirm-password" className="font-medium">
-          Confirm Password
-        </label>
-        <input
+        <Label htmlFor="register-confirm-password">Confirm Password</Label>
+        <Input
           id="register-confirm-password"
           type="password"
           placeholder="Repeat your password"
           value={confirmPassword}
+          aria-invalid={!!confirmPasswordError}
           onChange={(e) => {
             setConfirmPassword(e.target.value);
             setConfirmPasswordError(validateConfirmPassword(e.target.value, password));
@@ -164,7 +157,6 @@ export function RegisterForm({ onSuccess }: { onSuccess?: () => void }) {
           onBlur={(e) =>
             setConfirmPasswordError(validateConfirmPassword(e.target.value, password))
           }
-          className={inputClass}
         />
         {confirmPasswordError && (
           <p className="text-danger text-sm">{confirmPasswordError}</p>
@@ -177,13 +169,9 @@ export function RegisterForm({ onSuccess }: { onSuccess?: () => void }) {
         </p>
       )}
 
-      <button
-        type="submit"
-        disabled={isDisabled}
-        className="bg-brand hover:bg-brand-dark disabled:hover:bg-brand mt-4 w-full rounded-md p-2 font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-      >
+      <Button type="submit" disabled={isDisabled} className="mt-4 w-full">
         {submitting ? "Creating account…" : "Create Account"}
-      </button>
+      </Button>
     </form>
   );
 }

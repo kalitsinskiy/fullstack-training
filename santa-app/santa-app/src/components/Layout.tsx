@@ -1,5 +1,7 @@
 import { Link, NavLink, Outlet, useNavigate } from "react-router";
 import { useAuth } from "../hooks/useAuth";
+import { Button } from "@/components/ui/button";
+import { CreateRoomDialog } from "./CreateRoomDialog";
 
 export function Layout() {
   const auth = useAuth();
@@ -27,13 +29,11 @@ export function Layout() {
           </NavLink>
         </nav>
         <div className="flex items-center gap-3">
+          <CreateRoomDialog />
           <span className="text-sm text-gray-600">{auth.user?.displayName}</span>
-          <button
-            onClick={handleLogout}
-            className="rounded-md border border-gray-300 px-3 py-1 text-sm hover:bg-gray-100"
-          >
+          <Button variant="outline" size="sm" onClick={handleLogout}>
             Logout
-          </button>
+          </Button>
         </div>
       </header>
       <main className="p-6">
