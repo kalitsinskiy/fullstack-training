@@ -99,19 +99,20 @@ empty-state → `Bell`). Draw each as a lucide vector, tokenized stroke colour
 
 Checklist per frame: `[ ] Landing [ ] Login [ ] Register [ ] Rooms [ ] RoomDetail [ ] Messages [ ] Notifications [ ] Profile`.
 
-## Edit #3 — Brand badge: Gift vs Santa-hat (DECISION NEEDED)
+## Edit #3 — Brand badge: Gift vs Santa-hat — ✅ RESOLVED → (A)
 
-The mockups use the **Santa-hat** badge + scattered **snowflakes**; the built app
-renders the `Gift` lucide icon and does **not** use `santa-hat.svg` /
-`snowflake.svg` (only the `--frost` token is referenced). Pick one direction —
-not auto-applied:
+**Decision: the app adopts the hat** (so the app matches the existing mockup; the
+Figma frames need **no** change for this item). Done in the app:
 
-- **(A, recommended)** App adopts the shipped hat: render `/decor/santa-hat.svg`
-  on the Login/Register/Landing/Rooms badge and scatter `snowflake.svg` on Rooms.
-  The assets already ship in `public/decor/`, so this only *uses* what candidates
-  already have — and the app then matches the richer mockup.
-- **(B)** Swap the mockup hat → `Gift` and drop the snowflakes, matching the
-  current app exactly.
+- Login / Register badge → `/decor/santa-hat.svg` in a `size-16` `bg-primary-soft`
+  circle (the design-system "Hat badge" pattern).
+- Landing hero + Rooms sidebar logo → `/decor/santa-hat.svg`.
+- Rooms dashboard → decorative `snowflake.svg` scatter (low opacity, `-z-10`,
+  `pointer-events-none`).
+- The committed worked-example `template/.../LoginPage.tsx` updated to match, so
+  the course reference now agrees with `public/decor/README.md` (which always
+  said the badge is the hat). The `Gift` lucide icon stays as the **Rooms**
+  concept icon (nav + empty-state), which is unrelated to the brand badge.
 
 ---
 

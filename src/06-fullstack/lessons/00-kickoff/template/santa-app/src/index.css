@@ -6,7 +6,7 @@
   Secret Santa design tokens.
   Colors are HSL channels (no hsl() wrapper) so Tailwind can compose
   them with opacity modifiers, e.g. bg-primary/90.
-  Full reference: docs/design-system.md
+  Full reference: design/design-system.md
 */
 @layer base {
   :root {

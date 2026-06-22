@@ -1,0 +1,12 @@
+<svg width="358" height="40" viewBox="0 0 358 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Segmented chat switcher for the Messages screen.
+       Drop into frames 34:2 (mobile) and 44:2 (desktop) at x=16, y=83.
+       Tokens: track=color/muted #EFEAE0 · active=color/primary #C2410C ·
+       active text=color/primary-fg #FFFCF0 · inactive text=color/muted-fg #8A7A6A -->
+  <rect width="358" height="40" rx="12" fill="#EFEAE0"/>
+  <rect x="181" y="4" width="173" height="32" rx="9" fill="#C2410C"/>
+  <text x="90.5" y="20" text-anchor="middle" dominant-baseline="central"
+        font-family="Inter" font-weight="500" font-size="13" fill="#8A7A6A">🎁 Bob</text>
+  <text x="267.5" y="20" text-anchor="middle" dominant-baseline="central"
+        font-family="Inter" font-weight="600" font-size="13" fill="#FFFCF0">✨ Your Santa</text>
+</svg>

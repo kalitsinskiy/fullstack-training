@@ -48,11 +48,13 @@ By the end of this lesson you will have:
 You are **not** handed a finished frontend. You get structure, an approach, and
 **Figma mockups** to implement.
 
-- **Mockups:** [`template/santa-app/docs/mockups/`](template/santa-app/docs/mockups/) —
+All design lives in the repo-root [`design/`](../../../../design/) folder:
+
+- **Mockups:** [`design/screens/`](../../../../design/screens/) —
   all 8 screens, mobile **and** desktop, in the Santa-warm theme (PNG, plus the
   [Figma file](https://www.figma.com/design/vzwQuXGRqBQNUzpMlHtbvR)).
-- **Design system:** [`template/santa-app/docs/design-system.md`](template/santa-app/docs/design-system.md) +
-  [`design-tokens.json`](template/santa-app/docs/design-tokens.json) —
+- **Design system:** [`design/design-system.md`](../../../../design/design-system.md) +
+  [`design/design-tokens.json`](../../../../design/design-tokens.json) —
   exact colors, typography, spacing, radii, component sizes, breakpoints. These
   map 1:1 to the CSS variables in `santa-app/src/index.css`.
 

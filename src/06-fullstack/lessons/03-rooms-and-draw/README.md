@@ -17,9 +17,9 @@ By the end of this lesson you will have:
 
 > **Build the UI from the mockup.** This lesson's frontend lives on the
 > **Room detail** screen — Figma frames [mobile](https://www.figma.com/design/vzwQuXGRqBQNUzpMlHtbvR/Secret-Santa-%E2%80%94-Mockups?node-id=33-2) ·
-> [desktop](https://www.figma.com/design/vzwQuXGRqBQNUzpMlHtbvR/Secret-Santa-%E2%80%94-Mockups?node-id=43-2) (see [`santa-app/docs/mockups/`](../00-kickoff/template/santa-app/docs/mockups/)).
+> [desktop](https://www.figma.com/design/vzwQuXGRqBQNUzpMlHtbvR/Secret-Santa-%E2%80%94-Mockups?node-id=43-2) (see [`design/screens/`](../../../../design/screens/)).
 > Flesh out the `RoomDetailPage` stub (`santa-app/src/pages/RoomDetailPage.tsx`),
-> following the `LoginPage` worked example and the tokens in `docs/design-system.md`.
+> following the `LoginPage` worked example and the tokens in `design/design-system.md`.
 
 ## Key Concepts
 

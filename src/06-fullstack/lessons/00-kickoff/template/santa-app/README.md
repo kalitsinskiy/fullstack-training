@@ -82,8 +82,8 @@ src/
 
 ## Design System
 
-See [`docs/design-system.md`](docs/design-system.md) for the full token
-reference (colors, typography, spacing, radii), wireframes, and responsive
+See the repo-root `design/` folder (`design/design-system.md`) for the full token
+reference (colors, typography, spacing, radii), the screen mockups, and responsive
 patterns. Adapted from a Figma reference; the palette is Santa-warm
 (red / pine-green / gold on a cream background).
 
