@@ -11,7 +11,7 @@ your own `santa-api` / `santa-notifications` / `santa-app` when you pull updates
 |--------|-------|--------------|
 | `santa-api/` | NestJS + MongoDB | **Skeleton**: controllers, DTOs, Mongoose schemas, modules, the API contract, Dockerfile, a component-test harness (worked example + `it.todo`s). Service logic is stubbed — you implement it (Kickoff §4). |
 | `santa-notifications/` | Fastify + MongoDB | **Skeleton**: app + routes + scripts (`dev`/`start`/`build`/`test`), Dockerfile, Jest test harness, `.env.example` |
-| `santa-app/` | React + Vite + Tailwind + shadcn | Worked-example `LoginPage` + page stubs, RTL+MSW test setup, `public/decor/` (design system + mockups live in the repo-root `design/` folder) |
+| `santa-app/` | React + Vite + Tailwind + shadcn | Worked-example `LoginPage` + page stubs, RTL+MSW test setup, `public/decor/` (design system + mockups live in `santa-app/design/`) |
 | `docker-compose.yml` | mongo:8 · redis:8 · rabbitmq:4 + both backends | Full local stack (`name: santa`) |
 
 ## How to use it

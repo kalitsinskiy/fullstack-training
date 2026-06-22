@@ -5,10 +5,9 @@
 When microservices need to communicate, choosing between synchronous (HTTP) and asynchronous (message queue) patterns is a critical architecture decision. In this lesson we build the notifications feature end-to-end: santa-notifications consumes RabbitMQ events from the previous lesson, calls santa-api over HTTP to enrich data, stores notifications, and exposes them via REST. On the frontend, we add a notifications page and an unread-count badge in the header.
 
 > **Build the UI from the mockup.** Frontend lives on the **Notifications**
-> screen — Figma frames [mobile](https://www.figma.com/design/vzwQuXGRqBQNUzpMlHtbvR/Secret-Santa-%E2%80%94-Mockups?node-id=36-2) ·
-> [desktop](https://www.figma.com/design/vzwQuXGRqBQNUzpMlHtbvR/Secret-Santa-%E2%80%94-Mockups?node-id=45-2) (see [`design/screens/`](../../../../design/screens/)).
+> screen — see the local mockups in [`design/screens/`](../00-kickoff/template/santa-app/design/screens/).
 > Flesh out `santa-app/src/pages/NotificationsPage.tsx`, following the
-> `LoginPage` worked example and `design/design-system.md`.
+> `LoginPage` worked example and `santa-app/design/design-system.md`.
 
 ## Key Concepts
 
@@ -493,7 +492,7 @@ async function handleRoomJoined(event: RoomJoinedEvent) {
 
 > **Build with the course stack, not MUI.** Use shadcn/ui + Tailwind, the `api`
 > axios client, TanStack Query (`useQuery`/`useMutation`), and `sonner` toasts —
-> exactly like `LoginPage`/`RoomDetailPage` and the mockups in `design/design-system.md`.
+> exactly like `LoginPage`/`RoomDetailPage` and the mockups in `santa-app/design/design-system.md`.
 > The snippets in Steps 6–7 use MUI **only to show structure and data flow** — port
 > them to shadcn components + the design tokens; don't `npm install @mui/*`.
 

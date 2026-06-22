@@ -1,5 +1,5 @@
 {
-  "$comment": "Machine-readable design tokens for santa-app. Mirrors src/index.css and docs/design-system.md. You do NOT need Figma Dev Mode — these are the canonical values.",
+  "$comment": "Machine-readable design tokens for santa-app. Mirrors src/index.css and design-system.md. All local — no Figma needed; these are the canonical values.",
   "color": {
     "background":       { "hex": "#FFFBEB", "hsl": "48 100% 96%",  "cssVar": "--background",       "use": "App background (cream)" },
     "foreground":       { "hex": "#78350F", "hsl": "22 78% 27%",   "cssVar": "--foreground",       "use": "Body text (cocoa)" },

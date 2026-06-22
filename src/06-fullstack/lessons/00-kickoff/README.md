@@ -46,22 +46,19 @@ By the end of this lesson you will have:
 ## 2. The design — build the UI from mockups
 
 You are **not** handed a finished frontend. You get structure, an approach, and
-**Figma mockups** to implement.
+**mockups** to implement.
 
-All design lives in the repo-root [`design/`](../../../../design/) folder:
+All design lives in [`santa-app/design/`](template/santa-app/design/) — beside the app you build:
 
-- **Mockups:** [`design/screens/`](../../../../design/screens/) —
-  all 8 screens, mobile **and** desktop, in the Santa-warm theme (PNG, plus the
-  [Figma file](https://www.figma.com/design/vzwQuXGRqBQNUzpMlHtbvR)).
-- **Design system:** [`design/design-system.md`](../../../../design/design-system.md) +
-  [`design/design-tokens.json`](../../../../design/design-tokens.json) —
+- **Mockups:** [`santa-app/design/screens/`](template/santa-app/design/screens/) —
+  all 8 screens, mobile **and** desktop, in the Santa-warm theme (PNG, rendered from the live app).
+- **Design system:** [`design-system.md`](template/santa-app/design/design-system.md) +
+  [`design-tokens.json`](template/santa-app/design/design-tokens.json) —
   exact colors, typography, spacing, radii, component sizes, breakpoints. These
   map 1:1 to the CSS variables in `santa-app/src/index.css`.
 
-> **You don't need Figma Dev Mode** (it's paid). All exact values are in
-> `design-system.md` / `design-tokens.json`; the PNGs give you the layout. On a
-> free Figma account you can still click a layer to see its Design-panel
-> properties. If you *do* have Dev Mode, use it — same tokens.
+> **No Figma needed.** Everything is local: exact values in `design-system.md` /
+> `design-tokens.json`, and the PNG screens in `design/screens/` give you the layout.
 - **Worked example:** `santa-app/src/pages/LoginPage.tsx` is the one fully-built
   screen. Study it — tokens + shadcn components, an axios call through `api`,
   errors via `toast`, auth via `useAuth`, routing. Every other page is a stub

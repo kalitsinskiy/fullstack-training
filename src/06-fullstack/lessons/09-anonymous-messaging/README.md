@@ -13,11 +13,10 @@ with the real `senderId`, but never exposes the Secret Santa's identity. Message
 are pushed in real-time via Socket.IO.
 
 > **Build the UI from the mockup.** Frontend lives on the **Messages** screen —
-> Figma frames [mobile](https://www.figma.com/design/vzwQuXGRqBQNUzpMlHtbvR/Secret-Santa-%E2%80%94-Mockups?node-id=34-2) ·
-> [desktop](https://www.figma.com/design/vzwQuXGRqBQNUzpMlHtbvR/Secret-Santa-%E2%80%94-Mockups?node-id=44-2) (see [`design/screens/`](../../../../design/screens/)).
+> see the local mockups in [`design/screens/`](../00-kickoff/template/santa-app/design/screens/).
 > Flesh out the room messages page (two-tone chat bubbles, your own messages
 > right / the other party's left) with a **switcher between the two chats**
-> ("your giftee" / "your Secret Santa"), following `design/design-system.md`.
+> ("your giftee" / "your Secret Santa"), following `santa-app/design/design-system.md`.
 
 ## Key Concepts
 

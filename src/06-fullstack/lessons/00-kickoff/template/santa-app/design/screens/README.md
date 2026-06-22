@@ -22,6 +22,3 @@ Messages **two-chat toggle** (giftee / Secret Santa).
 Regenerate after UI changes by screenshotting the routes at both viewports with a
 seeded drawn room (see the seeding + Playwright steps used to create these).
 
-> For **editable Figma import**, use the SVGs in `../figma-import/` (the toggle is
-> there; ask for full-frame or icon SVGs if needed). These PNGs are visual
-> reference / underlay.

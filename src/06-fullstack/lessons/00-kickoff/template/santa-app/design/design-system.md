@@ -4,36 +4,26 @@ The single source of truth for the look & feel of `santa-app`.
 Tokens live as CSS variables in [`src/index.css`](../src/index.css) and are
 mapped to Tailwind utilities in [`tailwind.config.ts`](../tailwind.config.ts).
 
-> **Origin.** Adapted from Figma community references (a mobile "Gift app" for
-> screen structure, a "Christmas Landing" for the marketing page and decor).
-> The palette was re-themed to a warm Santa scheme; don't expect a 1:1 match
-> with the original files.
+> **Origin.** Adapted from community design references (a mobile "Gift app" for
+> screen structure, a "Christmas Landing" for the marketing page and decor),
+> re-themed to a warm Santa scheme.
 
 ---
 
-## 0. Reading styles — you do NOT need Figma Dev Mode
+## 0. Reading the design — everything is local
 
-Figma **Dev Mode** (the panel that auto-generates CSS and lets you measure) is a
-**paid** feature. You don't need it: **this document is the source of truth for
-every value** — exact colors, fonts, sizes, spacing, radii — and they're already
-in code (`src/index.css`, `tailwind.config.ts`). So:
+No Figma, no Dev Mode, no accounts. Everything you need is in this folder:
 
-- **No Dev Mode?** Use this file + `src/index.css` for the numbers, and the
-  [Figma file](mockups/) for the layout (open by link — see `mockups/README.md`).
-  That's everything you need. Even on a **free** Figma account you can still open
-  the file and click a layer — the right-hand **Design** panel shows its fill,
-  font, size, and radius (read-only); Dev Mode only adds the CSS-snippet/measure
-  convenience on top.
-- **Have Dev Mode?** Great — select any element to read its bound token and the
-  generated CSS directly. It'll match the tables below (Figma's `Santa` variable
-  collection ↔ the CSS variables here).
+- **Exact values** (colors, fonts, sizes, spacing, radii) — this document + the
+  tokens in [`design-tokens.json`](design-tokens.json), already mirrored in code
+  (`src/index.css`, `tailwind.config.ts`).
+- **Layout** — the PNG screens in [`screens/`](screens/) (`mobile/` + `desktop/`),
+  rendered straight from the running app.
 
-**Live design (open by link):**
-[Secret Santa — Mockups (Figma)](https://www.figma.com/design/vzwQuXGRqBQNUzpMlHtbvR/Secret-Santa-%E2%80%94-Mockups)
-— view access is open, just click. Canonical for layout; this doc is canonical
-for exact values.
+Match the screens, pull values from the tables below, and reuse the tokens that
+are already wired into Tailwind.
 
-Either way the chain is: **mockup PNG → this doc (values) → `index.css` /
+The chain is: **screen PNG → this doc (values) → `index.css` /
 `tailwind.config.ts` (ready-made classes) → `LoginPage.tsx` (worked example).**
 
 > Prefer machine-readable? Every value here is also in
@@ -93,11 +83,11 @@ Loaded from Google Fonts in [`index.html`](../index.html).
 | UI / body | **Inter** | `font-sans` (default) | Everything else |
 | Invite codes / mono | **JetBrains Mono** | `font-mono` | Room invite codes, anything monospaced |
 
-**Type ramp** — the exact named styles used in the Figma mockups (`Santa` text
+**Type ramp** — the exact named styles (`Santa` text
 styles). Sizes are in px with a Tailwind hint (use an arbitrary value like
 `text-[15px]` where the default scale has no exact match).
 
-| Figma style | Font / weight | Size | Line-height | Tailwind hint | Use |
+| Style | Font / weight | Size | Line-height | Tailwind hint | Use |
 |-------------|---------------|------|-------------|---------------|-----|
 | `Display/Hero` | Fraunces Bold | 56 | 110% | `font-display text-[56px] font-bold leading-[1.1]` | Landing hero |
 | `Display/Title` | Fraunces SemiBold | 32 | 120% | `font-display text-[32px] font-semibold` | Desktop page title |
@@ -182,13 +172,13 @@ Mobile-first. Breakpoints are Tailwind defaults:
 
 - **Navigation:** `Sidebar` (desktop, `hidden md:flex`) + `BottomNav` (mobile, `md:hidden`). Both read the same `navItems.ts`.
 - **Content width:** `container max-w-4xl` keeps reading line-length comfortable.
-- The Figma "Gift app" frames (375px) are the mobile reference; desktop is sidebar + main content.
+- The mobile frames (375px) are the reference; desktop is sidebar + main content.
 
 ---
 
 ## 7. Screen wireframes
 
-> **High-fidelity mockups:** see [`mockups/`](mockups/) for the Figma-exported
+> **High-fidelity mockups:** see [`screens/`](screens/) for the
 > Login and Rooms screens (mobile + desktop) you build against. The ASCII
 > sketches below are a quick structural reference; the mockups are the spec.
 
@@ -245,7 +235,7 @@ ROOM DETAIL (/rooms/:id)
 ## 8. Decor assets
 
 The brand SVGs **ship in the repo** at [`public/decor/`](../public/decor/) —
-no need to re-export from Figma:
+no need to re-export:
 
 - `santa-hat.svg` — hat mark (red `--primary` cone + white brim/pompom). Login/
   Register badge, Landing hero, the Rooms logo.
@@ -256,5 +246,5 @@ Usage examples (incl. the hat-on-soft-circle badge) are in
 landing hero, the "Secret Santa" logo, a few low-opacity snowflakes, optional
 empty-state / draw-complete flourishes.
 
-Want richer 3D illustrations (Santa, tree, gifts)? Export from the Figma file as
+Want richer 3D illustrations (Santa, tree, gifts)? Export as
 SVG/PNG and add them here — keep each under ~150 KB, prefer SVG.
