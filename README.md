@@ -2,6 +2,22 @@
 
 Welcome to hands-on fullstack development training! Learn JavaScript, TypeScript, Node.js Backend, and React Frontend through practical examples.
 
+First time / After code changes:
+docker compose up --build
+
+Subsequent runs (no code changes):
+docker compose up
+
+Stop:
+docker compose down
+
+Stop and wipe all data (MongoDB):
+docker compose down -v
+
+Frontend → http://localhost:5173
+API → http://localhost:3001
+Notifications → http://localhost:3002
+
 ## 🎯 What You'll Learn
 
 - **JavaScript Basics** - Variables, data types, functions, arrays, objects, control flow, async, strings, error handling, classes, closures, JSON & modules
