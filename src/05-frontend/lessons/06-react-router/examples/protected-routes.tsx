@@ -5,15 +5,7 @@
 // layout routes with Outlet, and login/logout flow.
 
 import { useState, createContext, useContext, ReactNode } from 'react';
-import {
-  BrowserRouter,
-  Routes,
-  Route,
-  Link,
-  Navigate,
-  Outlet,
-  useNavigate,
-} from 'react-router';
+import { BrowserRouter, Routes, Route, Link, Navigate, Outlet, useNavigate } from 'react-router';
 
 // ---- Fake Auth Context ----
 

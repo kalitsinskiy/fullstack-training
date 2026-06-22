@@ -4,12 +4,16 @@ import Counter from '../exercises/counter';
 import TodoList from '../exercises/todo-list';
 import ThemeSwitcherApp from '../exercises 2/theme-switcher';
 import PostList from '../exercises 2/use-fetch';
+import MultiPageApp from '../exercises 3/multi-page-app';
+import ProtectedApp from '../exercises 3/protected-app';
 
 const exercises = [
   { id: 'counter', label: 'Counter', component: <Counter /> },
   { id: 'todo-list', label: 'Todo List', component: <TodoList /> },
   { id: 'theme-switcher', label: 'Theme Switcher', component: <ThemeSwitcherApp /> },
   { id: 'use-fetch', label: 'Use Fetch', component: <PostList /> },
+  { id: 'multi-page-app', label: 'Multi-Page App', component: <MultiPageApp /> },
+  { id: 'protected-app', label: 'Protected App', component: <ProtectedApp /> },
 ];
 
 function App() {
