@@ -1,3 +1,12 @@
+import { Button } from "./ui/button";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "./ui/card";
+
 export type RoomStatus = "open" | "drawn" | "closed";
 export interface RoomCardProps {
   status: RoomStatus;
@@ -21,40 +30,41 @@ export default function RoomCard(props: RoomCardProps) {
       : "bg-brand hover:bg-brand-dark focus-visible:ring-brand";
 
   return (
-    <article className="group [container-type:inline-size] rounded-3xl bg-(--surface) shadow-sm ring-1 ring-(--border) transition hover:-translate-y-0.5 hover:shadow-md">
-      <div className="@container:(flex-row justify-between) flex flex-col items-center gap-4 p-5">
-        <div className="min-w-0 flex-auto space-y-4">
-          <div className="@container:(flex-row justify-between) flex flex-col items-center gap-3">
-            <div className="min-w-0">
-              <p className="text-sm font-medium tracking-[0.18em] text-(--muted) uppercase">
-                Room
-              </p>
-              <h3 className="mt-1 truncate text-xl font-semibold text-(--text)">
-                {props.name}
-              </h3>
-            </div>
-            <span className="font-mono text-sm text-(--muted)">
-              {props.code}
-            </span>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3 text-sm text-(--text)">
-            <span>{props.participantCount} members</span>
-            <span
-              className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${statusStyles[props.status]}`}
-            >
-              {props.status}
-            </span>
-          </div>
+    <Card className="group [container-type:inline-size] rounded-3xl bg-(--surface) shadow-sm ring-(--border) transition [--card-spacing:--spacing(5)] hover:-translate-y-0.5 hover:shadow-md">
+      <CardHeader className="@container:(flex-row justify-between) flex flex-col items-start gap-3">
+        <div className="min-w-0">
+          <p className="text-muted-foreground text-sm font-medium tracking-[0.18em] uppercase">
+            Room
+          </p>
+          <CardTitle className="mt-1 line-clamp-2 text-xl font-semibold break-words text-(--text)">
+            {props.name}
+          </CardTitle>
         </div>
-        <button
+        <span className="text-muted-foreground font-mono text-sm">
+          {props.code}
+        </span>
+      </CardHeader>
+
+      <CardContent>
+        <div className="flex flex-wrap items-center gap-3 text-sm text-(--text)">
+          <span>{props.participantCount} members</span>
+          <span
+            className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${statusStyles[props.status]}`}
+          >
+            {props.status}
+          </span>
+        </div>
+      </CardContent>
+
+      <CardFooter className="border-0 bg-transparent px-5 pt-0">
+        <Button
           type="button"
           onClick={props.onOpen}
-          className={`${actionClassName} inline-flex h-11 min-w-[7rem] cursor-pointer items-center justify-center rounded-full px-4 text-sm font-semibold text-(--button-text) transition focus:outline-none focus-visible:ring-2`}
+          className={`${actionClassName} h-11 min-w-[7rem] cursor-pointer rounded-full px-4 text-sm font-semibold text-(--button-text) focus-visible:ring-2`}
         >
           {actionLabel}
-        </button>
-      </div>
-    </article>
+        </Button>
+      </CardFooter>
+    </Card>
   );
 }

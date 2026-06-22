@@ -1,9 +1,14 @@
+import { useState } from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router";
 import { useAuth } from "../hooks/useAuth";
+import { CreateRoomDialog } from "./CreateRoomDialog";
+import { Button } from "./ui/button";
+import { Plus } from "lucide-react";
 
 export function Layout() {
   const auth = useAuth();
   const navigate = useNavigate();
+  const [createRoomDialogOpen, setCreateRoomDialogOpen] = useState(false);
 
   const handleLogout = () => {
     auth.logout();
@@ -45,18 +50,27 @@ export function Layout() {
             >
               Rooms
             </NavLink>
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => setCreateRoomDialogOpen(true)}
+              title="Create a new room"
+            >
+              <Plus className="h-5 w-5" />
+            </Button>
           </nav>
 
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
-            <span className="hidden max-w-44 truncate rounded-full border border-(--border) bg-(--surface) px-3 py-1.5 text-sm text-(--muted) sm:inline-block">
+            <span className="text-muted-foreground hidden max-w-44 truncate rounded-full border border-(--border) bg-(--surface) px-3 py-1.5 text-sm sm:inline-block">
               {auth.user?.displayName}
             </span>
-            <button
+            <Button
               onClick={handleLogout}
-              className="rounded-md border border-(--border) bg-(--surface) px-3 py-1.5 text-sm font-medium transition hover:-translate-y-0.5 hover:bg-(--bg) hover:shadow"
+              variant="outline"
+              className="h-9 px-3 text-sm font-semibold"
             >
               Logout
-            </button>
+            </Button>
           </div>
         </div>
       </header>
@@ -64,6 +78,11 @@ export function Layout() {
       <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
         <Outlet /> {/* protected page renders here */}
       </main>
+
+      <CreateRoomDialog
+        open={createRoomDialogOpen}
+        onOpenChange={setCreateRoomDialogOpen}
+      />
     </div>
   );
 }

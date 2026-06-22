@@ -13,7 +13,14 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/login" element={<LoginForm />} />
+        <Route
+          path="/login"
+          element={
+            <main className="grid min-h-svh place-items-center px-4">
+              <LoginForm />
+            </main>
+          }
+        />
         <Route path="/register" element={<RegisterForm />} />
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>

@@ -4,6 +4,9 @@ import Validate from "../utils/Validation";
 import ValidationList from "./ValidationList";
 import { useAuth } from "../hooks/useAuth";
 import { Navigate, useLocation, useNavigate } from "react-router";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
 
 export default function LoginForm() {
   const auth = useAuth();
@@ -69,10 +72,12 @@ export default function LoginForm() {
         </div>
       ) : null}
 
-      <label className="flex flex-col gap-1">
-        <span className="text-sm text-(--muted)">Email</span>
-        <input
-          className="focus-visible:ring-brand w-full rounded-md border border-(--border) bg-(--bg) px-3 py-2 text-(--text) focus:outline-none focus-visible:ring-2"
+      <div className="flex flex-col gap-1">
+        <Label htmlFor="login-email" className="text-muted-foreground text-sm">
+          Email
+        </Label>
+        <Input
+          id="login-email"
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -80,12 +85,17 @@ export default function LoginForm() {
           required
         />
         <ValidationList errors={emailErrors} />
-      </label>
+      </div>
 
-      <label className="flex flex-col gap-1">
-        <span className="text-sm text-(--muted)">Password</span>
-        <input
-          className="focus-visible:ring-brand w-full rounded-md border border-(--border) bg-(--bg) px-3 py-2 text-(--text) focus:outline-none focus-visible:ring-2"
+      <div className="flex flex-col gap-1">
+        <Label
+          htmlFor="login-password"
+          className="text-muted-foreground text-sm"
+        >
+          Password
+        </Label>
+        <Input
+          id="login-password"
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -93,15 +103,15 @@ export default function LoginForm() {
           required
         />
         <ValidationList errors={passwordErrors} />
-      </label>
+      </div>
 
-      <button
+      <Button
         type="submit"
         disabled={!isValid || submitting}
-        className="bg-brand hover:bg-brand-dark mt-2 rounded-md px-4 py-2 font-semibold text-(--button-text) transition disabled:cursor-not-allowed disabled:opacity-60"
+        className="bg-brand hover:bg-brand-dark mt-2 h-10 font-semibold text-(--button-text)"
       >
         {submitting ? "Signing in..." : "Sign in"}
-      </button>
+      </Button>
     </form>
   );
 }

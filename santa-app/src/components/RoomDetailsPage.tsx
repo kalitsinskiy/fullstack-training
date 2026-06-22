@@ -88,7 +88,7 @@ export function RoomDetailsPage() {
   if (isLoading) {
     return (
       <section className="rounded-3xl border border-(--border) bg-(--surface) p-6 shadow">
-        <p className="text-sm text-(--muted)">Loading room details...</p>
+        <p className="text-muted-foreground text-sm">Loading room details...</p>
       </section>
     );
   }
@@ -115,14 +115,14 @@ export function RoomDetailsPage() {
   return (
     <section className="space-y-6">
       <header className="rounded-3xl border border-(--border) bg-(--surface) p-6 shadow">
-        <p className="text-xs tracking-[0.22em] text-(--muted) uppercase">
+        <p className="text-muted-foreground text-xs tracking-[0.22em] uppercase">
           Room details
         </p>
         <h2 className="mt-2 text-3xl font-semibold text-(--text)">
           {room.name}
         </h2>
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          <span className="rounded-full bg-(--bg) px-3 py-1.5 font-mono text-sm text-(--muted)">
+          <span className="text-muted-foreground rounded-full bg-(--bg) px-3 py-1.5 font-mono text-sm">
             Invite: {room.inviteCode}
           </span>
           <span
@@ -135,21 +135,21 @@ export function RoomDetailsPage() {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <article className="rounded-2xl border border-(--border) bg-(--surface) p-4">
-          <p className="text-xs tracking-[0.18em] text-(--muted) uppercase">
+          <p className="text-muted-foreground text-xs tracking-[0.18em] uppercase">
             Participants
           </p>
           <p className="mt-2 text-2xl font-semibold">{participantCount}</p>
         </article>
         <article className="rounded-2xl border border-(--border) bg-(--surface) p-4">
-          <p className="text-xs tracking-[0.18em] text-(--muted) uppercase">
+          <p className="text-muted-foreground text-xs tracking-[0.18em] uppercase">
             Creator ID
           </p>
-          <p className="mt-2 truncate font-mono text-sm text-(--muted)">
+          <p className="text-muted-foreground mt-2 font-mono text-sm break-all">
             {room.creatorId}
           </p>
         </article>
         <article className="rounded-2xl border border-(--border) bg-(--surface) p-4">
-          <p className="text-xs tracking-[0.18em] text-(--muted) uppercase">
+          <p className="text-muted-foreground text-xs tracking-[0.18em] uppercase">
             Draw date
           </p>
           <p className="mt-2 text-sm text-(--text)">
@@ -157,7 +157,7 @@ export function RoomDetailsPage() {
           </p>
         </article>
         <article className="rounded-2xl border border-(--border) bg-(--surface) p-4">
-          <p className="text-xs tracking-[0.18em] text-(--muted) uppercase">
+          <p className="text-muted-foreground text-xs tracking-[0.18em] uppercase">
             Updated
           </p>
           <p className="mt-2 text-sm text-(--text)">

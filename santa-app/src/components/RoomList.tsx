@@ -81,7 +81,7 @@ export default function RoomList() {
     <section className="bg-(--bg)">
       <div className="mx-auto max-w-6xl p-6">
         <div className="mb-6 space-y-2 text-center">
-          <p className="text-sm tracking-[0.28em] text-(--muted) uppercase">
+          <p className="text-muted-foreground text-sm tracking-[0.28em] uppercase">
             Rooms
           </p>
           <h2 className="text-3xl font-semibold text-(--text)">Your rooms</h2>

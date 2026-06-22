@@ -2,6 +2,9 @@ import React, { useState } from "react";
 import type ValidationError from "../utils/ValidationError";
 import Validate from "../utils/Validation";
 import ValidationList from "./ValidationList";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
 
 export default function RegisterForm() {
   const [name, setName] = useState("");
@@ -50,61 +53,81 @@ export default function RegisterForm() {
     >
       <h3 className="text-lg font-semibold text-(--text)">Register</h3>
 
-      <label className="flex flex-col gap-1">
-        <span className="text-sm text-(--muted)">Full name</span>
-        <input
-          className="focus-visible:ring-brand w-full rounded-md border border-(--border) bg-(--bg) px-3 py-2 text-(--text) focus:outline-none focus-visible:ring-2"
+      <div className="flex flex-col gap-1">
+        <Label
+          htmlFor="register-name"
+          className="text-muted-foreground text-sm"
+        >
+          Full name
+        </Label>
+        <Input
+          id="register-name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
         />
         <ValidationList errors={nameErrors} />
-      </label>
+      </div>
 
-      <label className="flex flex-col gap-1">
-        <span className="text-sm text-(--muted)">Email</span>
-        <input
-          className="focus-visible:ring-brand w-full rounded-md border border-(--border) bg-(--bg) px-3 py-2 text-(--text) focus:outline-none focus-visible:ring-2"
+      <div className="flex flex-col gap-1">
+        <Label
+          htmlFor="register-email"
+          className="text-muted-foreground text-sm"
+        >
+          Email
+        </Label>
+        <Input
+          id="register-email"
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
         />
         <ValidationList errors={emailErrors} />
-      </label>
+      </div>
 
-      <label className="flex flex-col gap-1">
-        <span className="text-sm text-(--muted)">Password</span>
-        <input
-          className="focus-visible:ring-brand w-full rounded-md border border-(--border) bg-(--bg) px-3 py-2 text-(--text) focus:outline-none focus-visible:ring-2"
+      <div className="flex flex-col gap-1">
+        <Label
+          htmlFor="register-password"
+          className="text-muted-foreground text-sm"
+        >
+          Password
+        </Label>
+        <Input
+          id="register-password"
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
         />
         <ValidationList errors={passwordErrors} />
-      </label>
+      </div>
 
-      <label className="flex flex-col gap-1">
-        <span className="text-sm text-(--muted)">Confirm password</span>
-        <input
-          className="focus-visible:ring-brand w-full rounded-md border border-(--border) bg-(--bg) px-3 py-2 text-(--text) focus:outline-none focus-visible:ring-2"
+      <div className="flex flex-col gap-1">
+        <Label
+          htmlFor="register-confirm"
+          className="text-muted-foreground text-sm"
+        >
+          Confirm password
+        </Label>
+        <Input
+          id="register-confirm"
           type="password"
           value={confirm}
           onChange={(e) => setConfirm(e.target.value)}
           required
         />
         <ValidationList errors={confirmErrors} />
-      </label>
+      </div>
 
       <div className="flex items-center gap-3">
-        <button
+        <Button
           type="submit"
-          className="bg-brand hover:bg-brand-dark rounded-md px-4 py-2 font-semibold text-(--button-text) transition disabled:cursor-not-allowed disabled:opacity-60"
+          className="bg-brand hover:bg-brand-dark h-10 rounded-md px-4 font-semibold text-(--button-text)"
           disabled={isDisabled}
         >
           Create account
-        </button>
+        </Button>
       </div>
     </form>
   );

@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 import { useAuth } from "../hooks/useAuth";
 import { useApi } from "../hooks/useApi";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
 
 interface RoomResponse {
   id: string;
@@ -264,40 +267,49 @@ export function WishlistPage() {
             key={`item-${index}`}
             className="grid gap-3 rounded-2xl border border-(--border) bg-(--surface) p-4 md:grid-cols-[1.6fr_1fr_160px_auto]"
           >
-            <label className="flex flex-col gap-1">
-              <span className="text-xs tracking-[0.15em] text-(--muted) uppercase">
+            <div className="flex flex-col gap-1">
+              <Label
+                htmlFor={`wishlist-name-${index}`}
+                className="text-muted-foreground text-xs tracking-[0.15em] uppercase"
+              >
                 Name
-              </span>
-              <input
-                className="w-full rounded-md border border-(--border) bg-(--bg) px-3 py-2 text-sm text-(--text)"
+              </Label>
+              <Input
+                id={`wishlist-name-${index}`}
                 value={item.name}
                 onChange={(event) =>
                   updateItem(index, "name", event.target.value)
                 }
                 placeholder="Gift idea"
               />
-            </label>
+            </div>
 
-            <label className="flex flex-col gap-1">
-              <span className="text-xs tracking-[0.15em] text-(--muted) uppercase">
+            <div className="flex flex-col gap-1">
+              <Label
+                htmlFor={`wishlist-url-${index}`}
+                className="text-muted-foreground text-xs tracking-[0.15em] uppercase"
+              >
                 URL
-              </span>
-              <input
-                className="w-full rounded-md border border-(--border) bg-(--bg) px-3 py-2 text-sm text-(--text)"
+              </Label>
+              <Input
+                id={`wishlist-url-${index}`}
                 value={item.url}
                 onChange={(event) =>
                   updateItem(index, "url", event.target.value)
                 }
                 placeholder="https://..."
               />
-            </label>
+            </div>
 
-            <label className="flex flex-col gap-1">
-              <span className="text-xs tracking-[0.15em] text-(--muted) uppercase">
+            <div className="flex flex-col gap-1">
+              <Label
+                htmlFor={`wishlist-priority-${index}`}
+                className="text-muted-foreground text-xs tracking-[0.15em] uppercase"
+              >
                 Priority
-              </span>
-              <input
-                className="w-full rounded-md border border-(--border) bg-(--bg) px-3 py-2 text-sm text-(--text)"
+              </Label>
+              <Input
+                id={`wishlist-priority-${index}`}
                 value={item.priority}
                 onChange={(event) =>
                   updateItem(index, "priority", event.target.value)
@@ -305,43 +317,46 @@ export function WishlistPage() {
                 placeholder="0"
                 inputMode="numeric"
               />
-            </label>
+            </div>
 
             <div className="flex items-end justify-end">
-              <button
+              <Button
                 type="button"
                 onClick={() => removeItem(index)}
-                className="rounded-md border border-(--border) bg-(--bg) px-3 py-2 text-sm font-medium transition hover:bg-red-50"
+                variant="outline"
+                className="h-9 px-3 text-sm font-medium hover:bg-red-50"
               >
                 Remove
-              </button>
+              </Button>
             </div>
           </article>
         ))}
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <button
+        <Button
           type="button"
           onClick={addItem}
-          className="rounded-full border border-(--border) bg-(--surface) px-4 py-2 text-sm font-medium transition hover:bg-(--bg)"
+          variant="outline"
+          className="rounded-full px-4 text-sm font-medium"
         >
           Add item
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
           onClick={handleSave}
           disabled={isSaving}
-          className="bg-brand hover:bg-brand-dark rounded-full px-4 py-2 text-sm font-semibold text-(--button-text) transition disabled:cursor-not-allowed disabled:opacity-60"
+          className="bg-brand hover:bg-brand-dark rounded-full px-4 text-sm font-semibold text-(--button-text)"
         >
           {isSaving ? "Saving..." : "Save wishlist"}
-        </button>
-        <Link
-          to={room ? `/rooms/${room.id}` : "/rooms"}
-          className="rounded-full border border-(--border) bg-(--surface) px-4 py-2 text-sm font-medium transition hover:bg-(--bg)"
+        </Button>
+        <Button
+          asChild
+          variant="outline"
+          className="rounded-full px-4 text-sm font-medium"
         >
-          Back to room
-        </Link>
+          <Link to={room ? `/rooms/${room.id}` : "/rooms"}>Back to room</Link>
+        </Button>
       </div>
     </section>
   );

@@ -25,6 +25,15 @@
 // @ts-nocheck — exercise file. Pick one path, remove the no-check directive after you fill it in.
 
 import { useState } from 'react';
+import { Button } from '../components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '../components/ui/card';
 
 interface Room {
   id: string;
@@ -40,9 +49,27 @@ interface RoomCardProps {
 }
 
 const sampleRooms: Room[] = [
-  { id: '1', name: 'Office Party 2025', code: 'ABC123', memberCount: 8,  status: 'pending' },
-  { id: '2', name: 'Family Exchange',   code: 'DEF456', memberCount: 5,  status: 'drawn'   },
-  { id: '3', name: 'Friends Christmas', code: 'GHI789', memberCount: 12, status: 'closed'  },
+  {
+    id: '1',
+    name: 'Office Party 2025',
+    code: 'ABC123',
+    memberCount: 8,
+    status: 'pending',
+  },
+  {
+    id: '2',
+    name: 'Family Exchange',
+    code: 'DEF456',
+    memberCount: 5,
+    status: 'drawn',
+  },
+  {
+    id: '3',
+    name: 'Friends Christmas',
+    code: 'GHI789',
+    memberCount: 12,
+    status: 'closed',
+  },
 ];
 
 // ================================================
@@ -59,8 +86,37 @@ const sampleRooms: Room[] = [
 // TODO PATH A: implement RoomCardMUI using MUI components.
 // Replace this stub with your implementation.
 
-function RoomCardMUI(_props: RoomCardProps) {
-  return null; // TODO
+function RoomCardMUI(props: RoomCardProps) {
+  const { room, onOpen } = props;
+
+  const badgeClass =
+    room.status === 'pending'
+      ? 'bg-amber-100 text-amber-800'
+      : room.status === 'drawn'
+        ? 'bg-emerald-100 text-emerald-800'
+        : 'bg-slate-100 text-slate-700';
+
+  return (
+    <Card className="rounded-2xl">
+      <CardHeader>
+        <div className="flex items-start justify-between gap-3">
+          <CardTitle className="line-clamp-2 break-words">{room.name}</CardTitle>
+          <span
+            className={`inline-flex shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${badgeClass}`}
+          >
+            {room.status}
+          </span>
+        </div>
+        <CardDescription>
+          Code: <span className="font-mono">{room.code}</span> · {room.memberCount} members
+        </CardDescription>
+      </CardHeader>
+      <CardContent />
+      <CardFooter>
+        <Button onClick={onOpen}>Open</Button>
+      </CardFooter>
+    </Card>
+  );
 }
 
 // ================================================
@@ -79,8 +135,38 @@ function RoomCardMUI(_props: RoomCardProps) {
 // TODO PATH B: implement RoomCardShadcn using Tailwind utilities (and Radix-based dialog later).
 // Replace this stub with your implementation.
 
-function RoomCardShadcn(_props: RoomCardProps) {
-  return null; // TODO
+function RoomCardShadcn(props: RoomCardProps) {
+  const { room, onOpen } = props;
+
+  const badgeClass =
+    room.status === 'pending'
+      ? 'bg-amber-100 text-amber-800'
+      : room.status === 'drawn'
+        ? 'bg-emerald-100 text-emerald-800'
+        : 'bg-slate-100 text-slate-700';
+
+  return (
+    <Card className="rounded-2xl">
+      <CardHeader>
+        <div className="flex items-start justify-between gap-2">
+          <CardTitle className="line-clamp-2 break-words">{room.name}</CardTitle>
+          <span
+            className={`inline-flex shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${badgeClass}`}
+          >
+            {room.status}
+          </span>
+        </div>
+        <CardDescription>
+          Code: <span className="font-mono">{room.code}</span> · {room.memberCount} members
+        </CardDescription>
+      </CardHeader>
+      <CardFooter>
+        <Button size="sm" onClick={onOpen}>
+          Open
+        </Button>
+      </CardFooter>
+    </Card>
+  );
 }
 
 // ================================================
@@ -94,10 +180,21 @@ export function RoomCardDemo() {
 
   return (
     <div style={{ padding: 24, fontFamily: 'system-ui, sans-serif' }}>
-      <header style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+      <header
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          marginBottom: 16,
+        }}
+      >
         <h2 style={{ margin: 0 }}>RoomCard exercise</h2>
-        <button onClick={() => setPath('A')} disabled={path === 'A'}>Path A — MUI</button>
-        <button onClick={() => setPath('B')} disabled={path === 'B'}>Path B — Tailwind</button>
+        <button onClick={() => setPath('A')} disabled={path === 'A'}>
+          Path A — MUI
+        </button>
+        <button onClick={() => setPath('B')} disabled={path === 'B'}>
+          Path B — Tailwind
+        </button>
       </header>
 
       <div
