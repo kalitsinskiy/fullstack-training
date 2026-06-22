@@ -140,6 +140,32 @@ cd santa-notifications && npm install && cp .env.example .env && npm run dev # :
 cd santa-app && npm install && cp .env.example .env && npm run dev          # :5173
 ```
 
+Open **http://localhost:5173**. The browser client talks to the backends through
+Vite's **same-origin proxy** (`/api` → santa-api :3001, `/api/notifications`,
+`/api/messages`, `/socket.io` → santa-notifications :3002 — configured in
+`vite.config.ts`). `.env.example` leaves `VITE_API_URL` / `VITE_WS_URL` **empty**
+on purpose so the proxy is used; you don't need to set or change anything for the
+default localhost setup.
+
+#### Run it on your LAN (open from your phone)
+
+Because the client is same-origin (the proxy forwards to the backends on
+`localhost`), it works from another device on the same Wi-Fi with **no CORS and no
+hardcoded IP** — and it keeps working if your machine's IP changes:
+
+```bash
+cd santa-app && npm run dev -- --host        # binds 0.0.0.0; prints a "Network:" URL
+```
+
+Vite prints something like `Network: http://192.168.1.42:5173/`. Open that URL on
+your phone (same Wi-Fi) and the whole app works — login, rooms, real-time
+messages — all proxied to the backends on your machine.
+
+- Keep `VITE_API_URL` / `VITE_WS_URL` **empty** for this (absolute `localhost`
+  URLs would make the phone call *its own* localhost and fail).
+- If you can't connect, allow incoming connections for `node` in your OS firewall,
+  and make sure the phone is on the same network (not guest Wi-Fi / cellular).
+
 All three apps now **boot**, but the API is a **skeleton**: every service method
 throws `501 Not Implemented`. So registering or logging in fails until you do the
 bootstrap below. That's intentional — the template hands you the structure
