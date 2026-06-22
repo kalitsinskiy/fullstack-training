@@ -26,7 +26,7 @@ function validateConfirmPassword(value: string, password: string): string | null
   return null;
 }
 
-export function RegisterForm() {
+export function RegisterForm({ onSuccess }: { onSuccess?: () => void }) {
   const auth = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -64,8 +64,8 @@ export function RegisterForm() {
         const text = await res.text();
         throw new Error(text || "Registration failed");
       }
-      const user = await auth.login(email, password);
-      console.log("registered and logged in", user.email);
+      await auth.login(email, password);
+      onSuccess?.();
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Registration failed");
     } finally {

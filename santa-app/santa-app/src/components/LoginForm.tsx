@@ -13,7 +13,7 @@ function validatePassword(value: string): string | null {
   return null;
 }
 
-export function LoginForm() {
+export function LoginForm({ onSuccess }: { onSuccess?: () => void }) {
   const auth = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -33,8 +33,8 @@ export function LoginForm() {
     try {
       setSubmitting(true);
       setSubmitError(null);
-      const user = await auth.login(email, password);
-      console.log("logged in", user.email);
+      await auth.login(email, password);
+      onSuccess?.();
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Login failed");
     } finally {
