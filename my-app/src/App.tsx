@@ -10,6 +10,8 @@ import ThemeSwitcherApp from './exercises/theme-switcher';
 import MultiPageApp from './exercises/multi-page-app';
 import ProtectedApp from './exercises/protected-app';
 import { RoomCardDemo } from './exercises/build-room-card';
+import MultiStepCheckoutDemo from './exercises/multi-step-checkout';
+import ProfileFormDemo from './exercises/profile-form';
 
 type RouterDemo = 'multi-page' | 'protected';
 
@@ -51,6 +53,8 @@ function App() {
         <PostList />
         <ThemeSwitcherApp />
         <RoomCardDemo />
+        <MultiStepCheckoutDemo />
+        <ProfileFormDemo />
         <div style={{ marginTop: 32, display: 'flex', gap: 12 }}>
           <button onClick={() => setActiveDemo('multi-page')}>Open Multi-Page App →</button>
           <button onClick={() => setActiveDemo('protected')}>Open Protected App →</button>
