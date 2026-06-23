@@ -46,20 +46,19 @@ By the end of this lesson you will have:
 ## 2. The design — build the UI from mockups
 
 You are **not** handed a finished frontend. You get structure, an approach, and
-**Figma mockups** to implement.
+**mockups** to implement.
 
-- **Mockups:** [`template/santa-app/docs/mockups/`](template/santa-app/docs/mockups/) —
-  all 8 screens, mobile **and** desktop, in the Santa-warm theme (PNG, plus the
-  [Figma file](https://www.figma.com/design/vzwQuXGRqBQNUzpMlHtbvR)).
-- **Design system:** [`template/santa-app/docs/design-system.md`](template/santa-app/docs/design-system.md) +
-  [`design-tokens.json`](template/santa-app/docs/design-tokens.json) —
+All design lives in [`santa-app/design/`](template/santa-app/design/) — beside the app you build:
+
+- **Mockups:** [`santa-app/design/screens/`](template/santa-app/design/screens/) —
+  all 8 screens, mobile **and** desktop, in the Santa-warm theme (PNG, rendered from the live app).
+- **Design system:** [`design-system.md`](template/santa-app/design/design-system.md) +
+  [`design-tokens.json`](template/santa-app/design/design-tokens.json) —
   exact colors, typography, spacing, radii, component sizes, breakpoints. These
   map 1:1 to the CSS variables in `santa-app/src/index.css`.
 
-> **You don't need Figma Dev Mode** (it's paid). All exact values are in
-> `design-system.md` / `design-tokens.json`; the PNGs give you the layout. On a
-> free Figma account you can still click a layer to see its Design-panel
-> properties. If you *do* have Dev Mode, use it — same tokens.
+> **No Figma needed.** Everything is local: exact values in `design-system.md` /
+> `design-tokens.json`, and the PNG screens in `design/screens/` give you the layout.
 - **Worked example:** `santa-app/src/pages/LoginPage.tsx` is the one fully-built
   screen. Study it — tokens + shadcn components, an axios call through `api`,
   errors via `toast`, auth via `useAuth`, routing. Every other page is a stub
@@ -138,6 +137,32 @@ cd santa-notifications && npm install && cp .env.example .env && npm run dev # :
 cd santa-app && npm install && cp .env.example .env && npm run dev          # :5173
 ```
 
+Open **http://localhost:5173**. The browser client talks to the backends through
+Vite's **same-origin proxy** (`/api` → santa-api :3001, `/api/notifications`,
+`/api/messages`, `/socket.io` → santa-notifications :3002 — configured in
+`vite.config.ts`). `.env.example` leaves `VITE_API_URL` / `VITE_WS_URL` **empty**
+on purpose so the proxy is used; you don't need to set or change anything for the
+default localhost setup.
+
+#### Run it on your LAN (open from your phone)
+
+Because the client is same-origin (the proxy forwards to the backends on
+`localhost`), it works from another device on the same Wi-Fi with **no CORS and no
+hardcoded IP** — and it keeps working if your machine's IP changes:
+
+```bash
+cd santa-app && npm run dev -- --host        # binds 0.0.0.0; prints a "Network:" URL
+```
+
+Vite prints something like `Network: http://192.168.1.42:5173/`. Open that URL on
+your phone (same Wi-Fi) and the whole app works — login, rooms, real-time
+messages — all proxied to the backends on your machine.
+
+- Keep `VITE_API_URL` / `VITE_WS_URL` **empty** for this (absolute `localhost`
+  URLs would make the phone call *its own* localhost and fail).
+- If you can't connect, allow incoming connections for `node` in your OS firewall,
+  and make sure the phone is on the same network (not guest Wi-Fi / cellular).
+
 All three apps now **boot**, but the API is a **skeleton**: every service method
 throws `501 Not Implemented`. So registering or logging in fails until you do the
 bootstrap below. That's intentional — the template hands you the structure
@@ -156,7 +181,7 @@ bodies (each has a `TODO` describing what it should do):
 |---|---|---|
 | `auth/auth.service.ts` | `register`, `login` (bcrypt hash/compare, sign JWT) | — |
 | `users/users.service.ts` | `create`, `findByEmail`, `findById`, `updateCurrentUser` | — |
-| `rooms/rooms.service.ts` | `create`, `findByUser`, `findById`, `findByIdForUser`, `join` | `draw`, `getAssignment` → **Lesson 03** |
+| `rooms/rooms.service.ts` | `create`, `findByUser`, `findByIdForUser`, `join` | `draw`, `getAssignment` → **Lesson 03** |
 | `wishlist/wishlist.service.ts` | `set`, `get` | — |
 
 **Your spec, three sources that agree:**
@@ -181,6 +206,30 @@ example**) — you should land on the rooms dashboard and be able to create a ro
 > The `RegisterPage` UI is itself a stub you build later from the mockups; for now
 > Swagger (http://localhost:3001/docs) or the curl above creates your first user.
 
+### Stretch — unique room names per creator (optional improvement)
+
+Right now nothing stops one user from creating several rooms all called
+"Office Santa" — confusing when they open their dashboard. Make a room name
+**unique per creator** (different users may still reuse the same name):
+
+- Add a compound unique index in `room.schema.ts`:
+  `RoomSchema.index({ creatorId: 1, name: 1 }, { unique: true })`.
+- In `RoomsService.create`, catch the duplicate-key error (Mongo `code === 11000`)
+  and throw `ConflictException` → the API returns **409** instead of a 500.
+- Trim the name before saving. (Optional: make it case-insensitive with a
+  collation `{ locale: 'en', strength: 2 }` on the index so "Office" and "office"
+  collide too.)
+- Document the new `409` on `POST /rooms` and turn the `it.todo` for it green.
+
+This is scoped to ONE creator on purpose — it's a UX guard against your own
+duplicates, not a system-wide name reservation.
+
+> ⚠️ Gotcha: a unique index will **silently fail to build** if the collection
+> already contains duplicates — Mongoose `autoIndex` swallows the error, so the
+> constraint just appears not to work. Remove existing duplicates first, then
+> confirm the index exists (`db.rooms.getIndexes()`); in code you can force a
+> rebuild with `RoomModel.syncIndexes()`.
+
 ---
 
 ## 5. Choose your starting point
@@ -202,6 +251,9 @@ copy out what you want.
 Nothing is mandatory — the template unblocks you, it doesn't replace your work.
 See [`template/README.md`](template/README.md) for copy/run details.
 
+> Whichever option you pick, copy the template's `docker-compose.yml` to the repo
+> root — the older root compose has both backends commented out and stale images.
+
 > Either way, the **API contract** is the source of truth:
 > [`template/santa-api/docs/api-contract.md`](template/santa-api/docs/api-contract.md),
 > mirrored by `santa-app/src/types/api.ts`.
@@ -219,13 +271,14 @@ Each lesson adds one capability across the stack. No separate exercises — the
 | 01 | Docker & Infrastructure | Dockerfiles, full compose stack |
 | 02 | Environment & Config | Typed env for all three apps |
 | 03 | Rooms & Draw | Derangement, single-document atomic draw, room + draw UI |
-| 04 | Redis | Caching, TTL invite codes, rate limiting |
-| 05 | RabbitMQ | Event publish/consume between services |
-| 06 | Notifications | HTTP inter-service calls, notifications UI |
-| 07 | WebSockets | Real-time push, `useSocket`, toasts |
-| 08 | Anonymous Messaging | Mediator relay, chat UI |
-| 09 | Testing Microservices | Cross-service + Playwright E2E |
-| 10 | CI/CD & Deployment | Local hooks + manual deploy to free tiers |
+| 04 | Authorization: Roles & Permissions | Owner/member roles, permission guard, owner-only endpoints, FE gating |
+| 05 | Redis | Caching, TTL invite codes, rate limiting |
+| 06 | RabbitMQ | Event publish/consume between services |
+| 07 | Notifications | HTTP inter-service calls, notifications UI |
+| 08 | WebSockets | Real-time push, `useSocket`, toasts |
+| 09 | Anonymous Messaging | Mediator relay, chat UI |
+| 10 | Testing Microservices | Cross-service + Playwright E2E |
+| 11 | CI/CD & Deployment | Local hooks + manual deploy to free tiers |
 
 ## How to work
 

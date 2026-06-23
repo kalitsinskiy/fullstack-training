@@ -13,5 +13,7 @@ ENV NODE_ENV=production
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 COPY --from=build /app/dist ./dist
+# Run as the unprivileged built-in `node` user, not root.
+USER node
 EXPOSE 3002
 CMD ["node", "dist/server.js"]

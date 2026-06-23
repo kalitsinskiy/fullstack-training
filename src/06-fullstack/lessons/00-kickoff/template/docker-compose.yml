@@ -69,6 +69,13 @@ services:
     restart: unless-stopped
     ports:
       - "3001:3001"
+    # Liveness probe — node has global fetch, so no curl/wget needed in the image.
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3001/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 25s
     environment:
       NODE_ENV: production
       PORT: 3001
@@ -95,6 +102,12 @@ services:
     restart: unless-stopped
     ports:
       - "3002:3002"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3002/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 25s
     environment:
       NODE_ENV: production
       PORT: 3002

@@ -9,7 +9,7 @@ re-export them from Figma.
 | `snowflake.svg` | Frost-blue snowflake | Decorative scatter on the Rooms dashboard |
 
 Colors are the design tokens: hat red = `--primary` (`#C2410C`), snowflake =
-`--frost` (`#A9C5D1`). See [`../../docs/design-system.md`](../../docs/design-system.md).
+`--frost` (`#A9C5D1`). See [`../../design/design-system.md`](../../design/design-system.md).
 
 ## How to use
 
