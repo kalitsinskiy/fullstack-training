@@ -1,5 +1,6 @@
 import { Link, NavLink, Outlet, useNavigate } from "react-router";
 import { useAuth } from "../contexts/AuthContext";
+import { CreateRoomDialog } from "./CreateRoomDialog";
 
 export function Layout() {
   const auth = useAuth();
@@ -28,6 +29,7 @@ export function Layout() {
           </NavLink>
         </nav>
         <div className="flex items-center gap-3">
+          <CreateRoomDialog />
           <span className="text-sm">{auth.user?.displayName}</span>
           <button
             type="button"
