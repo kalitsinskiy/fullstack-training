@@ -7,6 +7,8 @@ import PostList from '../exercises 2/use-fetch';
 import MultiPageApp from '../exercises 3/multi-page-app';
 import ProtectedApp from '../exercises 3/protected-app';
 import { RoomCardDemo } from '../exercises 4/build-room-card';
+import MultiStepCheckout from '../exercises 5/multi-step-checkout';
+import ProfileFormDemo from '../exercises 5/profile-form';
 
 const exercises = [
   { id: 'counter', label: 'Counter', component: <Counter /> },
@@ -16,6 +18,8 @@ const exercises = [
   { id: 'multi-page-app', label: 'Multi-Page App', component: <MultiPageApp /> },
   { id: 'protected-app', label: 'Protected App', component: <ProtectedApp /> },
   { id: 'build-room-card', label: 'Build Room Card', component: <RoomCardDemo /> },
+  { id: 'multi-step-checkout', label: 'Multi-Step Checkout', component: <MultiStepCheckout /> },
+  { id: 'profile-form', label: 'Profile Form', component: <ProfileFormDemo /> },
 ];
 
 function App() {
