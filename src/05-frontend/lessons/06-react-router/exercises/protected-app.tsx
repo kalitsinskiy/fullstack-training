@@ -29,16 +29,9 @@
 // Flow: open app → redirected to /login → enter name → see dashboard
 // → navigate to profile → logout → redirected to /login
 
+import React from 'react';
 import { useState, createContext, useContext, ReactNode } from 'react';
-import {
-  BrowserRouter,
-  Routes,
-  Route,
-  Navigate,
-  Outlet,
-  Link,
-  useNavigate,
-} from 'react-router';
+import { BrowserRouter, Routes, Route, Navigate, Outlet, Link, useNavigate } from 'react-router';
 
 // ---- Types ----
 
@@ -55,9 +48,30 @@ interface AuthContextType {
 // - login sets user, logout clears user
 // - isAuthenticated = user !== null
 
+const AuthContext = createContext<AuthContextType | null>(null);
+
+function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<string | null>(null);
+
+  const login = (username: string) => setUser(username);
+  const logout = () => setUser(null);
+
+  return (
+    <AuthContext.Provider value={{ user, isAuthenticated: user !== null, login, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
 // ---- TODO 2: Create useAuth hook ----
 // - useContext(AuthContext)
 // - Throw error if used outside AuthProvider
+
+function useAuth(): AuthContextType {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within an AuthProvider');
+  return ctx;
+}
 
 // ---- TODO 3: Create ProtectedRoute component ----
 // - Use useAuth() to check isAuthenticated
@@ -66,6 +80,8 @@ interface AuthContextType {
 
 function ProtectedRoute() {
   // TODO: Implement
+  const { isAuthenticated } = useAuth();
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
   return <Outlet />;
 }
 
@@ -77,10 +93,37 @@ function ProtectedRoute() {
 
 function Layout() {
   // TODO: Implement
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
   return (
     <div>
-      <header>Layout header — implement me</header>
-      <main>
+      <header
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '1rem',
+          padding: '1rem',
+          borderBottom: '1px solid #ccc',
+        }}
+      >
+        <span>
+          Welcome, <strong>{user}</strong>
+        </span>
+        <nav style={{ display: 'flex', gap: '1rem' }}>
+          <Link to="/dashboard">Dashboard</Link>
+          <Link to="/profile">Profile</Link>
+        </nav>
+        <button onClick={handleLogout} style={{ marginLeft: 'auto' }}>
+          Logout
+        </button>
+      </header>
+      <main style={{ padding: '1rem' }}>
         <Outlet />
       </main>
     </div>
@@ -95,21 +138,77 @@ function Layout() {
 
 function LoginPage() {
   // TODO: Implement
-  return <div>LoginPage — implement me</div>;
+  const { isAuthenticated, login } = useAuth();
+  const navigate = useNavigate();
+  const [username, setUsername] = useState('');
+  const [error, setError] = useState('');
+
+  if (isAuthenticated) return <Navigate to="/dashboard" replace />;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!username.trim()) {
+      setError('Username cannot be empty');
+      return;
+    }
+    login(username.trim());
+    navigate('/dashboard');
+  };
+
+  return (
+    <div style={{ padding: '2rem' }}>
+      <h1>Login</h1>
+      <form onSubmit={handleSubmit}>
+        <div>
+          <label htmlFor="username">Username: </label>
+          <input
+            id="username"
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="Enter your name"
+          />
+        </div>
+        {error && <p style={{ color: 'red' }}>{error}</p>}
+        <button type="submit" style={{ marginTop: '0.5rem' }}>
+          Login
+        </button>
+      </form>
+    </div>
+  );
 }
 
 // ---- TODO 6: Create Dashboard page ----
 
 function Dashboard() {
   // TODO: Show welcome message with user name
-  return <div>Dashboard — implement me</div>;
+  const { user } = useAuth();
+  return (
+    <div>
+      <h1>Dashboard</h1>
+      <p>
+        Hello, <strong>{user}</strong>! You are now logged in.
+      </p>
+    </div>
+  );
 }
 
 // ---- TODO 7: Create Profile page ----
 
 function Profile() {
   // TODO: Show user profile info
-  return <div>Profile — implement me</div>;
+  const { user } = useAuth();
+  return (
+    <div>
+      <h1>Profile</h1>
+      <p>
+        <strong>Username:</strong> {user}
+      </p>
+      <p>
+        <strong>Status:</strong> Active
+      </p>
+    </div>
+  );
 }
 
 // ---- TODO 8: Wire it all together ----
@@ -121,5 +220,21 @@ function Profile() {
 
 export default function ProtectedApp() {
   // TODO: Implement
-  return <div>ProtectedApp — implement me</div>;
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route element={<ProtectedRoute />}>
+            <Route element={<Layout />}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/profile" element={<Profile />} />
+            </Route>
+          </Route>
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
+  );
 }

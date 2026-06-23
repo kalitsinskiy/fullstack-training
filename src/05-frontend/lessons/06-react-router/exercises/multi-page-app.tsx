@@ -22,15 +22,8 @@
 //
 // To test: render this component in a Vite React app.
 
-import {
-  BrowserRouter,
-  Routes,
-  Route,
-  Link,
-  NavLink,
-  useParams,
-  useNavigate,
-} from 'react-router';
+import React from 'react';
+import { BrowserRouter, Routes, Route, Link, NavLink, useParams, useNavigate } from 'react-router';
 
 // ---- Data ----
 
@@ -55,21 +48,51 @@ const users: User[] = [
 
 function Navigation() {
   // TODO: Implement
-  return <nav>Navigation — implement me</nav>;
+  const navLinkStyle = ({ isActive }: { isActive: boolean }): React.CSSProperties => ({
+    fontWeight: isActive ? 'bold' : 'normal',
+    color: isActive ? '#e25822' : '#333',
+    textDecoration: 'none',
+    marginRight: '1rem',
+  });
+
+  return (
+    <nav style={{ padding: '1rem', borderBottom: '1px solid #ccc', marginBottom: '1rem' }}>
+      <NavLink to="/" end style={navLinkStyle}>
+        Home
+      </NavLink>
+      <NavLink to="/about" style={navLinkStyle}>
+        About
+      </NavLink>
+      <NavLink to="/users" style={navLinkStyle}>
+        Users
+      </NavLink>
+    </nav>
+  );
 }
 
 // ---- TODO 2: Create Home page ----
 
 function Home() {
   // TODO: Implement — show a welcome message
-  return <div>Home — implement me</div>;
+  return (
+    <div>
+      <h1>Welcome to the Santa App!</h1>
+      <p>Use the navigation above to explore the app.</p>
+    </div>
+  );
 }
 
 // ---- TODO 3: Create About page ----
 
 function About() {
   // TODO: Implement — show app description
-  return <div>About — implement me</div>;
+  return (
+    <div>
+      <h1>About</h1>
+      <p>This is a multi-page demo app built with React Router v6.</p>
+      <p>It demonstrates BrowserRouter, Routes, NavLink, Link, useParams, and useNavigate.</p>
+    </div>
+  );
 }
 
 // ---- TODO 4: Create UserList page ----
@@ -78,7 +101,18 @@ function About() {
 
 function UserList() {
   // TODO: Implement
-  return <div>UserList — implement me</div>;
+  return (
+    <div>
+      <h1>Users</h1>
+      <ul>
+        {users.map((user) => (
+          <li key={user.id}>
+            <Link to={`/users/${user.id}`}>{user.name}</Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 // ---- TODO 5: Create UserDetail page ----
@@ -90,7 +124,31 @@ function UserList() {
 
 function UserDetail() {
   // TODO: Implement
-  return <div>UserDetail — implement me</div>;
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const user = users.find((u) => u.id === id);
+
+  if (!user) {
+    return (
+      <div>
+        <p>User not found</p>
+        <button onClick={() => navigate('/users')}>Back to Users</button>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <h1>{user.name}</h1>
+      <p>
+        <strong>Email:</strong> {user.email}
+      </p>
+      <p>
+        <strong>Role:</strong> {user.role}
+      </p>
+      <button onClick={() => navigate('/users')}>Back to Users</button>
+    </div>
+  );
 }
 
 // ---- TODO 6: Create NotFound page ----
@@ -99,7 +157,13 @@ function UserDetail() {
 
 function NotFound() {
   // TODO: Implement
-  return <div>NotFound — implement me</div>;
+  return (
+    <div>
+      <h1>404 — Page Not Found</h1>
+      <p>The page you are looking for does not exist.</p>
+      <Link to="/">Go back to Home</Link>
+    </div>
+  );
 }
 
 // ---- TODO 7: Wire it all up ----
@@ -110,5 +174,18 @@ function NotFound() {
 
 export default function MultiPageApp() {
   // TODO: Implement
-  return <div>MultiPageApp — implement me</div>;
+  return (
+    <BrowserRouter>
+      <Navigation />
+      <main style={{ padding: '0 1rem' }}>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/users" element={<UserList />} />
+          <Route path="/users/:id" element={<UserDetail />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </main>
+    </BrowserRouter>
+  );
 }

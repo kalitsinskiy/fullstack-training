@@ -2,7 +2,11 @@ import { useState } from "react";
 import { clsx } from "clsx";
 import { useAuth } from "../contexts/AuthContext";
 
-export function LoginForm() {
+interface LoginFormProps {
+  onSuccess?: () => void;
+}
+
+export function LoginForm({ onSuccess }: LoginFormProps = {}) {
   const auth = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -39,7 +43,7 @@ export function LoginForm() {
     auth
       .login(email, password)
       .then(() => {
-        console.log("logged in", auth.user?.email);
+        onSuccess?.();
       })
       .catch((err: unknown) => {
         setSubmitError(err instanceof Error ? err.message : "Login failed");

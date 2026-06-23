@@ -1,7 +1,11 @@
 import { useState } from "react";
 import { clsx } from "clsx";
 
-export function RegisterForm() {
+interface RegisterFormProps {
+  onSuccess?: () => void;
+}
+
+export function RegisterForm({ onSuccess }: RegisterFormProps = {}) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -52,6 +56,7 @@ export function RegisterForm() {
     setConfirmError(cErr);
     if (nErr || eErr || pErr || cErr) return;
     console.log("Register:", { name, email, password });
+    onSuccess?.();
   };
 
   return (
