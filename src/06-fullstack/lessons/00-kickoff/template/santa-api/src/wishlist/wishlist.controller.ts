@@ -16,6 +16,8 @@ import {
 } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RequirePermissions } from '../rooms/decorators/require-permissions.decorator';
+import { RoomPermissionsGuard } from '../rooms/guards/room-permissions.guard';
 import { UpdateWishlistDto } from './dto/update-wishlist.dto';
 import { WishlistResponseDto } from './dto/wishlist-response.dto';
 import { WishlistService } from './wishlist.service';
@@ -24,11 +26,12 @@ import type { Wishlist } from './wishlist.types';
 @ApiTags('wishlists')
 @ApiBearerAuth('JWT')
 @Controller('rooms/:roomId/wishlist')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RoomPermissionsGuard)
 export class WishlistController {
   constructor(private readonly wishlistService: WishlistService) {}
 
   @Put()
+  @RequirePermissions('wishlist:set')
   @ApiOperation({
     summary: "Set the current user's wishlist for a room",
     description: 'Creates or replaces the authenticated user wishlist items.',
@@ -46,6 +49,8 @@ export class WishlistController {
   })
   @ApiResponse({ status: 400, description: 'Validation failed' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Missing wishlist:set permission' })
+  @ApiResponse({ status: 404, description: 'Room not found' })
   set(
     @Param('roomId') roomId: string,
     @CurrentUser('id') userId: string,
@@ -55,6 +60,7 @@ export class WishlistController {
   }
 
   @Get(':userId')
+  @RequirePermissions('room:view')
   @ApiOperation({
     summary: "Get a user's wishlist for a room",
     description: 'Returns the wishlist items for the given user in the room.',
@@ -67,6 +73,8 @@ export class WishlistController {
     type: WishlistResponseDto,
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Missing room:view permission' })
+  @ApiResponse({ status: 404, description: 'Room not found / not a participant' })
   async findOne(
     @Param('roomId') roomId: string,
     @Param('userId') userId: string,

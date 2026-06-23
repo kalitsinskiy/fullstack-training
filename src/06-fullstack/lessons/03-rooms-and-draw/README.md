@@ -16,10 +16,9 @@ By the end of this lesson you will have:
 ---
 
 > **Build the UI from the mockup.** This lesson's frontend lives on the
-> **Room detail** screen — Figma frames [mobile](https://www.figma.com/design/vzwQuXGRqBQNUzpMlHtbvR/Secret-Santa-%E2%80%94-Mockups?node-id=33-2) ·
-> [desktop](https://www.figma.com/design/vzwQuXGRqBQNUzpMlHtbvR/Secret-Santa-%E2%80%94-Mockups?node-id=43-2) (see [`santa-app/docs/mockups/`](../00-kickoff/template/santa-app/docs/mockups/)).
+> **Room detail** screen — see the local mockups in [`design/screens/`](../00-kickoff/template/santa-app/design/screens/).
 > Flesh out the `RoomDetailPage` stub (`santa-app/src/pages/RoomDetailPage.tsx`),
-> following the `LoginPage` worked example and the tokens in `docs/design-system.md`.
+> following the `LoginPage` worked example and the tokens in `santa-app/design/design-system.md`.
 
 ## Key Concepts
 
@@ -149,7 +148,7 @@ if (room.participants.length < 3) {
   throw new BadRequestException('Need at least 3 participants to draw');
 }
 
-if (room.createdBy.toString() !== userId) {
+if (room.creatorId.toString() !== userId) {
   throw new ForbiddenException('Only the room creator can trigger the draw');
 }
 ```
@@ -199,11 +198,21 @@ Create the draw endpoint in your rooms or assignments controller:
    - Room status must not be "drawn" already
 3. **Generate assignments** using the derangement function.
 4. **Save atomically** with one `findByIdAndUpdate` — set `status: 'drawn'`,
-   `drawDate`, and the `assignments` array in the same call. A single-document
-   write is atomic, so there is nothing to roll back.
+   `drawDate`, `exchangeDate`, and the `assignments` array in the same call. A
+   single-document write is atomic, so there is nothing to roll back.
 5. **Return** the updated room (or just a success message).
 
 Make sure your Room schema has a `status` field (`'pending' | 'drawn'`, default `'pending'`).
+
+> **The draw sets the gift-exchange date.** The request body carries a **required**
+> `exchangeDate` (ISO 8601) — `{ "exchangeDate": "2026-12-24" }` (see the API
+> contract). Picking it at draw time means everyone learns the day the moment
+> names are drawn. Store it on the room as `exchangeDate` and reject the draw
+> (`400`) if it's missing/invalid. It stays editable afterwards via
+> `PATCH /rooms/:id` (owner only).
+>
+> **Gift budget** is set earlier, when the room is **created**: optional `budget`
+> (number) + `currency` (`$ € £ ₴ zł`), stored on the room and shown to everyone.
 
 ### Step 4: Implement GET /rooms/:id/assignment
 
@@ -235,13 +244,39 @@ In **santa-app**, on the room detail page:
    - The room has fewer than 3 participants
    - The draw has already happened (room status is "drawn")
 
-2. **Trigger the draw**: When clicked, call `POST /api/rooms/:id/draw`. Show a loading state while the request is in flight.
+2. **Trigger the draw**: Clicking "Draw Names" opens a **dialog with a calendar**
+   (date picker) where the owner picks the **gift-exchange date** — the draw button
+   in the dialog stays disabled until a date is chosen. Confirming calls
+   `POST /api/rooms/:id/draw` with `{ exchangeDate }`. Show a loading state while
+   the request is in flight. After the draw, display the exchange date to **all**
+   participants on the room page, and let the owner change it (`PATCH /rooms/:id`).
 
 3. **Show assignment**: After the draw, call `GET /api/rooms/:id/assignment` and display the result:
    - "You are giving a gift to: **Alice**"
    - Show Alice's wishlist items
 
 4. **Handle errors**: Show user-friendly messages for cases like "not enough participants" or "draw already performed."
+
+#### Building the calendar
+
+The date picker is [`react-day-picker`](https://daypicker.dev) (`npm i
+react-day-picker date-fns`). How it should look and behave (see the
+`room-draw-dialog.png` mockup and `design/design-system.md`):
+
+- **Render it inline inside the Dialog — NOT wrapped in a Popover.** A
+  popover-wrapped day-picker dismisses on the day/nav clicks, so dates won't
+  select and the month arrows close it. The Dialog is already the surface.
+- `mode="single"`, controlled via `selected` / `onSelect`; `weekStartsOn={1}`
+  (Monday); `disabled={{ before: today }}` so past days can't be chosen.
+- **Theme it to the palette** — by default react-day-picker is blue. Override its
+  `.rdp-root` CSS vars with a higher-specificity wrapper class (e.g. `.santa-cal`):
+  `--rdp-accent-color: hsl(var(--primary))`, today/​chevrons in `--primary`,
+  selected day = primary fill + `--primary-foreground` text, and
+  `font-family: inherit` (its default font isn't the app's). Import
+  `react-day-picker/style.css` once.
+- Show the chosen date as a readout (`date-fns` `format(d, 'EEE, d MMM yyyy')`) and
+  keep the confirm button disabled until a date is picked. Reuse the same inline
+  `Calendar` in a small Dialog for the owner's "Change date" action.
 
 ### Step 6: Verify the draw is atomic
 
@@ -256,61 +291,54 @@ trigger it again and confirm it is rejected (already drawn).
 
 ```bash
 # 1. Start the stack
-docker-compose up --build
+docker compose up --build
 
-# 2. Register two users and create a room (you should have these from earlier lessons)
-# Register users (adjust to your API)
-curl -X POST http://localhost:3001/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Alice", "email": "alice@test.com", "password": "password123"}'
+# API base is /api; registration takes { email, password, displayName }.
+# 2. Register three users
+curl -s -X POST http://localhost:3001/api/auth/register -H "Content-Type: application/json" \
+  -d '{"displayName": "Alice", "email": "alice@test.com", "password": "Passw0rd!"}'
+curl -s -X POST http://localhost:3001/api/auth/register -H "Content-Type: application/json" \
+  -d '{"displayName": "Bob", "email": "bob@test.com", "password": "Passw0rd!"}'
+curl -s -X POST http://localhost:3001/api/auth/register -H "Content-Type: application/json" \
+  -d '{"displayName": "Charlie", "email": "charlie@test.com", "password": "Passw0rd!"}'
 
-curl -X POST http://localhost:3001/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Bob", "email": "bob@test.com", "password": "password123"}'
+login() { curl -s -X POST http://localhost:3001/api/auth/login -H "Content-Type: application/json" \
+  -d "{\"email\": \"$1\", \"password\": \"Passw0rd!\"}" | jq -r '.accessToken'; }
+TOKEN_ALICE=$(login alice@test.com)
+TOKEN_BOB=$(login bob@test.com)
+TOKEN_CHARLIE=$(login charlie@test.com)
 
-curl -X POST http://localhost:3001/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Charlie", "email": "charlie@test.com", "password": "password123"}'
+# 3. Alice creates a room; capture its id and invite code
+ROOM=$(curl -s -X POST http://localhost:3001/api/rooms \
+  -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN_ALICE" \
+  -d '{"name": "Office Party"}')
+ROOM_ID=$(echo "$ROOM" | jq -r '.id')
+CODE=$(echo "$ROOM" | jq -r '.inviteCode')
 
-# 3. Login as Alice and create a room
-TOKEN_ALICE=$(curl -s -X POST http://localhost:3001/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email": "alice@test.com", "password": "password123"}' | jq -r '.accessToken')
+# 4. Bob and Charlie join with the invite code
+for T in "$TOKEN_BOB" "$TOKEN_CHARLIE"; do
+  curl -s -X POST "http://localhost:3001/api/rooms/$ROOM_ID/join" \
+    -H "Content-Type: application/json" -H "Authorization: Bearer $T" \
+    -d "{\"inviteCode\": \"$CODE\"}" > /dev/null
+done
 
-ROOM_ID=$(curl -s -X POST http://localhost:3001/rooms \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $TOKEN_ALICE" \
-  -d '{"name": "Office Party"}' | jq -r '._id')
-
-# 4. Have Bob and Charlie join the room
-# (use your invite/join flow)
-
-# 5. Try to draw with less than 3 participants (should fail)
-curl -X POST "http://localhost:3001/rooms/$ROOM_ID/draw" \
+# 5. Creator runs the draw (now that there are 3 participants)
+curl -i -X POST "http://localhost:3001/api/rooms/$ROOM_ID/draw" \
   -H "Authorization: Bearer $TOKEN_ALICE"
-# Expected: 400 "Need at least 3 participants"
+# Expected: 200, room with status "drawn" (with < 3 participants it would be 400)
 
-# 6. After all three have joined, trigger the draw
-curl -X POST "http://localhost:3001/rooms/$ROOM_ID/draw" \
-  -H "Authorization: Bearer $TOKEN_ALICE"
-# Expected: 201 with assignments
-
-# 7. Try to draw again (should fail)
-curl -X POST "http://localhost:3001/rooms/$ROOM_ID/draw" \
+# 6. Draw again → rejected
+curl -i -X POST "http://localhost:3001/api/rooms/$ROOM_ID/draw" \
   -H "Authorization: Bearer $TOKEN_ALICE"
 # Expected: 400 "Draw has already been performed"
 
-# 8. Get Alice's assignment
-curl "http://localhost:3001/rooms/$ROOM_ID/assignment" \
-  -H "Authorization: Bearer $TOKEN_ALICE"
-# Expected: { "receiver": { "name": "Bob" or "Charlie", ... } }
-
-# 9. Verify Bob cannot trigger a draw (he's not the creator)
-TOKEN_BOB=$(curl -s -X POST http://localhost:3001/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email": "bob@test.com", "password": "password123"}' | jq -r '.accessToken')
-
-curl -X POST "http://localhost:3001/rooms/$ROOM_ID/draw" \
+# 7. Non-creator (Bob) cannot draw
+curl -i -X POST "http://localhost:3001/api/rooms/$ROOM_ID/draw" \
   -H "Authorization: Bearer $TOKEN_BOB"
 # Expected: 403 Forbidden
+
+# 8. Each user sees only their OWN assignment
+curl "http://localhost:3001/api/rooms/$ROOM_ID/assignment" \
+  -H "Authorization: Bearer $TOKEN_ALICE"
+# Expected: { "receiver": { "id": "...", "displayName": "Bob" | "Charlie", "wishlist": [] } }
 ```

@@ -1,6 +1,5 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Gift } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, getApiErrorMessage } from '@/lib/api';
 import { useAuth } from '@/features/auth/useAuth';
@@ -47,7 +46,9 @@ export function LoginPage() {
     <div className="flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-sm">
         <CardHeader className="items-center text-center">
-          <Gift className="mb-2 size-8 text-primary" />
+          <span className="mb-2 flex size-16 items-center justify-center rounded-full bg-primary-soft">
+            <img src="/decor/santa-hat.svg" alt="" className="size-10" />
+          </span>
           <CardTitle>Welcome back</CardTitle>
           <CardDescription>Sign in to your Secret Santa account</CardDescription>
         </CardHeader>

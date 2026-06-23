@@ -5,6 +5,7 @@ import { WishlistModule } from '../wishlist/wishlist.module';
 import { RoomsController } from './rooms.controller';
 import { Room, RoomSchema } from './schemas/room.schema';
 import { RoomsService } from './rooms.service';
+import { RoomPermissionsGuard } from './guards/room-permissions.guard';
 
 @Module({
   imports: [
@@ -13,6 +14,6 @@ import { RoomsService } from './rooms.service';
     MongooseModule.forFeature([{ name: Room.name, schema: RoomSchema }]),
   ],
   controllers: [RoomsController],
-  providers: [RoomsService],
+  providers: [RoomsService, RoomPermissionsGuard],
 })
 export class RoomsModule {}

@@ -236,6 +236,33 @@ Answer for yourself: *why does the build stage run `npm ci` (all deps) but the
 production stage run `npm ci --omit=dev`?* (Hint: `@nestjs/cli` / `tsc` are only
 needed to build.)
 
+#### Two hardening details the backend images ship with
+
+- **Non-root user.** The production stage ends with `USER node` — the `node:alpine`
+  images include an unprivileged `node` user. Running as root inside a container is
+  a common foot-gun: if the process is compromised, root-in-container is a step
+  toward root-on-host. Switch to `node` after the last `COPY`/`RUN` that needs
+  write access.
+- **Backend healthchecks.** `depends_on: { condition: service_healthy }` only
+  helps if the dependency *declares* a healthcheck. Infra images do; your backends
+  should too, so Compose (and orchestrators) know when they're actually ready —
+  not just "process started". Both backends expose a health route
+  (`GET /api/health` on santa-api, `GET /health` on santa-notifications), so the
+  compose healthcheck just calls it. The image already has Node (with global
+  `fetch`), so no `curl`/`wget` is needed:
+
+  ```yaml
+  healthcheck:
+    test: ["CMD", "node", "-e", "fetch('http://localhost:3001/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+    interval: 10s
+    timeout: 5s
+    retries: 5
+    start_period: 25s   # grace period while the app boots
+  ```
+
+  (You could equally put a `HEALTHCHECK` instruction in the Dockerfile; in compose
+  it's more visible and overridable per-environment.)
+
 ### Step 2: Dockerize the frontend (santa-app) — your turn
 
 The client runs on Vite (`npm run dev`) day-to-day, but production ships as static
@@ -267,13 +294,69 @@ files behind a web server. Write it yourself:
    so the image knows where the API lives.
 
 > Day-to-day you'll still run the client with `npm run dev` for hot-reload — the
-> Dockerfile is for production builds and deployment (Lesson 10).
+> Dockerfile is for production builds and deployment (Lesson 11).
 
 ### Step 3 (optional): Add santa-app to compose
 
 If you want the whole stack in one `docker compose up`, add a `santa-app` service
 that builds from `./santa-app` with `args: { VITE_API_URL: http://localhost:3001 }`
 and maps `5173:80`. Keep it optional — the default workflow is Vite for the client.
+
+### Step 4: Dev vs prod images (hot reload)
+
+The production `Dockerfile` ships a small, immutable image (`node dist/...`) — but
+it has to rebuild on every code change, which is painful while developing. So each
+backend also ships a **`Dockerfile.dev`**: a single stage with all dependencies
+that runs the **watch** command (`npm run start:dev` for santa-api, `npm run dev`
+for santa-notifications).
+
+A second compose file, **`docker-compose.dev.yml`**, overlays the base stack to
+use those dev images, set `NODE_ENV=development`, and **bind-mount the source**
+into the container so edits on the host restart the in-container server:
+
+```yaml
+services:
+  santa-api:
+    build: { context: ./santa-api, dockerfile: Dockerfile.dev }
+    environment: { NODE_ENV: development }
+    volumes:
+      - ./santa-api:/app
+      - /app/node_modules   # keep the container's Linux deps, not the host's
+```
+
+Run each mode:
+
+```bash
+# Production images (default)
+docker compose up --build
+
+# Dev — hot reload: base + dev overlay
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+```
+
+The anonymous `/app/node_modules` volume is the key trick: the bind-mount would
+otherwise hide the container's `node_modules` (built for Linux) behind the host's
+(built for your OS) — that volume preserves the container's.
+
+> ⚠️ Gotcha: that anonymous volume **persists across rebuilds**, so after you add
+> a dependency a plain `--build` is not enough — the stale volume shadows the
+> freshly-installed `node_modules` and you'll get "Cannot find module 'x'". Renew
+> it: `docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+> --renew-anon-volumes santa-api`.
+
+### Inspecting the running services (GUI, optional)
+
+The CLI (`docker compose exec … mongosh / redis-cli`) is enough, but a GUI is
+nicer for poking around. The infra ports are published to your host, so point any
+client at `localhost`:
+
+| Service | Tool | Connect to |
+|---------|------|------------|
+| MongoDB | [MongoDB Compass](https://www.mongodb.com/products/compass) | `mongodb://localhost:27017` |
+| Redis | [Medis](https://getmedis.com/) or [RedisInsight](https://redis.io/insight/) | `localhost:6379` |
+| RabbitMQ | built-in **Management UI** (ships with the `-management` image) | http://localhost:15672 (user/pass `santa` / `santa123`) |
+
+These connect to the containers via the published ports — no extra setup.
 
 ---
 
