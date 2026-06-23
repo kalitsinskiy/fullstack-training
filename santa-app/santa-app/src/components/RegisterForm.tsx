@@ -1,176 +1,137 @@
-import { useState, type SyntheticEvent } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "../hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
-const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
-
-function validateName(value: string): string | null {
-  if (!value) return "Name is required";
-  return null;
-}
-
-function validateEmail(value: string): string | null {
-  if (!value) return "Email is required";
-  if (!value.includes("@") || !value.includes(".")) return "Enter a valid email address";
-  return null;
-}
-
-function validatePassword(value: string): string | null {
-  if (!value) return "Password is required";
-  if (value.length < 8) return "Password must be at least 8 characters";
-  return null;
-}
-
-function validateConfirmPassword(value: string, password: string): string | null {
-  if (!value) return "Please confirm your password";
-  if (value !== password) return "Passwords don't match";
-  return null;
-}
+import { RegisterSchema, type RegisterInput } from "@/schemas/auth";
 
 export function RegisterForm({ onSuccess }: { onSuccess?: () => void }) {
   const auth = useAuth();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<RegisterInput>({
+    resolver: zodResolver(RegisterSchema),
+  });
 
-  const [nameError, setNameError] = useState<string | null>(null);
-  const [emailError, setEmailError] = useState<string | null>(null);
-  const [passwordError, setPasswordError] = useState<string | null>(null);
-  const [confirmPasswordError, setConfirmPasswordError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-
-  const handleSubmit = async (e: SyntheticEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const nameErr = validateName(name);
-    const emailErr = validateEmail(email);
-    const passwordErr = validatePassword(password);
-    const confirmErr = validateConfirmPassword(confirmPassword, password);
-    setNameError(nameErr);
-    setEmailError(emailErr);
-    setPasswordError(passwordErr);
-    setConfirmPasswordError(confirmErr);
-    if (nameErr || emailErr || passwordErr || confirmErr) return;
-
+  const submit = async (data: RegisterInput) => {
     try {
-      setSubmitting(true);
-      setSubmitError(null);
-      const res = await fetch(`${BASE_URL}/api/auth/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, displayName: name }),
-      });
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || "Registration failed");
-      }
-      await auth.login(email, password);
+      await auth.register(data.email, data.password, data.displayName);
       onSuccess?.();
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : "Registration failed");
-    } finally {
-      setSubmitting(false);
+      setError("root.serverError", {
+        message: err instanceof Error ? err.message : "Registration failed",
+      });
     }
   };
 
-  const isDisabled =
-    submitting ||
-    !name ||
-    !email ||
-    !password ||
-    !confirmPassword ||
-    !!nameError ||
-    !!emailError ||
-    !!passwordError ||
-    !!confirmPasswordError;
-
   return (
     <form
-      onSubmit={handleSubmit}
+      onSubmit={handleSubmit(submit)}
       className="rounded-card p-card bg-surface w-full max-w-sm shadow-md"
     >
+      {errors.root?.serverError && (
+        <p
+          role="alert"
+          className="text-danger mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm"
+        >
+          {errors.root.serverError.message}
+        </p>
+      )}
+
       <fieldset className="flex flex-col gap-3 rounded-md border border-gray-200 p-4">
-        <legend className="text-brand px-2 font-semibold">Account details</legend>
+        <legend className="text-brand px-2 font-semibold">
+          Account details
+        </legend>
 
         <Label htmlFor="register-name">Full Name</Label>
         <Input
           id="register-name"
           type="text"
           placeholder="John Doe"
-          value={name}
-          aria-invalid={!!nameError}
-          onChange={(e) => {
-            setName(e.target.value);
-            setNameError(null);
-          }}
-          onBlur={(e) => setNameError(validateName(e.target.value))}
+          aria-invalid={!!errors.displayName}
+          aria-describedby={
+            errors.displayName ? "register-name-error" : undefined
+          }
+          {...register("displayName")}
         />
-        {nameError && <p className="text-danger text-sm">{nameError}</p>}
+        {errors.displayName && (
+          <p
+            id="register-name-error"
+            role="alert"
+            className="text-danger text-sm"
+          >
+            {errors.displayName.message}
+          </p>
+        )}
 
         <Label htmlFor="register-email">Email Address</Label>
         <Input
           id="register-email"
           type="email"
           placeholder="you@example.com"
-          value={email}
-          aria-invalid={!!emailError}
-          onChange={(e) => {
-            setEmail(e.target.value);
-            setEmailError(null);
-          }}
-          onBlur={(e) => setEmailError(validateEmail(e.target.value))}
+          aria-invalid={!!errors.email}
+          aria-describedby={errors.email ? "register-email-error" : undefined}
+          {...register("email")}
         />
-        {emailError && <p className="text-danger text-sm">{emailError}</p>}
+        {errors.email && (
+          <p
+            id="register-email-error"
+            role="alert"
+            className="text-danger text-sm"
+          >
+            {errors.email.message}
+          </p>
+        )}
 
         <Label htmlFor="register-password">Password</Label>
         <Input
           id="register-password"
           type="password"
           placeholder="At least 8 characters"
-          value={password}
-          aria-invalid={!!passwordError}
-          onChange={(e) => {
-            setPassword(e.target.value);
-            setPasswordError(null);
-            if (confirmPassword) {
-              setConfirmPasswordError(validateConfirmPassword(confirmPassword, e.target.value));
-            }
-          }}
-          onBlur={(e) => setPasswordError(validatePassword(e.target.value))}
+          aria-invalid={!!errors.password}
+          aria-describedby={
+            errors.password ? "register-password-error" : undefined
+          }
+          {...register("password")}
         />
-        {passwordError && <p className="text-danger text-sm">{passwordError}</p>}
+        {errors.password && (
+          <p
+            id="register-password-error"
+            role="alert"
+            className="text-danger text-sm"
+          >
+            {errors.password.message}
+          </p>
+        )}
 
-        <Label htmlFor="register-confirm-password">Confirm Password</Label>
+        <Label htmlFor="register-confirm">Confirm Password</Label>
         <Input
-          id="register-confirm-password"
+          id="register-confirm"
           type="password"
           placeholder="Repeat your password"
-          value={confirmPassword}
-          aria-invalid={!!confirmPasswordError}
-          onChange={(e) => {
-            setConfirmPassword(e.target.value);
-            setConfirmPasswordError(validateConfirmPassword(e.target.value, password));
-          }}
-          onBlur={(e) =>
-            setConfirmPasswordError(validateConfirmPassword(e.target.value, password))
+          aria-invalid={!!errors.confirm}
+          aria-describedby={
+            errors.confirm ? "register-confirm-error" : undefined
           }
+          {...register("confirm")}
         />
-        {confirmPasswordError && (
-          <p className="text-danger text-sm">{confirmPasswordError}</p>
+        {errors.confirm && (
+          <p
+            id="register-confirm-error"
+            role="alert"
+            className="text-danger text-sm"
+          >
+            {errors.confirm.message}
+          </p>
         )}
       </fieldset>
 
-      {submitError && (
-        <p className="text-danger mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm">
-          {submitError}
-        </p>
-      )}
-
-      <Button type="submit" disabled={isDisabled} className="mt-4 w-full">
-        {submitting ? "Creating account…" : "Create Account"}
+      <Button type="submit" disabled={isSubmitting} className="mt-4 w-full">
+        {isSubmitting ? "Creating account…" : "Create Account"}
       </Button>
     </form>
   );

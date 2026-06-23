@@ -1,9 +1,4 @@
-import {
-  createContext,
-  useEffect,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useEffect, useState, type ReactNode } from "react";
 
 interface User {
   id: string;
@@ -17,6 +12,11 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<User>;
+  register: (
+    email: string,
+    password: string,
+    displayName: string,
+  ) => Promise<User>;
   logout: () => void;
 }
 
@@ -35,7 +35,9 @@ async function fetchMe(accessToken: string): Promise<User> {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(() => !!localStorage.getItem("token"));
+  const [isLoading, setIsLoading] = useState(
+    () => !!localStorage.getItem("token"),
+  );
 
   useEffect(() => {
     const stored = localStorage.getItem("token");
@@ -68,6 +70,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return fetchedUser;
   }
 
+  async function register(
+    email: string,
+    password: string,
+    displayName: string,
+  ): Promise<User> {
+    const res = await fetch(`${BASE_URL}/api/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, displayName }),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || "Registration failed");
+    }
+    return login(email, password);
+  }
+
   function logout() {
     localStorage.removeItem("token");
     setToken(null);
@@ -82,6 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         isAuthenticated: user !== null,
         login,
+        register,
         logout,
       }}
     >
