@@ -1,65 +1,52 @@
-import { useState, type FormEvent } from "react";
 import clsx from "clsx";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useAuth } from "../contexts/AuthContext";
+import { RegisterSchema, type RegisterInput } from "../schemas/auth";
 
-export default function RegisterForm() {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
-  const [nameError, setNameError] = useState<string | null>(null);
-  const [emailError, setEmailError] = useState<string | null>(null);
-  const [passwordError, setPasswordError] = useState<string | null>(null);
-  const [confirmError, setConfirmError] = useState<string | null>(null);
+interface Props {
+  onSuccess?: () => void;
+}
 
-  function validateName(value: string) {
-    if (!value.trim()) return "Name is required";
-    return null;
-  }
+export default function RegisterForm({ onSuccess }: Props) {
+  const auth = useAuth();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    setError,
+  } = useForm<RegisterInput>({
+    resolver: zodResolver(RegisterSchema),
+    mode: "onBlur",
+  });
 
-  function validateEmail(value: string) {
-    if (!value.trim()) return "Email is required";
-    if (!value.includes("@") || !value.includes("."))
-      return "Enter a valid email";
-    return null;
-  }
-
-  function validatePassword(value: string) {
-    if (!value) return "Password is required";
-    if (value.length < 8) return "Password must be at least 8 characters";
-    return null;
-  }
-
-  function validateConfirm(value: string, pw: string) {
-    if (!value) return "Please confirm your password";
-    if (value !== pw) return "Passwords don't match";
-    return null;
-  }
-
-  const hasErrors =
-    !!nameError || !!emailError || !!passwordError || !!confirmError;
-  const isEmpty =
-    !name.trim() || !email.trim() || !password.trim() || !confirm.trim();
-
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const nErr = validateName(name);
-    const eErr = validateEmail(email);
-    const pErr = validatePassword(password);
-    const cErr = validateConfirm(confirm, password);
-    setNameError(nErr);
-    setEmailError(eErr);
-    setPasswordError(pErr);
-    setConfirmError(cErr);
-    if (nErr || eErr || pErr || cErr) return;
-    console.log("register", { name, email, password });
+  const submit = async (data: RegisterInput) => {
+    try {
+      await auth.register(data.email, data.password, data.displayName);
+      onSuccess?.();
+    } catch (err) {
+      setError("root.serverError", {
+        message: err instanceof Error ? err.message : "Registration failed",
+      });
+    }
   };
 
   return (
     <form
-      onSubmit={handleSubmit}
+      onSubmit={handleSubmit(submit)}
       className="rounded-card p-card flex w-full max-w-sm flex-col gap-4 bg-white shadow-sm"
+      noValidate
     >
       <h2 className="text-brand text-xl font-semibold">Create Account</h2>
+
+      {errors.root?.serverError && (
+        <p
+          className="rounded bg-red-50 px-3 py-2 text-sm text-red-600"
+          role="alert"
+        >
+          {errors.root.serverError.message}
+        </p>
+      )}
 
       <div className="flex flex-col gap-1">
         <label className="text-sm font-medium text-gray-700" htmlFor="reg-name">
@@ -69,13 +56,17 @@ export default function RegisterForm() {
           id="reg-name"
           type="text"
           autoComplete="name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onBlur={() => setNameError(validateName(name))}
+          aria-invalid={!!errors.displayName}
+          aria-describedby={errors.displayName ? "reg-name-error" : undefined}
           className="focus-visible:ring-brand rounded border border-gray-300 px-3 py-2 text-sm outline-none focus-visible:ring-2"
           placeholder="Taras Shevchenko"
+          {...register("displayName")}
         />
-        {nameError && <p className="text-xs text-red-500">{nameError}</p>}
+        {errors.displayName && (
+          <p id="reg-name-error" className="text-xs text-red-500" role="alert">
+            {errors.displayName.message}
+          </p>
+        )}
       </div>
 
       <div className="flex flex-col gap-1">
@@ -89,13 +80,17 @@ export default function RegisterForm() {
           id="reg-email"
           type="email"
           autoComplete="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          onBlur={() => setEmailError(validateEmail(email))}
+          aria-invalid={!!errors.email}
+          aria-describedby={errors.email ? "reg-email-error" : undefined}
           className="focus-visible:ring-brand rounded border border-gray-300 px-3 py-2 text-sm outline-none focus-visible:ring-2"
           placeholder="you@example.com"
+          {...register("email")}
         />
-        {emailError && <p className="text-xs text-red-500">{emailError}</p>}
+        {errors.email && (
+          <p id="reg-email-error" className="text-xs text-red-500" role="alert">
+            {errors.email.message}
+          </p>
+        )}
       </div>
 
       <div className="flex flex-col gap-1">
@@ -109,14 +104,16 @@ export default function RegisterForm() {
           id="reg-password"
           type="password"
           autoComplete="new-password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          onBlur={() => setPasswordError(validatePassword(password))}
+          aria-invalid={!!errors.password}
+          aria-describedby={errors.password ? "reg-password-error" : undefined}
           className="focus-visible:ring-brand rounded border border-gray-300 px-3 py-2 text-sm outline-none focus-visible:ring-2"
           placeholder="••••••••"
+          {...register("password")}
         />
-        {passwordError && (
-          <p className="text-xs text-red-500">{passwordError}</p>
+        {errors.password && (
+          <p id="reg-password-error" className="text-xs text-red-500" role="alert">
+            {errors.password.message}
+          </p>
         )}
       </div>
 
@@ -131,30 +128,30 @@ export default function RegisterForm() {
           id="reg-confirm"
           type="password"
           autoComplete="new-password"
-          value={confirm}
-          onChange={(e) => {
-            setConfirm(e.target.value);
-            if (confirmError)
-              setConfirmError(validateConfirm(e.target.value, password));
-          }}
-          onBlur={() => setConfirmError(validateConfirm(confirm, password))}
+          aria-invalid={!!errors.confirm}
+          aria-describedby={errors.confirm ? "reg-confirm-error" : undefined}
           className="focus-visible:ring-brand rounded border border-gray-300 px-3 py-2 text-sm outline-none focus-visible:ring-2"
           placeholder="••••••••"
+          {...register("confirm")}
         />
-        {confirmError && <p className="text-xs text-red-500">{confirmError}</p>}
+        {errors.confirm && (
+          <p id="reg-confirm-error" className="text-xs text-red-500" role="alert">
+            {errors.confirm.message}
+          </p>
+        )}
       </div>
 
       <button
         type="submit"
-        disabled={hasErrors || isEmpty}
+        disabled={isSubmitting}
         className={clsx(
           "rounded px-4 py-2 text-sm font-medium text-white transition-colors",
-          hasErrors || isEmpty
+          isSubmitting
             ? "bg-brand/50 cursor-not-allowed"
             : "bg-brand hover:bg-brand-dark",
         )}
       >
-        Create Account
+        {isSubmitting ? "Creating…" : "Create Account"}
       </button>
     </form>
   );

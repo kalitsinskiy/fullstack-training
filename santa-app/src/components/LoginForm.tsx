@@ -1,6 +1,8 @@
-import { useState, type FormEvent } from "react";
 import clsx from "clsx";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "../contexts/AuthContext";
+import { LoginSchema, type LoginInput } from "../schemas/auth";
 
 interface Props {
   onSuccess?: () => void;
@@ -8,58 +10,41 @@ interface Props {
 
 export default function LoginForm({ onSuccess }: Props) {
   const auth = useAuth();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [emailError, setEmailError] = useState<string | null>(null);
-  const [passwordError, setPasswordError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    setError,
+  } = useForm<LoginInput>({
+    resolver: zodResolver(LoginSchema),
+    mode: "onBlur",
+  });
 
-  function validateEmail(value: string) {
-    if (!value.trim()) return "Email is required";
-    if (!value.includes("@") || !value.includes("."))
-      return "Enter a valid email";
-    return null;
-  }
-
-  function validatePassword(value: string) {
-    if (!value) return "Password is required";
-    if (value.length < 8) return "Password must be at least 8 characters";
-    return null;
-  }
-
-  const hasErrors = !!emailError || !!passwordError;
-  const isEmpty = !email.trim() || !password.trim();
-
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const eErr = validateEmail(email);
-    const pErr = validatePassword(password);
-    setEmailError(eErr);
-    setPasswordError(pErr);
-    if (eErr || pErr) return;
+  const submit = async (data: LoginInput) => {
     try {
-      setSubmitting(true);
-      setSubmitError(null);
-      await auth.login(email, password);
+      await auth.login(data.email, data.password);
       onSuccess?.();
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : "Login failed");
-    } finally {
-      setSubmitting(false);
+      setError("root.serverError", {
+        message: err instanceof Error ? err.message : "Login failed",
+      });
     }
   };
 
   return (
     <form
-      onSubmit={handleSubmit}
+      onSubmit={handleSubmit(submit)}
       className="rounded-card p-card flex w-full max-w-sm flex-col gap-4 bg-white shadow-sm"
+      noValidate
     >
       <h2 className="text-brand text-xl font-semibold">Sign In</h2>
 
-      {submitError && (
-        <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-600">
-          {submitError}
+      {errors.root?.serverError && (
+        <p
+          className="rounded bg-red-50 px-3 py-2 text-sm text-red-600"
+          role="alert"
+        >
+          {errors.root.serverError.message}
         </p>
       )}
 
@@ -74,13 +59,17 @@ export default function LoginForm({ onSuccess }: Props) {
           id="login-email"
           type="email"
           autoComplete="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          onBlur={() => setEmailError(validateEmail(email))}
+          aria-invalid={!!errors.email}
+          aria-describedby={errors.email ? "login-email-error" : undefined}
           className="focus-visible:ring-brand rounded border border-gray-300 px-3 py-2 text-sm outline-none focus-visible:ring-2"
           placeholder="you@example.com"
+          {...register("email")}
         />
-        {emailError && <p className="text-xs text-red-500">{emailError}</p>}
+        {errors.email && (
+          <p id="login-email-error" className="text-xs text-red-500" role="alert">
+            {errors.email.message}
+          </p>
+        )}
       </div>
 
       <div className="flex flex-col gap-1">
@@ -94,28 +83,30 @@ export default function LoginForm({ onSuccess }: Props) {
           id="login-password"
           type="password"
           autoComplete="current-password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          onBlur={() => setPasswordError(validatePassword(password))}
+          aria-invalid={!!errors.password}
+          aria-describedby={errors.password ? "login-password-error" : undefined}
           className="focus-visible:ring-brand rounded border border-gray-300 px-3 py-2 text-sm outline-none focus-visible:ring-2"
           placeholder="••••••••"
+          {...register("password")}
         />
-        {passwordError && (
-          <p className="text-xs text-red-500">{passwordError}</p>
+        {errors.password && (
+          <p id="login-password-error" className="text-xs text-red-500" role="alert">
+            {errors.password.message}
+          </p>
         )}
       </div>
 
       <button
         type="submit"
-        disabled={hasErrors || isEmpty || submitting}
+        disabled={isSubmitting}
         className={clsx(
           "rounded px-4 py-2 text-sm font-medium text-white transition-colors",
-          hasErrors || isEmpty || submitting
+          isSubmitting
             ? "bg-brand/50 cursor-not-allowed"
             : "bg-brand hover:bg-brand-dark",
         )}
       >
-        {submitting ? "Signing in…" : "Sign In"}
+        {isSubmitting ? "Signing in…" : "Sign In"}
       </button>
     </form>
   );
