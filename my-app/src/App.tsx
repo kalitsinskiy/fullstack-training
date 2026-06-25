@@ -12,6 +12,7 @@ import ProtectedApp from './exercises/protected-app';
 import { RoomCardDemo } from './exercises/build-room-card';
 import MultiStepCheckoutDemo from './exercises/multi-step-checkout';
 import ProfileFormDemo from './exercises/profile-form';
+import CrudPageDemo from './exercises/crud-page';
 
 type RouterDemo = 'multi-page' | 'protected';
 
@@ -55,6 +56,7 @@ function App() {
         <RoomCardDemo />
         <MultiStepCheckoutDemo />
         <ProfileFormDemo />
+        <CrudPageDemo />
         <div style={{ marginTop: 32, display: 'flex', gap: 12 }}>
           <button onClick={() => setActiveDemo('multi-page')}>Open Multi-Page App →</button>
           <button onClick={() => setActiveDemo('protected')}>Open Protected App →</button>
