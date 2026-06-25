@@ -1,7 +1,7 @@
 import clsx from "clsx";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth } from "../contexts/useAuth";
 import { RegisterSchema, type RegisterInput } from "../schemas/auth";
 
 interface Props {

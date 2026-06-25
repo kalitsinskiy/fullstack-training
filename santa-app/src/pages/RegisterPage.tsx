@@ -1,5 +1,5 @@
 import { Navigate } from "react-router";
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth } from "../contexts/useAuth";
 import RegisterForm from "../components/RegisterForm";
 
 export default function RegisterPage() {

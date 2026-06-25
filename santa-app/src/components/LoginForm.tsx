@@ -1,8 +1,9 @@
 import clsx from "clsx";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth } from "../contexts/useAuth";
 import { LoginSchema, type LoginInput } from "../schemas/auth";
+import { ApiError } from "../services/api";
 
 interface Props {
   onSuccess?: () => void;
@@ -26,7 +27,12 @@ export default function LoginForm({ onSuccess }: Props) {
       onSuccess?.();
     } catch (err) {
       setError("root.serverError", {
-        message: err instanceof Error ? err.message : "Login failed",
+        message:
+          err instanceof ApiError && err.status === 401
+            ? "Invalid email or password"
+            : err instanceof Error
+              ? err.message
+              : "Login failed",
       });
     }
   };
