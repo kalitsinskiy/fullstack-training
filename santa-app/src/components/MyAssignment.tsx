@@ -18,6 +18,7 @@ export default function MyAssignment({ roomId }: Props) {
       if (err instanceof ApiError && (err.status === 404 || err.status === 409)) return false
       return failureCount < 3
     },
+    throwOnError: false,
   })
 
   if (isLoading) return <p className="text-sm text-gray-500">Loading assignment…</p>

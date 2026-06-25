@@ -34,6 +34,7 @@ export default function WishlistEditor({ roomId }: Props) {
       if (err instanceof Error && 'status' in err && (err as { status: number }).status === 404) return false
       return failureCount < 3
     },
+    throwOnError: false,
   })
 
   const {

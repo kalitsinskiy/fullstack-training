@@ -1,9 +1,11 @@
 import { useParams } from 'react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { ErrorBoundary } from 'react-error-boundary'
 import { api } from '../services/api'
 import WishlistEditor from '../components/WishlistEditor'
 import MyAssignment from '../components/MyAssignment'
 import AssigneeWishlist from '../components/AssigneeWishlist'
+import WishlistErrorFallback from '../components/WishlistErrorFallback'
 
 interface Room {
   id: string
@@ -22,6 +24,7 @@ export default function RoomDetailPage() {
     queryKey: ['rooms', id],
     queryFn: () => api.get<Room>(`/api/rooms/${id}`),
     enabled: !!id,
+    throwOnError: false,
   })
 
   const drawMutation = useMutation({
@@ -64,7 +67,9 @@ export default function RoomDetailPage() {
 
       <section>
         <h2 className="text-xl font-semibold mb-4">My Wishlist</h2>
-        <WishlistEditor roomId={id} />
+        <ErrorBoundary FallbackComponent={WishlistErrorFallback}>
+          <WishlistEditor roomId={id} />
+        </ErrorBoundary>
       </section>
 
       <section>

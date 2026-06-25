@@ -22,6 +22,7 @@ export default function RoomsPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['rooms'],
     queryFn: () => api.get<RoomsResponse>('/api/rooms'),
+    throwOnError: false,
   })
 
   if (isLoading) return <p className="p-6 text-gray-500">Loading rooms…</p>
