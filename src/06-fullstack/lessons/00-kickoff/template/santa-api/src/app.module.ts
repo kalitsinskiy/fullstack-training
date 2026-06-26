@@ -21,9 +21,15 @@ import { WishlistModule } from './wishlist/wishlist.module';
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
     LoggerModule.forRoot({
       pinoHttp: {
-        level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
+        level:
+          process.env.NODE_ENV === 'production'
+            ? 'info'
+            : process.env.NODE_ENV === 'test'
+              ? 'silent'
+              : 'debug',
         transport:
-          process.env.NODE_ENV !== 'production'
+          process.env.NODE_ENV !== 'production' &&
+          process.env.NODE_ENV !== 'test'
             ? {
                 target: 'pino-pretty',
                 options: {
