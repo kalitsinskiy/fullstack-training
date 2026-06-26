@@ -316,9 +316,12 @@ Keep these six values handy — you paste them into Render in Step 5.
    - **Private repo:** click **Configure account** / install the **Render GitHub
      App** and grant it the repo (for an org repo, the owner approves it once).
 4. In the dashboard: **New +** (top-right) → **Blueprint**.
-5. Pick the repo (or paste its public Git URL). Render scans the **root**
-   `render.yaml` and shows the plan: 2 Docker web services, 1 static site, and the
-   `santa-shared` env group.
+5. Pick the repo (or paste its public Git URL), then **choose the branch** to
+   deploy from — e.g. `deploy/<your-name>`. This is how each student deploys
+   their **own** branch from the shared repo (you can change it later per service
+   in **Settings → Branch**). Render scans the **root** `render.yaml` and shows
+   the plan: 2 Docker web services, 1 static site, and the `santa-shared` env
+   group.
 6. Render asks for the `sync: false` values **before it applies**. Paste what you
    have now — the **connection strings**: `MONGO_URL` (the `/santa` one for
    santa-api, `/santa-notifications` for the other), `REDIS_URL`, `RABBITMQ_URL`.
@@ -366,6 +369,15 @@ VITE_WS_URL  = https://santa-notifications-xxxx.onrender.com
 `NODE_ENV`, `PORT`, `JWT_EXPIRATION`, `LOG_LEVEL`, and the shared secrets come
 from `render.yaml`/the group — you don't set those by hand.
 
+> **`VITE_WS_URL` is an `https://` URL — not `ws://` / `wss://`.** It points at
+> the santa-notifications service (`https://santa-notifications-xxxx.onrender.com`).
+> Socket.IO does its handshake over HTTPS and upgrades to a WebSocket itself, so
+> use the plain `https://` origin (same shape as `VITE_API_URL`).
+
+After editing a service's variables click **Save Changes**. The new values only
+take effect on the **next deploy** (Step 6) — so set **all** of a service's vars
+first, then redeploy that service once.
+
 ### Step 6: Deploy (manual)
 
 Deploys are manual (`autoDeploy: false`). Two ways:
@@ -381,9 +393,15 @@ render services            # list services to get their IDs (srv-…)
 render deploys create srv-XXXXXXXX --wait   # repeat per service
 ```
 
+**Redeploy after changing env vars.** Editing variables doesn't auto-deploy here
+(`autoDeploy: false`). After **Save Changes**, hit **Manual Deploy** on that
+service. A **backend** picks up new env on restart; the **static santa-app reads
+`VITE_*` only at build time**, so it must be rebuilt — use **Manual Deploy →
+Clear build cache & deploy** so the new `VITE_*` are baked in.
+
 **Order matters once:** the static `santa-app` bakes `VITE_*` at **build** time,
-so deploy the **backends first**, confirm their URLs, make sure `VITE_API_URL` /
-`VITE_WS_URL` point at them, then deploy `santa-app`. If you change a `VITE_*`
+so deploy the **backends first**, confirm their URLs, set `VITE_API_URL` /
+`VITE_WS_URL` to point at them, then deploy `santa-app`. If you change a `VITE_*`
 value later, you must **redeploy santa-app** for it to take effect.
 
 ### Step 7: Verify the deployed app
