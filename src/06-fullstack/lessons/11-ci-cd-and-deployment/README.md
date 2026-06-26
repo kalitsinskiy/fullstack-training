@@ -366,6 +366,9 @@ VITE_API_URL = https://santa-api-xxxx.onrender.com
 VITE_WS_URL  = https://santa-notifications-xxxx.onrender.com
 ```
 
+Then redeploy santa-app with new env values
+![redeploy santa-app](image.png)
+
 `NODE_ENV`, `PORT`, `JWT_EXPIRATION`, `LOG_LEVEL`, and the shared secrets come
 from `render.yaml`/the group — you don't set those by hand.
 
@@ -442,7 +445,7 @@ curl https://santa-notifications-xxxx.onrender.com/health
 - **Render — service logs:** open a service → **Logs** tab. It's live; you see
   startup, crashes, and every request. Use the **Build logs** (the deploy view)
   for `npm ci`/Docker build failures, and the runtime logs for `MONGO_URL is
-  required`, connection refusals, etc.
+required`, connection refusals, etc.
 - **Render — events:** the **Events** tab shows each deploy, its result, and why
   a service restarted.
 - **Browser — Network tab:** DevTools → **Network**. This is the fastest way to
