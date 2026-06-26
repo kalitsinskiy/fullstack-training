@@ -65,6 +65,7 @@ Unlike blocks 04-05, there are no separate exercises — the app **is** the exer
 | 09 | [Anonymous Messaging](lessons/09-anonymous-messaging/) | Service mediator, privacy patterns | Anonymous message relay, chat UI, real-time delivery |
 | 10 | [Testing Microservices](lessons/10-testing-microservices/) | E2E testing, integration tests | Cross-service tests, E2E critical paths |
 | 11 | [CI/CD & Deployment](lessons/11-ci-cd-and-deployment/) | GitHub Actions, Husky, cloud deploy | CI pipeline, deploy to cloud (free tiers) |
+| 12 | [Going Further](lessons/12-going-further/) **(optional)** | Self-directed challenges | Build features solo — e.g. **email notifications** (approach + service + events given, no step-by-step) |
 
 ## Secret Santa Features
 
