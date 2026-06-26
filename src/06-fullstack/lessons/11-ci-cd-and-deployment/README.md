@@ -437,6 +437,61 @@ curl https://santa-api-xxxx.onrender.com/api/health
 curl https://santa-notifications-xxxx.onrender.com/health
 ```
 
+## Reading logs (how to debug a deploy)
+
+- **Render — service logs:** open a service → **Logs** tab. It's live; you see
+  startup, crashes, and every request. Use the **Build logs** (the deploy view)
+  for `npm ci`/Docker build failures, and the runtime logs for `MONGO_URL is
+  required`, connection refusals, etc.
+- **Render — events:** the **Events** tab shows each deploy, its result, and why
+  a service restarted.
+- **Browser — Network tab:** DevTools → **Network**. This is the fastest way to
+  see **where requests actually go** and their status. To share it, right-click →
+  **Save all as HAR** (that's the `.har` file).
+- **Browser — Console tab:** CORS errors, mixed-content, and JS errors show here.
+
+## Troubleshooting
+
+### Frontend calls its own URL (socket stuck on `polling`, `304` on `/api/*`)
+
+**Symptom (in the HAR / Network tab):** requests go to
+`https://santa-app-xxxx.onrender.com/api/...` and `/socket.io/...` instead of the
+backend hosts; `/api/*` returns `304`/HTML; the socket never upgrades past
+`transport=polling`.
+
+**Cause:** `VITE_API_URL` / `VITE_WS_URL` were empty **when santa-app was built**.
+Vite bakes `VITE_*` into the bundle at build time; if they're missing the app
+falls back to its own origin (the localhost-proxy default).
+
+**Fix:** set both on the **santa-app** service, then **Manual Deploy → Clear
+build cache & deploy** (a plain redeploy reuses the old bundle):
+
+```
+VITE_API_URL = https://santa-api-xxxx.onrender.com
+VITE_WS_URL  = https://santa-notifications-xxxx.onrender.com   # https, NOT ws://
+```
+
+### CORS errors in the console (after URLs are correct)
+
+**Cause:** the backend doesn't allow the santa-app origin. The same
+`CORS_ORIGIN` drives **both** the HTTP CORS and the Socket.IO server's CORS.
+
+**Fix:** on **both** santa-api and santa-notifications set
+`CORS_ORIGIN = https://santa-app-xxxx.onrender.com`, Save, redeploy.
+
+### Service won't start / 502 Bad Gateway
+
+Check the service **Logs**. Usual causes: a missing/empty `sync: false` var
+(e.g. `MONGO_URL is required`), a wrong connection string, or Atlas refusing the
+connection — confirm Network Access allows `0.0.0.0/0` and the user/password and
+DB name in the URI are correct.
+
+### Reminder: env changes need a redeploy
+
+Editing a variable doesn't auto-deploy (`autoDeploy: false`). Save **all** of a
+service's vars, then **Manual Deploy** — backends pick up env on restart;
+santa-app needs a **rebuild** (clear cache) for new `VITE_*`.
+
 ## Learn More
 
 - [Husky](https://typicode.github.io/husky/)
