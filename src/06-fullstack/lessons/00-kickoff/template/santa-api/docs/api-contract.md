@@ -138,8 +138,13 @@ to `{ id, displayName, role }`; `participantCount` is the number of members;
 
 `status` is `"pending"` until the draw, then `"drawn"` (with `drawDate` set).
 `budget`/`currency` are an optional per-gift budget set on create (omitted when not
-given). `exchangeDate` is the gift-exchange day — `null` until the draw sets it,
-and editable afterwards via `PATCH /rooms/:id`.
+given). `exchangeDate` is the gift-exchange day — unset until the draw, and editable
+afterwards via `PATCH /rooms/:id`.
+
+> Optional fields (`drawDate`, `budget`, `currency`, `exchangeDate`,
+> `viewerPermissions`) that have no value yet are **omitted** from the JSON (or may
+> appear as `null`). Clients must treat "absent" and `null` the same — don't rely on
+> the key being present.
 
 ### `POST /rooms`
 
