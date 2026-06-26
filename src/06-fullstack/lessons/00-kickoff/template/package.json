@@ -1,0 +1,16 @@
+{
+  "name": "secret-santa",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Secret Santa — fullstack training project (santa-api, santa-notifications, santa-app). Root package wires the dev CI gate (Husky + commitlint + lint-staged); each app has its own package.json.",
+  "scripts": {
+    "prepare": "husky",
+    "ci": "for app in santa-api santa-notifications santa-app; do echo \"▶ CI: $app\"; ( cd \"$app\" && npm run lint && npm run type-check && npm test ) || exit 1; done"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.6.0",
+    "@commitlint/config-conventional": "^19.6.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.10"
+  }
+}

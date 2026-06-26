@@ -2,143 +2,125 @@
 
 ## Quick Overview
 
-Code that is not deployed is not delivering value. This final lesson ties everything together: we add Git hooks (Husky) to catch issues before they reach the remote, enforce conventional commits with commitlint, run a **local CI gate** on pre-push (lint + type-check + test), set up managed cloud services (MongoDB Atlas, Redis Cloud, CloudAMQP), and **deploy all three apps manually from your own machine** using your own free-tier accounts. No shared hosted pipeline — each of you ships independently.
+Code that isn't deployed delivers no value. This final lesson puts a quality gate
+in front of your code and ships the app to the internet.
+
+- **CI is local.** A `pre-push` hook (Husky) runs lint + type-check + tests for
+  all three apps before anything leaves your machine. We deliberately **don't**
+  add a hosted pipeline (e.g. GitHub Actions): in this course everyone learns in
+  **one shared repo**, so a workflow on the shared `main` would run for everyone
+  and share secrets. Your local gate **is** your CI.
+- **Deploy with Infrastructure as Code.** A single **`render.yaml`** Blueprint
+  declares all three services on **Render**, backed by managed **MongoDB Atlas**,
+  **Redis Cloud**, and **CloudAMQP**. Deploys are **manual** — the repo holds the
+  _definition_ of prod, you hold the _trigger_ and the _secrets_.
+
+> **The template already ships the CI gate + IaC** — `package.json` (root),
+> `.husky/`, `commitlint.config.js`, `.lintstagedrc.mjs`, and `render.yaml`.
+> Your job: understand them, then provision **your own** free-tier accounts and
+> deploy. Secrets are **never** committed — you set them in the platform.
+
+---
 
 ## Key Concepts
 
-### Git Hooks with Husky
+### Why CI stays local (for now)
 
-Git hooks are scripts that run automatically at specific points in the Git workflow. **Husky** makes managing them easy:
+A hosted pipeline (GitHub Actions, GitLab CI) lives on one repo's settings and
+secrets. This course runs in a **single shared learning repo**, so a workflow on
+the shared `main` would fire for everyone's pushes and would need shared cloud
+secrets — a bad fit. Instead, the **`pre-push` hook is the CI**: it runs the same
+lint → type-check → test gate locally, in seconds, for each student independently.
 
-```bash
-# Install Husky
-npm install -D husky
-npx husky init
-```
+> If you later move to your **own** repo, these exact commands lift straight into
+> a GitHub Actions workflow (one job per app, `npm ci && npm run lint &&
+npm run type-check && npm test`) — but that's out of scope here.
 
-This creates a `.husky/` directory at the repo root. Add hooks:
+### Deploying from a shared repo (each student, isolated)
 
-```bash
-# .husky/pre-commit -- runs before every commit
-npm run lint
+This course runs in **one shared repo**, but everyone deploys **independently**.
+The trick: a Render **Blueprint binds to a Render account, not to the repo** — the
+repo is just the `render.yaml` template Render reads.
 
-# .husky/pre-push -- runs before every push
-npm run type-check
-npm test
-```
+- **Each student uses their own Render account** + their own Atlas / Redis /
+  CloudAMQP. You each get your own services and URLs (`santa-api-xxxx`,
+  `santa-api-yyyy`, …) — fully isolated, nobody overwrites anyone.
+- **Don't share one Render workspace** for everyone: `render.yaml` sets
+  `name: santa-api`, and two services can't share a name in one workspace.
+- **`autoDeploy: false`** means a teammate's `git push` to the shared `main`
+  never triggers your deploy — you deploy manually, when you choose.
+- **Repo access:** if the repo is private, each student needs read access + the
+  Render GitHub App authorized on it. Simplest for a class: make the repo
+  **public** (Render deploys any public Git URL, no access grants needed).
+- **`render.yaml` must sit at the repo root**, next to `santa-api/`,
+  `santa-notifications/`, and `santa-app/` — that's how the Docker paths resolve.
 
-**How it works:**
-- `pre-commit` runs before `git commit` completes. If the script exits with a non-zero code, the commit is aborted.
-- `pre-push` runs before `git push`. If it fails, the push is aborted.
+### Git Hooks with Husky (shipped)
 
-```bash
-$ git commit -m "feat: add notifications"
-> Running pre-commit hook...
-> npm run lint
-> ✓ Lint passed
-> Commit created: abc1234
-
-$ git push
-> Running pre-push hook...
-> npm run type-check
-> ✓ Type check passed
-> npm test
-> ✓ 42 tests passed
-> Pushed to origin/main
-```
-
-**Tip**: Use `lint-staged` alongside Husky to only lint files that are staged, not the entire codebase:
-
-```bash
-npm install -D lint-staged
-```
+Git hooks are scripts Git runs at lifecycle points. **Husky** manages them in a
+committed `.husky/` directory. The root `package.json` has a `prepare` script:
 
 ```json
-// package.json
-{
-  "lint-staged": {
-    "*.{ts,tsx}": ["eslint --fix"],
-    "*.{ts,tsx,json,md}": ["prettier --write"]
-  }
-}
+{ "scripts": { "prepare": "husky" } }
 ```
 
-```bash
-# .husky/pre-commit
-npx lint-staged
-```
+so `npm install` at the repo root activates the hooks (it sets
+`core.hooksPath=.husky`). The three shipped hooks:
 
-### Commitlint (Conventional Commits)
+- **`pre-commit`** → `npx lint-staged` — lints only your staged files.
+- **`commit-msg`** → `npx --no -- commitlint --edit "$1"` — validates the message.
+- **`pre-push`** → the full lint + type-check + test gate (see below).
 
-Conventional Commits enforce a consistent commit message format:
+A failing hook exits non-zero and aborts the commit/push.
 
-```
-<type>(<scope>): <description>
+### lint-staged in a monorepo (shipped)
 
-[optional body]
+Each app has its **own** ESLint config (type-aware rules rooted at that app), so
+you can't lint from the repo root. `.lintstagedrc.mjs` `cd`s into the app and
+lints just the staged files:
 
-[optional footer]
-```
-
-**Types:**
-| Type | When to use |
-|---|---|
-| `feat` | New feature |
-| `fix` | Bug fix |
-| `docs` | Documentation only |
-| `style` | Formatting (no code change) |
-| `refactor` | Code change that neither fixes a bug nor adds a feature |
-| `test` | Adding or updating tests |
-| `chore` | Build process, tooling, dependencies |
-| `ci` | CI/CD configuration |
-| `perf` | Performance improvement |
-
-```bash
-# Good
-feat(auth): add JWT refresh token rotation
-fix(rooms): prevent duplicate room joins
-docs: update API documentation for notifications endpoint
-test(messages): add integration tests for anonymous messaging
-
-# Bad
-update stuff
-fixed bug
-WIP
-```
-
-Install and configure:
-
-```bash
-npm install -D @commitlint/cli @commitlint/config-conventional
-```
-
-```javascript
-// commitlint.config.js
-module.exports = {
-  extends: ['@commitlint/config-conventional'],
+```js
+import path from 'node:path';
+const appScoped = (app) => (files) => {
+  const rel = files.map((f) => path.relative(app, f)).join(' ');
+  return `bash -c 'cd ${app} && npx eslint --fix ${rel}'`;
+};
+export default {
+  'santa-api/**/*.ts': appScoped('santa-api'),
+  'santa-notifications/**/*.ts': appScoped('santa-notifications'),
+  'santa-app/**/*.{ts,tsx}': appScoped('santa-app'),
 };
 ```
 
+### Conventional Commits (commitlint, shipped)
+
+`commitlint.config.js` enforces `<type>(<scope>): <subject>`:
+
+| Type       | When                                   |
+| ---------- | -------------------------------------- |
+| `feat`     | new feature                            |
+| `fix`      | bug fix                                |
+| `docs`     | documentation only                     |
+| `style`    | formatting (no code change)            |
+| `refactor` | neither fixes a bug nor adds a feature |
+| `test`     | tests                                  |
+| `chore`    | tooling / deps                         |
+| `ci`       | CI/CD config                           |
+| `perf`     | performance                            |
+
 ```bash
-# .husky/commit-msg
-npx --no -- commitlint --edit "$1"
+git commit -m "feat(rooms): add gift budget"   # ✓ passes
+git commit -m "update stuff"                    # ✗ rejected
 ```
 
-Now `git commit -m "update stuff"` will be rejected with a helpful error.
+### The pre-push gate — your CI (shipped)
 
-### Local CI — your pre-push gate
-
-We deliberately **keep CI local**. A hosted pipeline (GitHub Actions) lives on
-one repo's settings and secrets; in this course everyone works on their own
-fork/branch with their own cloud accounts, so a shared pipeline doesn't fit.
-Instead, the `pre-push` hook **is** your CI: it runs lint, type-check, and tests
-before anything leaves your machine, so you never push broken code.
+`.husky/pre-push`:
 
 ```bash
-# .husky/pre-push — runs before every `git push`
 set -e
 for app in santa-api santa-notifications santa-app; do
-  echo "▶ $app"
+  echo "▶ CI: $app"
   ( cd "$app" && npm run lint && npm run type-check && npm test )
 done
 ```
@@ -147,408 +129,300 @@ done
   git push
      |
      v
-  pre-push hook (local)
+  pre-push hook (local CI)
+     +── lint ──────────┐
+     +── type-check ────┤  per app: santa-api, santa-notifications, santa-app
+     +── test ──────────┘
      |
-     +── lint ──┐
-     +── type-check ──┤  (per app: santa-api, santa-notifications, santa-app)
-     +── test ──┘
-     |
-     v
   all green → push proceeds   |   any red → push aborted
 ```
 
-The flow mirrors what a hosted CI would do — lint → type-check → test — but it
-runs in seconds on your machine with no shared infrastructure. If you later move
-to a team repo, the same three commands drop straight into a GitHub Actions
-workflow unchanged.
+There's also a convenience `npm run ci` at the repo root that runs the same loop.
 
-### Deployment Platforms
+> **What's in the gate, and what isn't.** The gate runs each app's `npm test`.
+> The backend suites use `mongodb-memory-server`, which **downloads a MongoDB
+> binary on the first run** (cached afterwards) — so your first push is slower.
+> The **Playwright** end-to-end flow (`santa-app npm run test:e2e`) needs the
+> whole stack up, so it is deliberately **not** in the gate — run it by hand
+> before a deploy.
 
-| Platform | Best for | Free tier | Key features |
-|---|---|---|---|
-| **Railway** | Backend services | $5 credit/month | Monorepo support, auto-deploy from Git, managed databases |
-| **Render** | Backend services | 750 hrs/month | Free web services (spin down after inactivity), managed databases |
-| **Fly.io** | Backend with regions | 3 shared VMs free | Global edge deployment, Docker-based |
-| **Vercel** | Frontend (React/Next) | Generous free tier | Automatic preview deploys, CDN, zero-config for Vite |
-| **Netlify** | Frontend (static/SPA) | 100GB bandwidth/month | Build plugins, form handling, CDN |
+### Infrastructure as Code — `render.yaml` (shipped)
 
-**Recommended setup for Secret Santa:**
-- **santa-api** + **santa-notifications**: Railway or Render
-- **santa-app**: Vercel (best DX for Vite/React)
-- **MongoDB**: MongoDB Atlas (free M0 cluster, 512MB)
-- **Redis**: Redis Cloud (free tier, 30MB)
-- **RabbitMQ**: CloudAMQP (Little Lemur plan, free)
+Instead of clicking through a dashboard, the entire stack is declared once in
+`render.yaml` (a [Render Blueprint](https://render.com/docs/blueprint-spec)).
+Render reads it and provisions everything:
 
-### Managed Services
+- **santa-api** — Docker web service, health check `/api/health`.
+- **santa-notifications** — Docker web service, health check `/health`.
+- **santa-app** — static site (Vite build → static hosting) with an SPA rewrite.
+- **`santa-shared` env group** — `JWT_SECRET` + `SERVICE_API_KEY`, **generated
+  once** by Render and shared by both backends (they must match: notifications
+  verifies santa-api's JWTs and calls its `/internal/*` with the service key).
 
-**MongoDB Atlas** (free tier):
+Connection strings (`MONGO_URL`, `REDIS_URL`, `RABBITMQ_URL`) and cross-service
+URLs (`CORS_ORIGIN`, `SANTA_API_URL`, `VITE_API_URL`, `VITE_WS_URL`) are marked
+`sync: false` — **placeholders you fill in the dashboard**, never committed.
+`autoDeploy: false` keeps deploys manual.
 
-```
-1. Go to mongodb.com/atlas
-2. Create a free cluster (M0 Sandbox, 512MB)
-3. Set up database user (username + password)
-4. Whitelist IP addresses (or allow 0.0.0.0/0 for any)
-5. Get connection string: mongodb+srv://user:pass@cluster.abc123.mongodb.net/santa-api
-```
+### Managed services (free tier)
 
-**Redis Cloud** (free tier):
+| Service  | Provider          | Free tier    | In-transit security                 |
+| -------- | ----------------- | ------------ | ----------------------------------- |
+| MongoDB  | **MongoDB Atlas** | M0, 512 MB   | TLS by default (`mongodb+srv://`)   |
+| Redis    | **Redis Cloud**   | 30 MB        | free tier is plaintext (`redis://`) |
+| RabbitMQ | **CloudAMQP**     | Little Lemur | TLS (`amqps://`)                    |
 
-```
-1. Go to redis.com/cloud
-2. Create a free database (30MB)
-3. Get connection string: redis://default:password@redis-12345.c1.us-east-1-2.ec2.cloud.redislabs.com:12345
-```
+> **Prefer TLS.** `mongodb+srv` and `amqps://` are TLS by default — keep them.
+> (Redis Cloud's free tier is plaintext `redis://`, which is fine for this
+> training app's non-sensitive data; a real service would require TLS in transit.)
 
-**CloudAMQP** (free tier):
+### Environment variables & secrets
 
-```
-1. Go to cloudamqp.com
-2. Create a new instance (Little Lemur plan - free)
-3. Get AMQP URL: amqps://user:pass@moose.rmq.cloudamqp.com/user
-```
+**Never commit secrets.** `.env` is gitignored; commit only `.env.example`.
+In prod, secrets live in the platform:
 
-### Environment Variables in Production
+- **Generated** (`JWT_SECRET`, `SERVICE_API_KEY`) — Render creates them in the
+  `santa-shared` group; you never see or paste them.
+- **From your providers** (`MONGO_URL`, `REDIS_URL`, `RABBITMQ_URL`) — paste the
+  connection strings into Render (`sync: false` vars).
+- **Public, build-time** (`VITE_API_URL`, `VITE_WS_URL`) — baked into the SPA
+  bundle at build, so they are **not** secret (only public URLs go here).
 
-**Never commit secrets to Git.** Use the deployment platform's environment variable management:
+### Health checks
 
-```bash
-# Railway (via CLI)
-railway variables set MONGODB_URI="mongodb+srv://..."
-railway variables set JWT_SECRET="strong-random-secret-here"
-railway variables set REDIS_URL="redis://..."
-railway variables set RABBITMQ_URL="amqps://..."
-railway variables set SERVICE_API_KEY="production-service-key"
+Both backends expose a health endpoint Render pings to know the service is up:
 
-# Or via the Railway/Render web dashboard: Settings > Environment Variables
-```
-
-For santa-app on Vercel:
-
-```bash
-# Vercel dashboard: Settings > Environment Variables
-VITE_API_URL=https://santa-api-production.railway.app
-VITE_WS_URL=https://santa-notifications-production.railway.app
-```
-
-**Important**: `VITE_` variables are embedded in the client bundle at build time. They are not secret. Only use them for public URLs.
-
-### Health Checks and Monitoring
-
-Add health check endpoints to both backend services:
-
-```typescript
-// santa-api health check
+```ts
+// santa-api  → GET /api/health
 @Get('health')
 healthCheck() {
-  return {
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-  };
+  return { status: 'ok', timestamp: new Date().toISOString(), uptime: process.uptime() };
 }
 ```
 
-```typescript
-// santa-notifications health check (Fastify)
-fastify.get('/health', async () => {
-  // Check MongoDB connection
-  const mongoOk = mongoose.connection.readyState === 1;
-
-  // Check Redis connection
-  let redisOk = false;
-  try {
-    await redisClient.ping();
-    redisOk = true;
-  } catch {}
-
-  const status = mongoOk && redisOk ? 'ok' : 'degraded';
-
-  return {
-    status,
-    timestamp: new Date().toISOString(),
-    services: {
-      mongodb: mongoOk ? 'connected' : 'disconnected',
-      redis: redisOk ? 'connected' : 'disconnected',
-    },
-  };
-});
+```ts
+// santa-notifications → GET /health  (Fastify)
+fastify.get('/health', async () => ({ status: 'ok' }));
 ```
 
-Configure your deployment platform to ping `/health` every 30 seconds. If it fails, the platform can restart the service.
+### Deployment checklist
 
-### Deployment Checklist
+- [ ] CI gate green locally (`npm run ci`, or just `git push`)
+- [ ] No hardcoded secrets; `.env` gitignored, only `.env.example` committed
+- [ ] Mongo + RabbitMQ use TLS (`mongodb+srv`, `amqps`)
+- [ ] `CORS_ORIGIN` set to the deployed santa-app URL on both backends
+- [ ] `JWT_SECRET` + `SERVICE_API_KEY` identical across both backends
+- [ ] Health checks respond (`/api/health`, `/health`)
+- [ ] `NODE_ENV=production` set
 
-Before deploying to production, verify:
-
-- [ ] All tests pass in CI
-- [ ] Environment variables are set (no hardcoded secrets)
-- [ ] CORS origins are configured for production URLs
-- [ ] MongoDB indexes are created
-- [ ] Health check endpoint responds
-- [ ] Error logging is configured (no `console.log` in production)
-- [ ] Rate limiting is enabled on auth endpoints
-- [ ] JWT secret is strong and unique per environment
-- [ ] `.env` files are in `.gitignore`
-- [ ] `NODE_ENV=production` is set
+---
 
 ## Task
 
-### Step 1: Add Husky to the Repo
+> The template **ships** the dev gate and the `render.yaml` Blueprint. Steps 1–2
+> turn them on and prove they work; Steps 3–7 provision your own cloud and deploy.
+> You can't deploy _my_ infra — you create **your** accounts and paste **your**
+> secrets into the platform.
+
+### Step 1: Turn on the local gate
 
 ```bash
-# From the repo root
-npm install -D husky lint-staged
-npx husky init
+# from the repo root (the folder with render.yaml + santa-api/ + …)
+npm install          # installs husky/commitlint/lint-staged AND activates hooks
 ```
 
-Create the pre-commit hook:
+`npm install` runs the `prepare` script (`husky`), which wires `.husky/` as your
+hooks directory. (If you cloned before installing, just run `npm install` again.)
+
+### Step 2: Prove the hooks work
 
 ```bash
-# .husky/pre-commit
-npx lint-staged
+# commit-msg (commitlint)
+git commit -m "update stuff"      # ✗ rejected: type must be one of [feat, fix, …]
+git commit -m "chore: try hooks"  # ✓ passes; pre-commit runs lint-staged on staged files
+
+# pre-push gate (your CI)
+git push                          # runs lint + type-check + test for all three apps
+# Introduce a lint error, push again, and confirm the push is aborted.
 ```
 
-Create a placeholder pre-push hook (Step 3 turns it into the full CI gate):
+### Step 3: Provision managed services (your accounts)
+
+**MongoDB Atlas**
+
+1. Sign up at [mongodb.com/atlas](https://www.mongodb.com/atlas) → **Build a
+   Database** → **M0 Free** → pick a cloud/region → create.
+   - **Pick the region closest to your backend, not to you** — the browser talks
+     to Render, and Render makes dozens of DB queries per request, so _app↔DB_
+     latency is what matters. Choose **AWS · Frankfurt (`eu-central-1`)**: M0 is
+     reliably available there, it's the nearest big hub to Kyiv (~25–40 ms), and
+     it **matches the Render region** (`region: frankfurt` in `render.yaml`), so
+     app↔DB drops to ~1–2 ms. Put Redis Cloud and CloudAMQP in Frankfurt too.
+2. **Database Access** → **Add New Database User** (username + password; "Read
+   and write to any database").
+3. **Network Access** → **Add IP Address** → **Allow access from anywhere**
+   (`0.0.0.0/0`) — Render's free egress IPs aren't fixed, so allow-all is the
+   pragmatic choice for a course.
+4. **Connect → Drivers** → copy the SRV string:
+   `mongodb+srv://USER:PASS@cluster0.xxxxx.mongodb.net/?retryWrites=true&w=majority`
+5. You'll use it **twice**, with a different database name per service:
+   - santa-api → `…mongodb.net/santa?retryWrites=true&w=majority`
+   - santa-notifications → `…mongodb.net/santa-notifications?retryWrites=true&w=majority`
+
+**Redis Cloud**
+
+What Redis is for here: santa-api uses it for the shared rate-limiter (throttler
+across instances) and the stricter auth limit (`INCR`+`EXPIRE`);
+santa-notifications uses it for presence (`online:users` set) and **pub/sub** for
+the Socket.IO Redis adapter (so WebSockets work across multiple instances). All
+of that is plain `SET`/`INCR`/`EXPIRE`/sets/pub-sub — no version-specific features.
+
+1. Sign up at [redis.io/cloud](https://redis.io/cloud) → **New database** → free
+   plan (**30 MB**).
+2. **Cloud + region:** choose **AWS · Europe (Frankfurt)** — same region as Render
+   and Atlas, so app↔Redis is ~1–2 ms.
+3. **Redis version:** pick the **latest stable offered in your region** — on the
+   free tier in Frankfurt that's usually **8.4** (8.6 may not be available there).
+   We only use core commands, so any 8.x is fine; keep the region, take whatever
+   version it allows.
+4. Copy host, port, and the default user password, then build the URL:
+   `redis://default:PASS@HOST:PORT`
+
+**CloudAMQP** (managed RabbitMQ)
+
+What RabbitMQ is for here: it's the backbone of the event-driven flow. santa-api
+**publishes** domain events (`draw.completed`, `message.sent`,
+`room.date_changed`, …) to a topic exchange; santa-notifications **consumes**
+them, creates per-recipient notifications, and pushes them over WebSocket. Both
+services need the **same** instance.
+
+1. Sign up at [cloudamqp.com](https://www.cloudamqp.com) → **Create New Instance**.
+2. **Plan:** **Little Lemur** (free).
+3. **Region:** **Amazon Web Services** → **EU-Central-1 (Frankfurt)** — same
+   region as Render / Atlas / Redis, so everything is co-located.
+4. Create, open the instance, and copy the **AMQP URL** from the details page:
+   `amqps://USER:PASS@HOST/VHOST` — the `amqps` scheme is TLS (already encrypted,
+   nothing to toggle). Use the **same URL** for both `RABBITMQ_URL` vars.
+
+Keep these six values handy — you paste them into Render in Step 5.
+
+### Step 4: Create the Render Blueprint (your own Render account)
+
+1. Make sure `render.yaml` is on GitHub at the **repo root** (next to
+   `santa-api/`, `santa-notifications/`, `santa-app/`).
+2. Go to [render.com](https://render.com) → **Get Started** → **Sign up with
+   GitHub** → authorize Render.
+3. Let Render see the repo:
+   - **Private repo:** click **Configure account** / install the **Render GitHub
+     App** and grant it the repo (for an org repo, the owner approves it once).
+4. In the dashboard: **New +** (top-right) → **Blueprint**.
+5. Pick the repo (or paste its public Git URL). Render scans the **root**
+   `render.yaml` and shows the plan: 2 Docker web services, 1 static site, and the
+   `santa-shared` env group.
+6. Render asks for the `sync: false` values **before it applies**. Paste what you
+   have now — the **connection strings**: `MONGO_URL` (the `/santa` one for
+   santa-api, `/santa-notifications` for the other), `REDIS_URL`, `RABBITMQ_URL`.
+   Leave the cross-URLs (`CORS_ORIGIN`, `SANTA_API_URL`, `VITE_API_URL`,
+   `VITE_WS_URL`) **blank for now** — you don't know the URLs until the services
+   exist.
+7. Name the Blueprint group → **Apply / Create Resources**. Render builds the
+   services and generates `JWT_SECRET` + `SERVICE_API_KEY` in the group. Each
+   service gets a URL like `https://santa-api-xxxx.onrender.com` (find it at the
+   top of each service's page).
+
+### Step 5: Fill in the cross-service URLs (now that you know them)
+
+You entered the connection strings during Apply. Now each service has a real
+`…onrender.com` URL, so open **Environment** on each service and fill the
+cross-references you left blank (then redeploy in Step 6). Full list per service
+for reference:
+
+**santa-api**
+
+```
+MONGO_URL    = mongodb+srv://…/santa?retryWrites=true&w=majority
+REDIS_URL    = redis://default:…@…:PORT
+RABBITMQ_URL = amqps://…@…/VHOST
+CORS_ORIGIN  = https://santa-app-xxxx.onrender.com
+```
+
+**santa-notifications**
+
+```
+MONGO_URL    = mongodb+srv://…/santa-notifications?retryWrites=true&w=majority
+REDIS_URL    = redis://default:…@…:PORT           # same Redis instance
+RABBITMQ_URL = amqps://…@…/VHOST                  # same CloudAMQP instance
+SANTA_API_URL = https://santa-api-xxxx.onrender.com
+CORS_ORIGIN  = https://santa-app-xxxx.onrender.com
+```
+
+**santa-app** (build-time, baked into the bundle)
+
+```
+VITE_API_URL = https://santa-api-xxxx.onrender.com
+VITE_WS_URL  = https://santa-notifications-xxxx.onrender.com
+```
+
+`NODE_ENV`, `PORT`, `JWT_EXPIRATION`, `LOG_LEVEL`, and the shared secrets come
+from `render.yaml`/the group — you don't set those by hand.
+
+### Step 6: Deploy (manual)
+
+Deploys are manual (`autoDeploy: false`). Two ways:
+
+**Dashboard** — open each service → **Manual Deploy → Deploy latest commit**.
+
+**CLI** — install the Render CLI, then trigger a deploy per service:
 
 ```bash
-# .husky/pre-push
-echo "pre-push: CI gate is wired up in Step 3"
+# https://render.com/docs/cli
+render login
+render services            # list services to get their IDs (srv-…)
+render deploys create srv-XXXXXXXX --wait   # repeat per service
 ```
 
-Configure lint-staged in the root `package.json`:
+**Order matters once:** the static `santa-app` bakes `VITE_*` at **build** time,
+so deploy the **backends first**, confirm their URLs, make sure `VITE_API_URL` /
+`VITE_WS_URL` point at them, then deploy `santa-app`. If you change a `VITE_*`
+value later, you must **redeploy santa-app** for it to take effect.
 
-```json
-{
-  "lint-staged": {
-    "santa-api/**/*.ts": ["eslint --fix"],
-    "santa-notifications/**/*.ts": ["eslint --fix"],
-    "santa-app/**/*.{ts,tsx}": ["eslint --fix"]
-  }
-}
-```
-
-### Step 2: Add Commitlint
+### Step 7: Verify the deployed app
 
 ```bash
-npm install -D @commitlint/cli @commitlint/config-conventional
+curl https://santa-api-xxxx.onrender.com/api/health
+# { "status": "ok", "uptime": … }
+
+curl https://santa-notifications-xxxx.onrender.com/health
+# { "status": "ok" }
 ```
 
-Create `commitlint.config.js` at the repo root:
-
-```javascript
-module.exports = {
-  extends: ['@commitlint/config-conventional'],
-  rules: {
-    'type-enum': [
-      2,
-      'always',
-      ['feat', 'fix', 'docs', 'style', 'refactor', 'test', 'chore', 'ci', 'perf'],
-    ],
-    'subject-max-length': [2, 'always', 72],
-  },
-};
-```
-
-Add the commit-msg hook:
-
-```bash
-# .husky/commit-msg
-npx --no -- commitlint --edit "$1"
-```
-
-Test it:
-
-```bash
-git commit -m "update stuff"
-# Should fail: "type must be one of [feat, fix, ...]"
-
-git commit -m "feat: add husky and commitlint"
-# Should pass
-```
-
-### Step 3: Local CI in the pre-push hook
-
-Your `pre-push` hook **is** your CI gate. It runs lint, type-check, and tests
-for all three apps before any push leaves your machine — no hosted pipeline,
-no shared secrets, works the same on everyone's fork. Replace `.husky/pre-push`:
-
-```bash
-set -e
-
-for app in santa-api santa-notifications santa-app; do
-  echo "▶ CI: $app"
-  ( cd "$app" && npm run lint && npm run type-check && npm test )
-done
-```
-
-A broken push is now stopped locally:
-
-```bash
-git push
-# ▶ CI: santa-api … ✓
-# ▶ CI: santa-notifications … ✓
-# ▶ CI: santa-app … ✓        → push proceeds
-# (any failure exits non-zero and aborts the push)
-```
-
-> **Keep the gate fast.** Scope the hook to lint + type-check + **unit** tests
-> (`test:unit`). Suites that need infrastructure — `mongodb-memory-server`
-> (downloads a binary on first run) and the Playwright e2e flow (needs the whole
-> stack up) — are run **manually before a deploy**, not on every push.
->
-> If you ever move to a shared team repo, these same three commands lift
-> straight into a GitHub Actions workflow unchanged — but that's out of scope
-> here: in this course each of you ships independently from your own machine.
-
-### Step 4: Set Up Managed Services
-
-> **Your own accounts, your own `.env`.** Everyone provisions their **own**
-> free-tier services and keeps their connection strings in their **own**
-> untracked `.env` files. Nothing here is shared, and secrets never go in git
-> (`.env` is gitignored; commit only `.env.example`).
-
-Create free-tier accounts and get connection strings for:
-
-1. **MongoDB Atlas**: Create an M0 cluster. Whitelist `0.0.0.0/0` (allow from anywhere) for simplicity. Create a database user. Copy the connection string.
-
-2. **Redis Cloud**: Create a free database. Copy the public endpoint and password.
-
-3. **CloudAMQP**: Create a Little Lemur instance. Copy the AMQP URL.
-
-Save the connection strings -- you will need them for Step 6.
-
-### Step 5: Deploy Backend Services
-
-Deploy santa-api and santa-notifications to Railway (or Render):
-
-```bash
-# Install Railway CLI
-npm install -g @railway/cli
-railway login
-
-# Deploy santa-api
-cd santa-api
-railway init
-railway up
-
-# Deploy santa-notifications
-cd ../santa-notifications
-railway init
-railway up
-```
-
-Or use the Railway web dashboard:
-1. Connect your GitHub repo
-2. Select the subdirectory for each service
-3. Railway will auto-detect Node.js and build
-
-### Step 6: Deploy Frontend
-
-Deploy santa-app to Vercel:
-
-```bash
-npm install -g vercel
-cd santa-app
-vercel
-```
-
-Or connect your GitHub repo in the Vercel dashboard:
-1. Import project
-2. Set root directory to `santa-app`
-3. Framework preset: Vite
-4. Add environment variables: `VITE_API_URL` and `VITE_WS_URL`
-
-### Step 7: Configure Production Environment Variables
-
-Set environment variables on each platform:
-
-**santa-api (Railway):**
-```
-NODE_ENV=production
-MONGODB_URI=mongodb+srv://...
-REDIS_URL=redis://...
-RABBITMQ_URL=amqps://...
-JWT_SECRET=<generate with: openssl rand -base64 32>
-SERVICE_API_KEY=<generate with: openssl rand -base64 32>
-CORS_ORIGIN=https://your-santa-app.vercel.app
-```
-
-**santa-notifications (Railway):**
-```
-NODE_ENV=production
-MONGODB_URI=mongodb+srv://...
-REDIS_URL=redis://...
-RABBITMQ_URL=amqps://...
-JWT_SECRET=<same as santa-api>
-SERVICE_API_KEY=<same as santa-api>
-SANTA_API_URL=https://santa-api-production.railway.app
-CORS_ORIGIN=https://your-santa-app.vercel.app
-```
-
-**santa-app (Vercel):**
-```
-VITE_API_URL=https://santa-api-production.railway.app
-VITE_WS_URL=https://santa-notifications-production.railway.app
-```
-
-### Step 8: Verify the Deployed Application
-
-Test the full end-to-end flow on production:
-
-1. Open your Vercel URL in the browser
-2. Register a new account
-3. Create a room
-4. Share the invite code with a friend (or use an incognito window)
-5. Join the room with the second account
-6. Run the draw
-7. Send an anonymous message
-8. Verify notifications and real-time updates work
+Then open the santa-app URL and run the full flow: register, create a room (with
+a budget), invite a second account (incognito window), join, run the draw (pick
+the exchange date), reveal assignments, send an anonymous message, and confirm
+the bell + real-time toast fire. Free Render services **spin down when idle**, so
+the first request after a pause takes a few seconds to wake — that's expected.
 
 ## Verification
 
-Test Husky hooks locally:
-
 ```bash
-# Test commitlint
-git commit -m "bad message"
-# Expected: rejected by commitlint
+# Local CI gate
+git commit -m "bad message"        # rejected by commitlint
+npm run ci                         # lint + type-check + test for all 3 apps
+git push                           # the pre-push hook runs the same gate
 
-git commit -m "feat: add ci/cd configuration"
-# Expected: passes commitlint, runs lint-staged
+# Coverage (optional)
+cd santa-api && npm run test:e2e:cov   # > 80% on services/controllers
+cd santa-app && npm test -- --coverage # (vitest will offer to install @vitest/coverage-v8)
 
-# Test the local CI gate (pre-push)
-git push
-# Expected: "▶ CI: santa-api / santa-notifications / santa-app" — lint,
-# type-check, and unit tests run for each app before the push proceeds.
-# Introduce a lint error and confirm the push is aborted.
+# Deployed health
+curl https://santa-api-xxxx.onrender.com/api/health
+curl https://santa-notifications-xxxx.onrender.com/health
 ```
-
-Test deployed services:
-
-```bash
-# Health checks
-curl https://santa-api-production.railway.app/health
-# Expected: { "status": "ok", ... }
-
-curl https://santa-notifications-production.railway.app/health
-# Expected: { "status": "ok", "services": { "mongodb": "connected", "redis": "connected" } }
-
-# Test auth flow
-curl -X POST https://santa-api-production.railway.app/auth/register \
-  -H 'Content-Type: application/json' \
-  -d '{"email":"prod-test@example.com","password":"password123","displayName":"Prod Test"}'
-# Expected: { "accessToken": "..." }
-```
-
-Open the deployed frontend and complete the full Secret Santa flow: register, create room, invite friends, draw names, send anonymous messages, receive real-time notifications.
 
 ## Learn More
 
-- [Husky Documentation](https://typicode.github.io/husky/)
-- [Conventional Commits](https://www.conventionalcommits.org/)
-- [commitlint](https://commitlint.js.org/)
-- [Git hooks](https://git-scm.com/book/en/v2/Customizing-Git-Git-Hooks)
-- [Railway Documentation](https://docs.railway.app/)
-- [Vercel Documentation](https://vercel.com/docs)
-- [MongoDB Atlas](https://www.mongodb.com/atlas)
+- [Husky](https://typicode.github.io/husky/)
+- [Conventional Commits](https://www.conventionalcommits.org/) · [commitlint](https://commitlint.js.org/)
+- [Render Blueprints (IaC)](https://render.com/docs/blueprint-spec) · [Render CLI](https://render.com/docs/cli)
+- [MongoDB Atlas](https://www.mongodb.com/atlas) · [Redis Cloud](https://redis.io/cloud) · [CloudAMQP](https://www.cloudamqp.com/)
 - [The Twelve-Factor App](https://12factor.net/)
