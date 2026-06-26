@@ -6,7 +6,7 @@ import { ErrorFallback } from '../ErrorFallback';
 import { CreateRoomDialog } from '../CreateRoomDialog';
 import { JoinRoomDialog } from '../JoinRoomDialog';
 import { useAuth } from '../../hooks/useAuth';
-import { ThemeToggle } from '../ThemeToggle/TheeToggle';
+import { ThemeToggle } from '../ThemeToggle/ThemeToggle';
 import { StatusMessage } from '../ui/StatusMessage/StatusMessage';
 
 export function Layout() {
