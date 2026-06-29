@@ -283,7 +283,7 @@ Update `santa-api` and `santa-notifications` services to depend on Redis:
 ```yaml
 santa-api:
   depends_on:
-    mongo:
+    mongodb:                 # match the compose service name (mongodb, not mongo)
       condition: service_healthy
     redis:
       condition: service_healthy
@@ -494,37 +494,41 @@ docker-compose up --build
 docker-compose exec redis redis-cli PING
 # Expected: PONG
 
-# 3. Test room caching
+# 3. Test room caching  (API base is /api)
 # Fetch a room (first call = cache miss, hits DB)
-curl http://localhost:3001/rooms/{roomId} -H "Authorization: Bearer $TOKEN"
+curl http://localhost:3001/api/rooms/{roomId} -H "Authorization: Bearer $TOKEN"
 
 # Check Redis for the cached value
-docker-compose exec redis redis-cli GET "room:{roomId}"
+docker compose exec redis redis-cli GET "room:{roomId}"
 # Expected: JSON string of the room data
 
 # Check TTL
-docker-compose exec redis redis-cli TTL "room:{roomId}"
+docker compose exec redis redis-cli TTL "room:{roomId}"
 # Expected: ~300 (seconds)
 
 # Fetch the same room again (cache hit, no DB query)
-# Check your application logs -- should say "cache HIT"
+# Check your application logs -- should say "Room cache HIT"
 
 # 4. Test invite code expiration
-# Create an invite code
-curl -X POST http://localhost:3001/rooms/{roomId}/invite \
-  -H "Authorization: Bearer $TOKEN"
-# Note the invite code
-
-# Verify it exists in Redis
-docker-compose exec redis redis-cli GET "invite:{code}"
-docker-compose exec redis redis-cli TTL "invite:{code}"
+# The invite code is created with the room (POST /api/rooms) and returned on the
+# room object — there is no separate "create invite" endpoint. Grab it, then check
+# Redis. (To rotate it: POST /api/rooms/{roomId}/invite-code/regenerate.)
+CODE=$(curl -s http://localhost:3001/api/rooms/{roomId} -H "Authorization: Bearer $TOKEN" | jq -r '.inviteCode')
+docker compose exec redis redis-cli GET "invite:$CODE"   # → the roomId
+docker compose exec redis redis-cli TTL "invite:$CODE"
 # Expected: ~172800 seconds (48 hours)
+
+# Join using ONLY the code (what the frontend's "Join with code" calls):
+curl -X POST http://localhost:3001/api/rooms/join \
+  -H "Content-Type: application/json" -H "Authorization: Bearer $OTHER_TOKEN" \
+  -d "{\"inviteCode\": \"$CODE\"}"
+# Expected: 201 + the room; a bogus code → 400
 
 # 5. Test rate limiting
 # Hit the login endpoint rapidly
 for i in {1..6}; do
   curl -s -o /dev/null -w "%{http_code}\n" \
-    -X POST http://localhost:3001/auth/login \
+    -X POST http://localhost:3001/api/auth/login \
     -H "Content-Type: application/json" \
     -d '{"email": "alice@test.com", "password": "wrong"}'
 done
@@ -532,13 +536,13 @@ done
 
 # 6. Test cache invalidation
 # Update a room
-curl -X PATCH http://localhost:3001/rooms/{roomId} \
+curl -X PATCH http://localhost:3001/api/rooms/{roomId} \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"name": "Updated Name"}'
 
 # Check Redis -- the cached value should be gone
-docker-compose exec redis redis-cli GET "room:{roomId}"
+docker compose exec redis redis-cli GET "room:{roomId}"
 # Expected: (nil)
 
 # 7. Check online users (santa-notifications)
