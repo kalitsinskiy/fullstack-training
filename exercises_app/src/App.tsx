@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import './App.css';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Counter from '../exercises/counter';
 import TodoList from '../exercises/todo-list';
 import ThemeSwitcherApp from '../exercises 2/theme-switcher';
@@ -9,6 +10,9 @@ import ProtectedApp from '../exercises 3/protected-app';
 import { RoomCardDemo } from '../exercises 4/build-room-card';
 import MultiStepCheckout from '../exercises 5/multi-step-checkout';
 import ProfileFormDemo from '../exercises 5/profile-form';
+import { CrudPage } from '../exercises 6/crud-page';
+
+const queryClient = new QueryClient();
 
 const exercises = [
   { id: 'counter', label: 'Counter', component: <Counter /> },
@@ -20,6 +24,7 @@ const exercises = [
   { id: 'build-room-card', label: 'Build Room Card', component: <RoomCardDemo /> },
   { id: 'multi-step-checkout', label: 'Multi-Step Checkout', component: <MultiStepCheckout /> },
   { id: 'profile-form', label: 'Profile Form', component: <ProfileFormDemo /> },
+  { id: 'crud-page', label: 'CRUD Page', component: <CrudPage /> },
 ];
 
 function App() {
@@ -28,21 +33,23 @@ function App() {
   const current = exercises.find((e) => e.id === active)!;
 
   return (
-    <div id="app">
-      <nav id="tabs">
-        {exercises.map((ex) => (
-          <button
-            key={ex.id}
-            className={ex.id === active ? 'tab active' : 'tab'}
-            onClick={() => setActive(ex.id)}
-          >
-            {ex.label}
-          </button>
-        ))}
-      </nav>
+    <QueryClientProvider client={queryClient}>
+      <div id="app">
+        <nav id="tabs">
+          {exercises.map((ex) => (
+            <button
+              key={ex.id}
+              className={ex.id === active ? 'tab active' : 'tab'}
+              onClick={() => setActive(ex.id)}
+            >
+              {ex.label}
+            </button>
+          ))}
+        </nav>
 
-      <main id="exercise">{current.component}</main>
-    </div>
+        <main id="exercise">{current.component}</main>
+      </div>
+    </QueryClientProvider>
   );
 }
 
