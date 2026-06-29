@@ -171,31 +171,18 @@ Open the diff on GitHub and read it yourself, file by file, against the
 
 ### Step 4 — Open the pull request
 
-Open it against the base your instructor names. Use a description like:
+Open it against the base your instructor names. GitHub **pre-fills the PR body**
+from the repo's [`.github/pull_request_template.md`](../../../../.github/pull_request_template.md) —
+fill **every** section and tick the boxes honestly. In particular:
 
-```md
-## What
-One-paragraph summary of the system this PR delivers.
-
-## Why / scope
-What's included, and what's intentionally out of scope.
-
-## How to run
-- Local: `docker compose up -d` + the three apps (or the dev overlay)
-- Deployed: <your Render URL>
-
-## Testing
-How it's tested + how to run the suites (`npm run ci`).
-
-## Screenshots
-Key screens / the real-time flow.
-
-## Checks
-- [ ] lint + type-check + tests green
-- [ ] npm audit / Semgrep / Sonar Quality Gate clean (or noted)
-- [ ] no secrets; only .env.example committed
-- [ ] security checklist reviewed
-```
+- **Live demo (Render):** paste your deployed **client URL** (santa-app) — it's
+  the first thing the reviewer opens — plus the two backend `/health` URLs.
+- **Deployment checklist:** prove the whole flow works in prod (register → room →
+  join → draw → assignment → anonymous message → real-time notification).
+- **Tests & quality:** `npm run ci` green; `npm audit` / Semgrep / Sonar clean
+  (or justified in *Notes*); no secrets, only `.env.example`.
+- **Security checklist:** the Lesson 12 items hold (authz, validation, the
+  `santaId` privacy invariant, TLS, CORS, logging).
 
 Then **assign your instructor as the reviewer**.
 
