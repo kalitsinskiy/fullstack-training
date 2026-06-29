@@ -322,19 +322,23 @@ for T in "$TOKEN_BOB" "$TOKEN_CHARLIE"; do
     -d "{\"inviteCode\": \"$CODE\"}" > /dev/null
 done
 
-# 5. Creator runs the draw (now that there are 3 participants)
+# 5. Creator runs the draw (now that there are 3 participants).
+#    exchangeDate is REQUIRED (see the API contract) — the draw 400s without it.
 curl -i -X POST "http://localhost:3001/api/rooms/$ROOM_ID/draw" \
-  -H "Authorization: Bearer $TOKEN_ALICE"
+  -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN_ALICE" \
+  -d '{"exchangeDate": "2026-12-24"}'
 # Expected: 200, room with status "drawn" (with < 3 participants it would be 400)
 
 # 6. Draw again → rejected
 curl -i -X POST "http://localhost:3001/api/rooms/$ROOM_ID/draw" \
-  -H "Authorization: Bearer $TOKEN_ALICE"
+  -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN_ALICE" \
+  -d '{"exchangeDate": "2026-12-24"}'
 # Expected: 400 "Draw has already been performed"
 
 # 7. Non-creator (Bob) cannot draw
 curl -i -X POST "http://localhost:3001/api/rooms/$ROOM_ID/draw" \
-  -H "Authorization: Bearer $TOKEN_BOB"
+  -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN_BOB" \
+  -d '{"exchangeDate": "2026-12-24"}'
 # Expected: 403 Forbidden
 
 # 8. Each user sees only their OWN assignment
