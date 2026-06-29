@@ -18,7 +18,11 @@ import { WishlistModule } from './wishlist/wishlist.module';
         uri: process.env.MONGO_URL ?? 'mongodb://localhost:27017/santa-api',
       }),
     }),
-    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
+    ThrottlerModule.forRoot({
+      throttlers: [{ ttl: 60_000, limit: 100 }],
+      // Disable rate limiting under test so multi-user e2e scenarios don't 429.
+      skipIf: () => process.env.NODE_ENV === 'test',
+    }),
     LoggerModule.forRoot({
       pinoHttp: {
         level:
