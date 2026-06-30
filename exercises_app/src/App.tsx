@@ -11,6 +11,8 @@ import { RoomCardDemo } from '../exercises 4/build-room-card';
 import MultiStepCheckout from '../exercises 5/multi-step-checkout';
 import ProfileFormDemo from '../exercises 5/profile-form';
 import { CrudPage } from '../exercises 6/crud-page';
+import OptimisticToggleDemo from '../exercises 7/optimistic-toggle';
+import WrapRouteWithBoundaryDemo from '../exercises 7/wrap-route-with-boundary';
 
 const queryClient = new QueryClient();
 
@@ -25,6 +27,12 @@ const exercises = [
   { id: 'multi-step-checkout', label: 'Multi-Step Checkout', component: <MultiStepCheckout /> },
   { id: 'profile-form', label: 'Profile Form', component: <ProfileFormDemo /> },
   { id: 'crud-page', label: 'CRUD Page', component: <CrudPage /> },
+  { id: 'optimistic-toggle', label: 'Optimistic Toggle', component: <OptimisticToggleDemo /> },
+  {
+    id: 'wrap-route-with-boundary',
+    label: 'Wrap Route with Boundary',
+    component: <WrapRouteWithBoundaryDemo />,
+  },
 ];
 
 function App() {
