@@ -13,11 +13,15 @@ import {
   PaginationQuery,
   PaginatedResponse,
 } from '../common/pagination';
+import { UsersService } from '../users/users.service';
+import { WishlistService } from '../wishlist/wishlist.service';
 
 @Injectable()
 export class RoomsService {
   constructor(
     @InjectModel(Room.name) private readonly roomModel: Model<Room>,
+    private readonly usersService: UsersService,
+    private readonly wishlistService: WishlistService,
   ) {}
 
   async create(dto: CreateRoomDto, ownerId: string) {
@@ -65,6 +69,62 @@ export class RoomsService {
         { new: true },
       )
       .exec() as Promise<Room>;
+  }
+
+  async getAssignment(
+    roomId: string,
+    userId: string,
+  ): Promise<{ assigneeId: string; assigneeName: string }> {
+    const room = await this.roomModel.findById(roomId).exec();
+    if (!room) throw new NotFoundException('Room not found');
+
+    const isMember = room.participants.some((p) => p.toString() === userId);
+    if (!isMember) throw new ForbiddenException('Access denied');
+
+    if (room.status !== 'drawn' || !room.assignments) {
+      throw new NotFoundException('Draw has not been run yet');
+    }
+
+    const assigneeId = room.assignments.get(userId);
+    if (!assigneeId) throw new NotFoundException('Assignment not found');
+
+    const assignee = await this.usersService.findById(assigneeId);
+    if (!assignee) throw new NotFoundException('Assignee not found');
+
+    return { assigneeId, assigneeName: assignee.displayName };
+  }
+
+  async getAssignmentWishlist(
+    roomId: string,
+    userId: string,
+  ): Promise<{
+    assigneeName: string;
+    items: Array<{ name: string; url?: string; priority?: number }>;
+  }> {
+    const room = await this.roomModel.findById(roomId).exec();
+    if (!room) throw new NotFoundException('Room not found');
+
+    const isMember = room.participants.some((p) => p.toString() === userId);
+    if (!isMember) throw new ForbiddenException('Access denied');
+
+    if (room.status !== 'drawn' || !room.assignments) {
+      throw new NotFoundException('Draw has not been run yet');
+    }
+
+    const assigneeId = room.assignments.get(userId);
+    if (!assigneeId) throw new NotFoundException('Assignment not found');
+
+    const [assignee, wishlist] = await Promise.all([
+      this.usersService.findById(assigneeId),
+      this.wishlistService.get(roomId, assigneeId),
+    ]);
+
+    if (!assignee) throw new NotFoundException('Assignee not found');
+
+    return {
+      assigneeName: assignee.displayName,
+      items: wishlist?.items ?? [],
+    };
   }
 
   async draw(roomId: string, callerId: string): Promise<Room> {

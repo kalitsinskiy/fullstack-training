@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { api, getErrorMessage } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -12,15 +15,26 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
+interface ApiRoom {
+  _id: string;
+  id?: string;
+}
+
 export function CreateRoomDialog() {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
+  const navigate = useNavigate();
+  const qc = useQueryClient();
 
-  const handleCreate = () => {
-    console.log({ name });
-    setName('');
-    setOpen(false);
-  };
+  const create = useMutation({
+    mutationFn: (roomName: string) => api.post<ApiRoom>('/api/rooms', { name: roomName }),
+    onSuccess: (room) => {
+      qc.invalidateQueries({ queryKey: ['rooms'] });
+      setName('');
+      setOpen(false);
+      navigate(`/rooms/${room._id ?? room.id}`);
+    },
+  });
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -34,7 +48,7 @@ export function CreateRoomDialog() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            handleCreate();
+            if (name.trim()) create.mutate(name.trim());
           }}
         >
           <div className="space-y-2">
@@ -48,12 +62,15 @@ export function CreateRoomDialog() {
               required
             />
           </div>
+          {create.isError && (
+            <p className="mt-2 text-sm text-red-600">{getErrorMessage(create.error)}</p>
+          )}
           <DialogFooter>
             <DialogClose render={<Button type="button" variant="outline" />}>
               Cancel
             </DialogClose>
-            <Button type="submit" disabled={!name.trim()}>
-              Create
+            <Button type="submit" disabled={!name.trim() || create.isPending}>
+              {create.isPending ? 'Creating…' : 'Create'}
             </Button>
           </DialogFooter>
         </form>

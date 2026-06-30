@@ -12,5 +12,6 @@ import { Wishlist, WishlistSchema } from './schemas/wishlist.schema';
   ],
   providers: [WishlistService],
   controllers: [WishlistController],
+  exports: [WishlistService],
 })
 export class WishlistModule {}

@@ -49,6 +49,35 @@ export class RoomsController {
     return this.roomsService.findByUser(userId, { page, limit });
   }
 
+  @Get(':id/assignment/wishlist')
+  @ApiOperation({ summary: "Get the assignee's wishlist for the current user" })
+  @ApiParam({ name: 'id', description: 'Room MongoDB ID' })
+  @ApiResponse({ status: 200, description: 'Wishlist found' })
+  @ApiResponse({ status: 403, description: 'Not a member of this room' })
+  @ApiResponse({
+    status: 404,
+    description: 'Room not found or draw not run yet',
+  })
+  getAssignmentWishlist(
+    @Param('id') id: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.roomsService.getAssignmentWishlist(id, userId);
+  }
+
+  @Get(':id/assignment')
+  @ApiOperation({ summary: "Get the current user's Secret Santa assignment" })
+  @ApiParam({ name: 'id', description: 'Room MongoDB ID' })
+  @ApiResponse({ status: 200, description: 'Assignment found' })
+  @ApiResponse({ status: 403, description: 'Not a member of this room' })
+  @ApiResponse({
+    status: 404,
+    description: 'Room not found or draw not run yet',
+  })
+  getAssignment(@Param('id') id: string, @CurrentUser('id') userId: string) {
+    return this.roomsService.getAssignment(id, userId);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get room by ID' })
   @ApiParam({ name: 'id', description: 'Room MongoDB ID' })

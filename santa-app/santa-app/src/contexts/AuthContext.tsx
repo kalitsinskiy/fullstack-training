@@ -1,4 +1,6 @@
-import { createContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useEffect, useState, type ReactNode } from 'react';
+import { api } from '@/services/api';
+import { queryClient } from '@/lib/queryClient';
 
 interface User {
   id: string;
@@ -12,60 +14,63 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<User>;
-  register: (
-    email: string,
-    password: string,
-    displayName: string,
-  ) => Promise<User>;
+  register: (email: string, password: string, displayName: string) => Promise<User>;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
+interface RawUser {
+  _id?: string;
+  id?: string;
+  email: string;
+  displayName: string;
+}
 
-async function fetchMe(accessToken: string): Promise<User> {
-  const res = await fetch(`${BASE_URL}/api/users/me`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-  if (!res.ok) throw new Error("Failed to load profile");
-  return res.json() as Promise<User>;
+function mapUser(raw: RawUser): User {
+  return { id: raw._id ?? raw.id ?? '', email: raw.email, displayName: raw.displayName };
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(
-    () => !!localStorage.getItem("token"),
-  );
+  const [isLoading, setIsLoading] = useState(() => !!localStorage.getItem('token'));
+
+  function logout() {
+    localStorage.removeItem('token');
+    setToken(null);
+    setUser(null);
+    queryClient.clear();
+  }
 
   useEffect(() => {
-    const stored = localStorage.getItem("token");
+    api.setUnauthorizedHandler(logout);
+  }, []);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('token');
     if (!stored) return;
-    fetchMe(stored)
-      .then((u) => {
+    api
+      .get<RawUser>('/api/users/me')
+      .then((raw) => {
         setToken(stored);
-        setUser(u);
+        setUser(mapUser(raw));
       })
       .catch(() => {
-        localStorage.removeItem("token");
+        localStorage.removeItem('token');
       })
       .finally(() => setIsLoading(false));
   }, []);
 
   async function login(email: string, password: string): Promise<User> {
-    const loginRes = await fetch(`${BASE_URL}/api/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+    const { accessToken } = await api.post<{ accessToken: string }>('/api/auth/login', {
+      email,
+      password,
     });
-    if (!loginRes.ok) throw new Error("Invalid credentials");
-    const { accessToken } = (await loginRes.json()) as { accessToken: string };
-
-    const fetchedUser = await fetchMe(accessToken);
-
-    localStorage.setItem("token", accessToken);
+    localStorage.setItem('token', accessToken);
     setToken(accessToken);
+    const raw = await api.get<RawUser>('/api/users/me');
+    const fetchedUser = mapUser(raw);
     setUser(fetchedUser);
     return fetchedUser;
   }
@@ -75,22 +80,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     password: string,
     displayName: string,
   ): Promise<User> {
-    const res = await fetch(`${BASE_URL}/api/auth/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, displayName }),
+    const raw = await api.post<RawUser & { accessToken: string }>('/api/auth/register', {
+      email,
+      password,
+      displayName,
     });
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(text || "Registration failed");
-    }
-    return login(email, password);
-  }
-
-  function logout() {
-    localStorage.removeItem("token");
-    setToken(null);
-    setUser(null);
+    localStorage.setItem('token', raw.accessToken);
+    setToken(raw.accessToken);
+    const fetchedUser = mapUser(raw);
+    setUser(fetchedUser);
+    return fetchedUser;
   }
 
   return (
