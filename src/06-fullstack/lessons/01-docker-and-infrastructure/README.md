@@ -137,8 +137,7 @@ The `build` stage has all dev dependencies (TypeScript compiler, etc.). The `pro
 Docker Compose lets you define and run multi-container applications. You describe all services, networks, and volumes in a single `docker-compose.yml` file.
 
 ```yaml
-version: '3.8'
-
+# Modern Compose ignores the top-level `version:` key (it's obsolete) — omit it.
 services:
   mongo:
     image: mongo:7
@@ -301,6 +300,15 @@ files behind a web server. Write it yourself:
 If you want the whole stack in one `docker compose up`, add a `santa-app` service
 that builds from `./santa-app` with `args: { VITE_API_URL: http://localhost:3001 }`
 and maps `5173:80`. Keep it optional — the default workflow is Vite for the client.
+
+> Heads-up for later lessons: the **dev** Vite proxy (`vite.config.ts`) routes
+> `/api` → santa-api **and** `/api/notifications` / `/api/messages` / `/socket.io`
+> → santa-notifications, all same-origin. The nginx prod image has none of that —
+> baking only `VITE_API_URL` reaches santa-api but **not** notifications or
+> WebSockets. Once you add those features (Lessons 07-08), production needs either
+> `VITE_WS_URL` baked in (with CORS configured on the backends) or nginx `proxy_pass`
+> locations mirroring the dev proxy. You wire this up properly in Lesson 11 (deploy);
+> for now santa-api alone is enough.
 
 ### Step 4: Dev vs prod images (hot reload)
 

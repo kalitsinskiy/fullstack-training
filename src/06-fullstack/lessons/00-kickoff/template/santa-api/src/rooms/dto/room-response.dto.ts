@@ -49,10 +49,28 @@ export class RoomResponseDto {
   status!: 'pending' | 'drawn';
 
   @ApiPropertyOptional({
-    description: 'ISO date when the draw was completed',
+    description: 'ISO date when the draw was completed (omitted until drawn)',
     example: '2025-12-20T00:00:00.000Z',
   })
   drawDate?: string;
+
+  @ApiPropertyOptional({
+    description: 'Suggested per-gift budget amount (omitted when not set)',
+    example: 500,
+  })
+  budget?: number;
+
+  @ApiPropertyOptional({
+    description: 'Currency symbol for the budget',
+    example: '₴',
+  })
+  currency?: string;
+
+  @ApiPropertyOptional({
+    description: 'Gift-exchange day, ISO date (omitted until the draw sets it)',
+    example: '2026-12-24T00:00:00.000Z',
+  })
+  exchangeDate?: string;
 
   @ApiPropertyOptional({
     description:

@@ -89,7 +89,20 @@ patterns. Adapted from a Figma reference; the palette is Santa-warm
 
 ## Environment Variables
 
+Leave both **empty** for local dev — the app then uses Vite's same-origin proxy
+(`vite.config.ts`), which forwards `/api` and `/socket.io` to the backends on
+localhost. This works on localhost and from another device on your LAN (phone)
+with no CORS and no hardcoded IP. See `.env.example` for details.
+
 ```env
-VITE_API_URL=http://localhost:3001    # santa-api
-VITE_WS_URL=http://localhost:3002     # santa-notifications (WebSocket)
+VITE_API_URL=     # empty → same-origin Vite proxy (recommended for local dev)
+VITE_WS_URL=      # empty → same-origin Vite proxy
+```
+
+Set absolute URLs **only** to target a remote/separate backend (which must then
+allow this origin via CORS); that also bypasses the proxy:
+
+```env
+# VITE_API_URL=http://localhost:3001    # santa-api (NestJS)
+# VITE_WS_URL=http://localhost:3002     # santa-notifications (WebSocket)
 ```

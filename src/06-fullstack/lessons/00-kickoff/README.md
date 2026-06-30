@@ -72,7 +72,8 @@ All design lives in [`santa-app/design/`](template/santa-app/design/) — beside
 
 ## 3. Run the whole stack
 
-**Prerequisites:** Node 20+, Docker Desktop, a terminal.
+**Prerequisites:** Node 20+ (22 LTS recommended — matches the repo `.nvmrc`; run
+`nvm use`), Docker Desktop, a terminal.
 
 ### 3.0 Get the template — overlay it onto your root projects
 

@@ -685,10 +685,11 @@ cd santa-app && npm run test:e2e
 Check test coverage:
 
 ```bash
-cd santa-api && npm run test:cov
+cd santa-api && npm run test:e2e:cov
 # Look for > 80% coverage on services and controllers
 
-cd santa-app && npm run test:cov
+cd santa-app && npm test -- --coverage
+# (vitest will offer to install @vitest/coverage-v8 the first time)
 # Look for key pages being tested
 ```
 

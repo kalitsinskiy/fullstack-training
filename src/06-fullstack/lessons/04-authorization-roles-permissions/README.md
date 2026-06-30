@@ -137,6 +137,23 @@ cd santa-api && npm run test:e2e        # turn the Lesson 04 it.todo cases green
 cd santa-app && npm test                # turn the gating it.todo cases green
 ```
 
+> **Why your multi-user tests don't hit the rate limiter.** These authorization
+> tests register several users (an owner plus members), but `POST /auth/register`
+> is throttled (3/min). To keep tests deterministic, `AppModule` skips throttling
+> under test:
+>
+> ```ts
+> // santa-api/src/app.module.ts
+> ThrottlerModule.forRoot({
+>   throttlers: [{ ttl: 60_000, limit: 100 }],
+>   skipIf: () => process.env.NODE_ENV === 'test', // Jest sets NODE_ENV=test
+> }),
+> ```
+>
+> `skipIf` disables the guard only when it returns `true`, so **production rate
+> limiting is unchanged** — it's off solely for the in-memory test run. (Same
+> `NODE_ENV` switch you used for config validation in Lesson 02.)
+
 Manually: create a room (you are `owner`), have a second user join (they are
 `member`). As the member, the Draw/Edit/Delete/Kick controls should be gone or
 disabled, and the corresponding API calls should return `403`. As the owner they

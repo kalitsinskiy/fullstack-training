@@ -64,7 +64,9 @@ Unlike blocks 04-05, there are no separate exercises — the app **is** the exer
 | 08 | [WebSockets](lessons/08-websockets/) | Socket.IO, JWT auth for WS, Redis adapter | Real-time push, useSocket hook, toast notifications |
 | 09 | [Anonymous Messaging](lessons/09-anonymous-messaging/) | Service mediator, privacy patterns | Anonymous message relay, chat UI, real-time delivery |
 | 10 | [Testing Microservices](lessons/10-testing-microservices/) | E2E testing, integration tests | Cross-service tests, E2E critical paths |
-| 11 | [CI/CD & Deployment](lessons/11-ci-cd-and-deployment/) | GitHub Actions, Husky, cloud deploy | CI pipeline, deploy to cloud (free tiers) |
+| 11 | [CI/CD & Deployment](lessons/11-ci-cd-and-deployment/) | Husky, commitlint, local CI gate, Render Blueprint (IaC) | Local pre-push gate, render.yaml, deploy to cloud (free tiers) |
+| 12 | [Code Review](lessons/12-code-review/) | PRs, static analysis, SonarCloud/Semgrep, security review | A production PR of the whole system, scanned and self-reviewed, for a human review |
+| 13 | [Going Further](lessons/13-going-further/) **(optional)** | Self-directed challenges | Build features solo — e.g. **email notifications** (approach + service + events given, no step-by-step) |
 
 ## Secret Santa Features
 
@@ -100,11 +102,11 @@ santa-app     — port 5173 (Vite dev server, runs locally)
 
 | Service | Provider |
 |---------|----------|
-| santa-api + santa-notifications | Railway / Render |
+| santa-api + santa-notifications | Render (Docker web service, via `render.yaml` Blueprint) |
 | MongoDB | MongoDB Atlas (free 512MB) |
 | Redis | Redis Cloud (free 30MB) |
 | RabbitMQ | CloudAMQP (free Little Lemur) |
-| santa-app | Vercel / Netlify |
+| santa-app | Render (static site, via `render.yaml` Blueprint) |
 
 ## How to Work
 

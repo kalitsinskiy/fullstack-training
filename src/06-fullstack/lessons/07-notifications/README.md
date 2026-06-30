@@ -627,35 +627,41 @@ Add `<NotificationBell />` to your AppBar and add a route for `/notifications` p
 Start all services and infrastructure:
 
 ```bash
-docker-compose up -d   # MongoDB, Redis, RabbitMQ
+docker compose up -d mongodb redis rabbitmq   # infra
 cd santa-api && npm run start:dev
-cd santa-notifications && npm run start:dev
+cd santa-notifications && npm run dev
 cd santa-app && npm run dev
 ```
 
 Test the notifications API directly:
 
 ```bash
-# Get JWT token (login)
-TOKEN=$(curl -s -X POST http://localhost:3001/auth/login \
+# Get JWT token (login). API base is /api; santa-api is :3001, notifications :3002.
+TOKEN=$(curl -s -X POST http://localhost:3001/api/auth/login \
   -H 'Content-Type: application/json' \
-  -d '{"email":"alice@test.com","password":"password123"}' | jq -r '.accessToken')
+  -d '{"email":"alice@test.com","password":"Passw0rd!"}' | jq -r '.accessToken')
 
-# List notifications (should be empty initially)
-curl -s http://localhost:3002/notifications \
+# List notifications (the same JWT works — both services share JWT_SECRET).
+# Notification routes are JWT-scoped to you (no ?userId=) — that's the IDOR fix.
+curl -s http://localhost:3002/api/notifications \
   -H "Authorization: Bearer $TOKEN" | jq
 
-# Trigger a notification by joining a room (this publishes room.joined event)
-curl -s -X POST http://localhost:3001/rooms/INVITE_CODE/join \
-  -H "Authorization: Bearer $TOKEN"
+# Trigger notifications by joining a room with its invite code (publishes user.joined).
+curl -s -X POST http://localhost:3001/api/rooms/join \
+  -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN" \
+  -d '{"inviteCode":"INVITE_CODE"}'
 
-# Check notifications again — should see "New Member Joined"
-curl -s http://localhost:3002/notifications \
+# Check notifications again — existing members see "<name> joined …"
+curl -s http://localhost:3002/api/notifications \
   -H "Authorization: Bearer $TOKEN" | jq
 
-# Mark as read
-curl -s -X PATCH http://localhost:3002/notifications/NOTIFICATION_ID/read \
+# Mark one as read (only your own — another user's id returns 404)
+curl -s -X PATCH http://localhost:3002/api/notifications/NOTIFICATION_ID/read \
   -H "Authorization: Bearer $TOKEN" | jq
+
+# The internal endpoints the consumer calls (service-key auth, not JWT):
+curl -s http://localhost:3001/api/internal/rooms/ROOM_ID \
+  -H "X-Service-Key: dev-service-key-change-in-production" | jq
 ```
 
 Test in the browser:

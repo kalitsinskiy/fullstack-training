@@ -453,15 +453,15 @@ await channel.assertQueue('notifications.events', {
 
 ```bash
 # 1. Start the stack
-docker-compose up --build
+docker compose up --build
 
 # 2. Open the RabbitMQ Management UI
 # Open http://localhost:15672 in your browser
 # Login: santa / santa123  (RABBITMQ_DEFAULT_USER / RABBITMQ_DEFAULT_PASS in compose)
 # You should see the exchange "santa.events" and queue "notifications.events"
 
-# 3. Create a room (this should publish a room.created event)
-curl -X POST http://localhost:3001/rooms \
+# 3. Create a room (this should publish a room.created event). API base is /api.
+curl -X POST http://localhost:3001/api/rooms \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"name": "Test Room"}'
@@ -471,38 +471,42 @@ curl -X POST http://localhost:3001/rooms \
 # - Message rate should show 1 message was delivered
 # - The "Get messages" button can show message contents
 
-# 5. Check the notification was created in santa-notifications DB
-docker-compose exec mongo mongosh santa --eval \
+# 5. Check the notification was created in the santa-notifications DB
+#    (service name is `mongodb`; the consumer writes to the `santa-notifications` db)
+docker compose exec mongodb mongosh santa-notifications --eval \
   'db.notifications.find().sort({createdAt: -1}).limit(5).pretty()'
 # Expected: A notification document with type "room.created"
 
-# 6. Have a user join the room (should publish user.joined event)
-curl -X POST http://localhost:3001/rooms/{roomId}/join \
-  -H "Authorization: Bearer $TOKEN_BOB"
+# 6. Have a user join the room (should publish user.joined event).
+#    POST /:id/join needs the invite code in the body.
+curl -X POST http://localhost:3001/api/rooms/{roomId}/join \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN_BOB" \
+  -d '{"inviteCode": "{code}"}'
 
 # Check for new notification
-docker-compose exec mongo mongosh santa --eval \
+docker compose exec mongodb mongosh santa-notifications --eval \
   'db.notifications.find({type: "user.joined"}).pretty()'
 
 # 7. Test the DLQ
 # You can test by temporarily making the consumer throw an error.
 # After processing fails, check:
-docker-compose exec mongo mongosh santa --eval \
+docker compose exec mongodb mongosh santa-notifications --eval \
   'db.notifications.countDocuments()'
 
 # In RabbitMQ Management UI, check the santa.dlq queue for dead-lettered messages.
 
 # 8. Test idempotency
 # Restart santa-notifications (messages may redeliver):
-docker-compose restart santa-notifications
+docker compose restart santa-notifications
 # Check that no duplicate notifications were created.
 
 # 9. Verify exchange and queue details
-docker-compose exec rabbitmq rabbitmqctl list_exchanges | grep santa
+docker compose exec rabbitmq rabbitmqctl list_exchanges | grep santa
 # Expected: santa.events   topic
 #           santa.dlx       fanout
 
-docker-compose exec rabbitmq rabbitmqctl list_queues
+docker compose exec rabbitmq rabbitmqctl list_queues
 # Expected: notifications.events   0  (no pending messages if consumer is running)
 #           santa.dlq              0  (or more if messages failed)
 
