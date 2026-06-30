@@ -1,57 +1,54 @@
-import React, { useState } from "react";
-import type ValidationError from "../utils/ValidationError";
-import Validate from "../utils/Validation";
-import ValidationList from "./ValidationList";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useAuth } from "../hooks/useAuth";
+import { useNavigate } from "react-router";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
+import { RegisterSchema, type RegisterInput } from "../schemas/auth";
 
 export default function RegisterForm() {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
+  const auth = useAuth();
+  const navigate = useNavigate();
 
-  const [nameErrors, setNameErrors] = useState<ValidationError[]>([]);
-  const [emailErrors, setEmailErrors] = useState<ValidationError[]>([]);
-  const [passwordErrors, setPasswordErrors] = useState<ValidationError[]>([]);
-  const [confirmErrors, setConfirmErrors] = useState<ValidationError[]>([]);
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<RegisterInput>({
+    resolver: zodResolver(RegisterSchema),
+    mode: "onBlur",
+  });
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-
-    const nameValidationErrors = Validate.name(name);
-    const emailValidationErrors = Validate.email(email);
-    const passwordValidationErrors = Validate.password(password);
-    const confirmValidationErrors = Validate.confirmPassword(password, confirm);
-
-    setNameErrors(nameValidationErrors);
-    setEmailErrors(emailValidationErrors);
-    setPasswordErrors(passwordValidationErrors);
-    setConfirmErrors(confirmValidationErrors);
-
-    if (
-      nameValidationErrors.length > 0 ||
-      emailValidationErrors.length > 0 ||
-      passwordValidationErrors.length > 0 ||
-      confirmValidationErrors.length > 0
-    ) {
-      console.error("validation errors:");
-      return;
+  const submit = async (data: RegisterInput) => {
+    try {
+      await auth.register(data.email, data.password, data.displayName);
+      navigate("/rooms", { replace: true });
+    } catch (err) {
+      setError("root.serverError", {
+        message: err instanceof Error ? err.message : "Registration failed",
+      });
     }
-
-    console.info("register:", { name, email, password, confirm });
-  }
-
-  const isDisabled = !name || !email || !password || !confirm;
+  };
 
   return (
     <form
-      onSubmit={handleSubmit}
+      onSubmit={handleSubmit(submit)}
+      noValidate
       aria-label="register form"
       className="flex w-[360px] flex-col gap-3 rounded-lg bg-(--surface) p-4 shadow"
     >
       <h3 className="text-lg font-semibold text-(--text)">Register</h3>
+
+      {errors.root?.serverError && (
+        <div
+          role="alert"
+          className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+        >
+          {errors.root.serverError.message}
+        </div>
+      )}
 
       <div className="flex flex-col gap-1">
         <Label
@@ -62,11 +59,21 @@ export default function RegisterForm() {
         </Label>
         <Input
           id="register-name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
+          autoComplete="name"
+          aria-invalid={!!errors.displayName}
+          aria-describedby={errors.displayName ? "register-name-error" : undefined}
+          disabled={isSubmitting}
+          {...register("displayName")}
         />
-        <ValidationList errors={nameErrors} />
+        {errors.displayName && (
+          <span
+            id="register-name-error"
+            role="alert"
+            className="text-xs text-red-600"
+          >
+            {errors.displayName.message}
+          </span>
+        )}
       </div>
 
       <div className="flex flex-col gap-1">
@@ -79,11 +86,21 @@ export default function RegisterForm() {
         <Input
           id="register-email"
           type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
+          autoComplete="email"
+          aria-invalid={!!errors.email}
+          aria-describedby={errors.email ? "register-email-error" : undefined}
+          disabled={isSubmitting}
+          {...register("email")}
         />
-        <ValidationList errors={emailErrors} />
+        {errors.email && (
+          <span
+            id="register-email-error"
+            role="alert"
+            className="text-xs text-red-600"
+          >
+            {errors.email.message}
+          </span>
+        )}
       </div>
 
       <div className="flex flex-col gap-1">
@@ -96,11 +113,21 @@ export default function RegisterForm() {
         <Input
           id="register-password"
           type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
+          autoComplete="new-password"
+          aria-invalid={!!errors.password}
+          aria-describedby={errors.password ? "register-password-error" : undefined}
+          disabled={isSubmitting}
+          {...register("password")}
         />
-        <ValidationList errors={passwordErrors} />
+        {errors.password && (
+          <span
+            id="register-password-error"
+            role="alert"
+            className="text-xs text-red-600"
+          >
+            {errors.password.message}
+          </span>
+        )}
       </div>
 
       <div className="flex flex-col gap-1">
@@ -113,20 +140,30 @@ export default function RegisterForm() {
         <Input
           id="register-confirm"
           type="password"
-          value={confirm}
-          onChange={(e) => setConfirm(e.target.value)}
-          required
+          autoComplete="new-password"
+          aria-invalid={!!errors.confirm}
+          aria-describedby={errors.confirm ? "register-confirm-error" : undefined}
+          disabled={isSubmitting}
+          {...register("confirm")}
         />
-        <ValidationList errors={confirmErrors} />
+        {errors.confirm && (
+          <span
+            id="register-confirm-error"
+            role="alert"
+            className="text-xs text-red-600"
+          >
+            {errors.confirm.message}
+          </span>
+        )}
       </div>
 
       <div className="flex items-center gap-3">
         <Button
           type="submit"
+          disabled={isSubmitting}
           className="bg-brand hover:bg-brand-dark h-10 rounded-md px-4 font-semibold text-(--button-text)"
-          disabled={isDisabled}
         >
-          Create account
+          {isSubmitting ? "Creating account..." : "Create account"}
         </Button>
       </div>
     </form>

@@ -116,6 +116,34 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }
 
+  async function register(email: string, password: string, displayName: string) {
+    const registerRes = await fetch(`${getBaseUrl()}/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, displayName }),
+    });
+
+    if (!registerRes.ok) {
+      const message = await getErrorMessage(registerRes, "Registration failed");
+      throw new Error(message);
+    }
+
+    const { accessToken } = (await registerRes.json()) as { accessToken: string };
+
+    localStorage.setItem(TOKEN_STORAGE_KEY, accessToken);
+    setToken(accessToken);
+
+    try {
+      const currentUser = await fetchCurrentUser(accessToken);
+      setUser(currentUser);
+    } catch (error) {
+      localStorage.removeItem(TOKEN_STORAGE_KEY);
+      setToken(null);
+      setUser(null);
+      throw error;
+    }
+  }
+
   function logout() {
     localStorage.removeItem(TOKEN_STORAGE_KEY);
     setToken(null);
@@ -128,6 +156,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       token,
       isLoading,
       login,
+      register,
       logout,
       isAuthenticated: user !== null,
     }),

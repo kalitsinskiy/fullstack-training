@@ -21,7 +21,14 @@ function App() {
             </main>
           }
         />
-        <Route path="/register" element={<RegisterForm />} />
+        <Route
+          path="/register"
+          element={
+            <main className="grid min-h-svh place-items-center px-4">
+              <RegisterForm />
+            </main>
+          }
+        />
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
             <Route path="/rooms" element={<RoomList />} />

@@ -168,16 +168,16 @@ export function RoomDetailsPage() {
 
       <div className="flex flex-wrap items-center gap-3">
         <Link
+          to={`/rooms/${room.id}/wishlist`}
+          className="rounded-full border border-(--border) bg-(--surface) px-4 py-2 text-sm font-medium transition hover:bg-(--bg)"
+        >
+          Edit wishlist
+        </Link>
+        <Link
           to="/rooms"
           className="rounded-full border border-(--border) bg-(--surface) px-4 py-2 text-sm font-medium transition hover:bg-(--bg)"
         >
           Back to rooms
-        </Link>
-        <Link
-          to={`/rooms/${room.id}/wishlist`}
-          className="bg-brand hover:bg-brand-dark rounded-full px-4 py-2 text-sm font-semibold text-(--button-text) transition"
-        >
-          Manage my wishlist
         </Link>
       </div>
     </section>
