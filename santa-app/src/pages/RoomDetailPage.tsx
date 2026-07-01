@@ -1,4 +1,5 @@
 import { useParams, useNavigate } from "react-router";
+import { WishlistEditor } from "../components/WishlistEditor";
 
 export function RoomDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -13,7 +14,10 @@ export function RoomDetailPage() {
         ← Back to Rooms
       </button>
       <h1 className="text-text-base text-2xl font-semibold">Room {id}</h1>
-      <p className="text-text-muted mt-2">Room details coming in Lesson 08.</p>
+      <div className="mt-6">
+        {/* L09 wires it to GET/PUT /api/rooms/:id/wishlist */}
+        <WishlistEditor />
+      </div>
     </div>
   );
 }

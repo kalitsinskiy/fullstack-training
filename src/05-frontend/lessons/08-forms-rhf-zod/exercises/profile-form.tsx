@@ -60,6 +60,24 @@ import { useState } from 'react';
 // });
 // type ProfileInput = z.infer<typeof ProfileSchema>;
 
+const ProfileSchema = z.object({
+  displayName: z.string().min(2, 'At least 2 characters').max(50, 'At most 50 characters'),
+  bio: z.string().max(500, 'At most 500 characters').optional(),
+  contact: z.object({
+    email: z.string().email('Enter a valid email'),
+    phone: z
+      .string()
+      .regex(/^\+\d{6,15}$/, 'E.164 format, e.g. +123456789')
+      .optional()
+      .or(z.literal('')),
+  }),
+  preferences: z.object({
+    newsletter: z.boolean(),
+    theme: z.enum(['light', 'dark', 'system']),
+  }),
+});
+type ProfileInput = z.infer<typeof ProfileSchema>;
+
 // ---- TODO 2: Implement ProfileForm ----
 
 interface ProfileFormProps {
@@ -72,11 +90,92 @@ function ProfileForm({ initial, onSave }: ProfileFormProps) {
   // TODO: handleSubmit, errors, isSubmitting from formState
   // TODO: a "saved" boolean state for the success indicator
   // TODO: render the form
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<ProfileInput>({
+    resolver: zodResolver(ProfileSchema),
+    defaultValues: initial,
+  });
+
+  const [saved, setSaved] = useState(false);
+
+  const submit = async (data: ProfileInput) => {
+    setSaved(false);
+    try {
+      await onSave(data);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      setError('root.serverError', {
+        message: err instanceof Error ? err.message : 'Something went wrong',
+      });
+    }
+  };
+
+  const fieldStyle: React.CSSProperties = { display: 'block', width: '100%', padding: 8, marginTop: 4 };
+  const errorStyle: React.CSSProperties = { color: '#b91c1c', fontSize: 13 };
 
   return (
-    <div style={{ padding: 24 }}>
-      TODO: implement the form. See the comments at the top of this file.
-    </div>
+    <form
+      onSubmit={handleSubmit(submit)}
+      noValidate
+      style={{ display: 'grid', gap: 12, maxWidth: 420, padding: 24, fontFamily: 'system-ui, sans-serif' }}
+    >
+      <h2>Edit profile</h2>
+
+      <div>
+        <label htmlFor="displayName">Display name</label>
+        <input id="displayName" style={fieldStyle} {...register('displayName')} />
+        {errors.displayName && <span role="alert" style={errorStyle}>{errors.displayName.message}</span>}
+      </div>
+
+      <div>
+        <label htmlFor="bio">Bio</label>
+        <textarea id="bio" rows={4} style={fieldStyle} {...register('bio')} />
+        {errors.bio && <span role="alert" style={errorStyle}>{errors.bio.message}</span>}
+      </div>
+
+      <div>
+        <label htmlFor="email">Email</label>
+        <input id="email" type="email" style={fieldStyle} {...register('contact.email')} />
+        {errors.contact?.email && <span role="alert" style={errorStyle}>{errors.contact.email.message}</span>}
+      </div>
+
+      <div>
+        <label htmlFor="phone">Phone</label>
+        <input id="phone" style={fieldStyle} {...register('contact.phone')} />
+        {errors.contact?.phone && <span role="alert" style={errorStyle}>{errors.contact.phone.message}</span>}
+      </div>
+
+      <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <input type="checkbox" {...register('preferences.newsletter')} />
+        Subscribe to newsletter
+      </label>
+
+      <div>
+        <label htmlFor="theme">Theme</label>
+        <select id="theme" style={fieldStyle} {...register('preferences.theme')}>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+          <option value="system">System</option>
+        </select>
+        {errors.preferences?.theme && <span role="alert" style={errorStyle}>{errors.preferences.theme.message}</span>}
+      </div>
+
+      {errors.root?.serverError && (
+        <span role="alert" style={errorStyle}>{errors.root.serverError.message}</span>
+      )}
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? 'Saving…' : 'Save'}
+        </button>
+        {saved && <span style={{ color: '#15803d', fontSize: 14 }}>Saved!</span>}
+      </div>
+    </form>
   );
 }
 
