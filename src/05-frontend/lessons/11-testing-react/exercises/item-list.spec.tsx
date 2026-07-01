@@ -34,7 +34,7 @@
 /* eslint-disable */
 // @ts-nocheck — exercise stub. Remove this directive after implementing.
 
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, test, expect, beforeAll, afterEach, afterAll } from 'vitest';
 import {
@@ -148,6 +148,15 @@ describe('ItemList', () => {
   // - Render and assert "Loading…" is visible
   test('shows loading state on mount', () => {
     // TODO: Implement
+    server.use(
+      http.get(`${BASE_URL}/api/items`, async () => {
+        await new Promise(() => {});
+      }),
+    );
+
+    renderWithQuery(<ItemList />);
+
+    expect(screen.getByText(/loading/i)).toBeInTheDocument();
   });
 
   // TODO 2: Renders items from default handler
@@ -156,6 +165,12 @@ describe('ItemList', () => {
   // - Assert all 3 names are present, "Loading…" is gone
   test('renders items after successful fetch', async () => {
     // TODO: Implement
+    renderWithQuery(<ItemList />);
+
+    expect(await screen.findByText(/warm socks/i)).toBeInTheDocument();
+    expect(screen.getByText(/coffee mug/i)).toBeInTheDocument();
+    expect(screen.getByText(/clean code/i)).toBeInTheDocument();
+    expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
   });
 
   // TODO 3: Empty state
@@ -164,6 +179,11 @@ describe('ItemList', () => {
   // - Wait for "No items yet." to appear
   test('shows empty state when no items', async () => {
     // TODO: Implement
+    server.use(http.get(`${BASE_URL}/api/items`, () => HttpResponse.json([])));
+
+    renderWithQuery(<ItemList />);
+
+    expect(await screen.findByText(/no items yet\./i)).toBeInTheDocument();
   });
 
   // TODO 4: Error state
@@ -173,6 +193,17 @@ describe('ItemList', () => {
   // - Assert "Retry" button is present
   test('shows error message on fetch failure', async () => {
     // TODO: Implement
+    server.use(
+      http.get(`${BASE_URL}/api/items`, () =>
+        HttpResponse.json({ message: 'Boom' }, { status: 500 }),
+      ),
+    );
+
+    renderWithQuery(<ItemList />);
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(/http 500/i);
+    expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
   });
 
   // TODO 5: Retry recovers from error
@@ -181,6 +212,27 @@ describe('ItemList', () => {
   // - Wait for items to appear, assert alert is gone
   test('retry button refetches items after error', async () => {
     // TODO: Implement
+    const user = userEvent.setup();
+
+    let callCount = 0;
+    server.use(
+      http.get(`${BASE_URL}/api/items`, () => {
+        callCount++;
+        if (callCount === 1) {
+          return HttpResponse.json({ message: 'Boom' }, { status: 500 });
+        }
+        return HttpResponse.json(sampleItems);
+      }),
+    );
+
+    renderWithQuery(<ItemList />);
+
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /retry/i }));
+
+    expect(await screen.findByText(/warm socks/i)).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   // TODO 6: Delete
@@ -193,5 +245,29 @@ describe('ItemList', () => {
   //   the DELETE was sent with the right id)
   test('clicking Delete sends DELETE with the correct id', async () => {
     // TODO: Implement
+    const user = userEvent.setup();
+
+    let deletedId: string | null = null;
+    let remaining = [...sampleItems];
+    server.use(
+      http.get(`${BASE_URL}/api/items`, () => HttpResponse.json(remaining)),
+      http.delete(`${BASE_URL}/api/items/:id`, ({ params }) => {
+        deletedId = params.id as string;
+        remaining = remaining.filter((it) => it.id !== deletedId);
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    renderWithQuery(<ItemList />);
+
+    expect(await screen.findByText(/warm socks/i)).toBeInTheDocument();
+
+    await user.click(screen.getAllByRole('button', { name: /^delete$/i })[0]);
+
+    await waitFor(() => expect(deletedId).toBe('1'));
+    await waitFor(() =>
+      expect(screen.queryByText(/warm socks/i)).not.toBeInTheDocument(),
+    );
+    expect(screen.getByText(/coffee mug/i)).toBeInTheDocument();
   });
 });

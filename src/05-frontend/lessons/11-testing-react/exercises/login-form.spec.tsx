@@ -99,30 +99,97 @@ describe('LoginForm', () => {
   // TODO 1: Renders email + password + submit; no alert before first submit
   test('renders email, password, and submit button — no alert initially', () => {
     // TODO: Implement
+    render(<LoginForm onSubmit={vi.fn()} />);
+
+    expect(screen.getByLabelText('Email')).toBeInTheDocument();
+    expect(screen.getByLabelText('Password')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   // TODO 2: Empty submit → both Zod errors render, onSubmit NOT called
   test('shows validation errors on empty submit and does not call onSubmit', async () => {
     // TODO: Implement
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(<LoginForm onSubmit={onSubmit} />);
+
+    await user.click(screen.getByRole('button', { name: /sign in/i }));
+
+    expect(await screen.findByText(/valid email/i)).toBeInTheDocument();
+    expect(screen.getByText(/at least 8 characters/i)).toBeInTheDocument();
+    expect(onSubmit).not.toHaveBeenCalled();
   });
 
   // TODO 3: Invalid email format → email error, no password error
   test('shows email error when email is invalid but password is OK', async () => {
     // TODO: Implement
+    const user = userEvent.setup();
+    render(<LoginForm onSubmit={vi.fn()} />);
+
+    await user.type(screen.getByLabelText('Email'), 'not-an-email');
+    await user.type(screen.getByLabelText('Password'), 'longenough');
+    await user.click(screen.getByRole('button', { name: /sign in/i }));
+
+    expect(await screen.findByText(/valid email/i)).toBeInTheDocument();
+    expect(screen.queryByText(/at least 8 characters/i)).not.toBeInTheDocument();
   });
 
   // TODO 4: Valid input → onSubmit called with the parsed data
   test('calls onSubmit with { email, password } on valid submit', async () => {
     // TODO: Implement
+    const user = userEvent.setup();
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(<LoginForm onSubmit={onSubmit} />);
+
+    await user.type(screen.getByLabelText('Email'), 'alice@test.com');
+    await user.type(screen.getByLabelText('Password'), 'SecretPass1');
+    await user.click(screen.getByRole('button', { name: /sign in/i }));
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledWith({
+        email: 'alice@test.com',
+        password: 'SecretPass1',
+      });
+    });
   });
 
   // TODO 5: Rejected onSubmit → message in role="alert"
   test('renders server error message when onSubmit rejects', async () => {
     // TODO: Implement
+    const user = userEvent.setup();
+    const onSubmit = vi.fn().mockRejectedValue(new Error('Invalid credentials'));
+    render(<LoginForm onSubmit={onSubmit} />);
+
+    await user.type(screen.getByLabelText('Email'), 'alice@test.com');
+    await user.type(screen.getByLabelText('Password'), 'SecretPass1');
+    await user.click(screen.getByRole('button', { name: /sign in/i }));
+
+    const alerts = await screen.findAllByRole('alert');
+    expect(alerts[0]).toHaveTextContent(/invalid credentials/i);
   });
 
   // TODO 6: Successful resubmit after error → error disappears
   test('clears server error on a fresh successful submit', async () => {
     // TODO: Implement
+    const user = userEvent.setup();
+    const onSubmit = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('Invalid credentials'))
+      .mockResolvedValueOnce(undefined);
+
+    render(<LoginForm onSubmit={onSubmit} />);
+
+    await user.type(screen.getByLabelText('Email'), 'alice@test.com');
+    await user.type(screen.getByLabelText('Password'), 'SecretPass1');
+    await user.click(screen.getByRole('button', { name: /sign in/i }));
+
+    expect(await screen.findByText(/invalid credentials/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /sign in/i }));
+
+    await waitFor(() => {
+      expect(screen.queryByText(/invalid credentials/i)).not.toBeInTheDocument();
+    });
   });
 });
