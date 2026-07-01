@@ -5,11 +5,23 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { api } from "../services/api";
 
 export interface User {
   id: string;
   email: string;
   displayName: string;
+}
+
+interface RawUser {
+  _id: string;
+  email: string;
+  displayName: string;
+}
+
+function toUser(raw: RawUser): User {
+  return { id: raw._id, email: raw.email, displayName: raw.displayName };
 }
 
 interface AuthContextType {
@@ -28,9 +40,8 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
-
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -42,16 +53,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
       return;
     }
-    fetch(`${BASE_URL}/api/users/me`, {
-      headers: { Authorization: `Bearer ${stored}` },
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error("Invalid token");
-        return res.json() as Promise<User>;
-      })
+    api
+      .get<RawUser>("/users/me")
       .then((me) => {
         setToken(stored);
-        setUser(me);
+        setUser(toUser(me));
       })
       .catch(() => {
         localStorage.removeItem("token");
@@ -62,23 +68,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   async function login(email: string, password: string) {
-    const loginRes = await fetch(`${BASE_URL}/api/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-    if (!loginRes.ok) throw new Error("Invalid credentials");
-    const { accessToken } = (await loginRes.json()) as { accessToken: string };
-
-    const meRes = await fetch(`${BASE_URL}/api/users/me`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-    if (!meRes.ok) throw new Error("Failed to load profile");
-    const me = (await meRes.json()) as User;
-
+    const { accessToken } = await api.post<{ accessToken: string }>(
+      "/auth/login",
+      { email, password },
+    );
     localStorage.setItem("token", accessToken);
+    const me = await api.get<RawUser>("/users/me");
     setToken(accessToken);
-    setUser(me);
+    setUser(toUser(me));
   }
 
   async function register(
@@ -86,18 +83,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     password: string,
     displayName: string,
   ) {
-    const res = await fetch(`${BASE_URL}/api/auth/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, displayName }),
-    });
-    if (!res.ok) throw new Error("Registration failed");
+    const res = await api.post<User & { accessToken: string }>(
+      "/auth/register",
+      { email, password, displayName },
+    );
+    localStorage.setItem("token", res.accessToken);
+    setToken(res.accessToken);
+    setUser({ id: res.id, email: res.email, displayName: res.displayName });
   }
 
   function logout() {
     localStorage.removeItem("token");
     setToken(null);
     setUser(null);
+    queryClient.clear();
   }
 
   return (

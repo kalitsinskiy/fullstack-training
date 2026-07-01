@@ -1,4 +1,6 @@
 import { useState, type FormEvent } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { api, ApiError } from "@/services/api";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,15 +17,26 @@ import { Label } from "@/components/ui/label";
 export function CreateRoomDialog() {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
+  const queryClient = useQueryClient();
+
+  const create = useMutation({
+    mutationFn: (roomName: string) =>
+      api.post("/rooms", { name: roomName }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["rooms"] });
+      setName("");
+      setOpen(false);
+    },
+    onError: (err) => {
+      alert(err instanceof ApiError ? err.message : "Failed to create room");
+    },
+  });
 
   const handleCreate = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const trimmed = name.trim();
     if (!trimmed) return;
-    // Lesson 09 wires the real POST /api/rooms — log for now.
-    console.log({ name: trimmed });
-    setName("");
-    setOpen(false);
+    create.mutate(trimmed);
   };
 
   return (
@@ -73,7 +86,9 @@ export function CreateRoomDialog() {
             >
               Cancel
             </Button>
-            <Button type="submit">Create</Button>
+            <Button type="submit" disabled={create.isPending}>
+              {create.isPending ? "Creating…" : "Create"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

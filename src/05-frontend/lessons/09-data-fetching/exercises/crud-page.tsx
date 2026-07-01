@@ -81,30 +81,126 @@ async function deleteTask(id: string): Promise<void> {
 
 function TasksPage() {
   const [newTitle, setNewTitle] = useState('');
+  const queryClient = useQueryClient();
 
   // TODO 1: useQuery to fetch the task list — queryKey: ['tasks']
+  const { data: tasks = [], isLoading, error } = useQuery({
+    queryKey: ['tasks'],
+    queryFn: listTasks,
+  });
 
   // TODO 2: useMutation for createTask
   //   - onSuccess: invalidateQueries({ queryKey: ['tasks'] }), clear `newTitle`
   //   - onError: alert / setError
+  const create = useMutation({
+    mutationFn: createTask,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      setNewTitle('');
+    },
+    onError: (err) => alert(`Create failed: ${(err as Error).message}`),
+  });
 
   // TODO 3: useMutation for patchTask (toggling `done`) — OPTIMISTIC
   //   - mutationFn: ({ id, done }) => patchTask(id, { done })
   //   - onMutate: cancelQueries, snapshot, setQueryData with the toggled task
   //   - onError: rollback to snapshot
   //   - onSettled: invalidateQueries
+  const toggle = useMutation({
+    mutationFn: ({ id, done }: { id: string; done: boolean }) => patchTask(id, { done }),
+    onMutate: async ({ id, done }) => {
+      await queryClient.cancelQueries({ queryKey: ['tasks'] });
+      const previous = queryClient.getQueryData<Task[]>(['tasks']);
+      queryClient.setQueryData<Task[]>(['tasks'], (old) =>
+        old?.map((t) => (t.id === id ? { ...t, done } : t)) ?? [],
+      );
+      return { previous };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.previous) queryClient.setQueryData(['tasks'], ctx.previous);
+      alert('Update failed — rolled back');
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    },
+  });
 
   // TODO 4: useMutation for deleteTask — OPTIMISTIC (same pattern as toggle)
+  const remove = useMutation({
+    mutationFn: deleteTask,
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: ['tasks'] });
+      const previous = queryClient.getQueryData<Task[]>(['tasks']);
+      queryClient.setQueryData<Task[]>(['tasks'], (old) => old?.filter((t) => t.id !== id) ?? []);
+      return { previous };
+    },
+    onError: (_err, _id, ctx) => {
+      if (ctx?.previous) queryClient.setQueryData(['tasks'], ctx.previous);
+      alert('Delete failed — rolled back');
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    },
+  });
 
   return (
     <div style={{ padding: 20, fontFamily: 'system-ui, sans-serif', maxWidth: 540, margin: '0 auto' }}>
       <h2>Tasks</h2>
 
       {/* TODO: form that calls create.mutate(newTitle) on submit */}
-      <p>TODO: implement the create form (input + submit button)</p>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!newTitle.trim()) return;
+          create.mutate(newTitle.trim());
+        }}
+        style={{ display: 'flex', gap: 8, marginBottom: 16 }}
+      >
+        <input
+          value={newTitle}
+          onChange={(e) => setNewTitle(e.target.value)}
+          placeholder="New task title"
+          style={{ flex: 1, padding: 6 }}
+        />
+        <button type="submit" disabled={create.isPending || !newTitle.trim()}>
+          {create.isPending ? 'Adding…' : 'Add task'}
+        </button>
+      </form>
 
       {/* TODO: list rendering — handle isLoading, error, empty, success */}
-      <p>TODO: render task list with toggle + delete per row</p>
+      {isLoading ? (
+        <p>Loading…</p>
+      ) : error ? (
+        <p style={{ color: '#b91c1c' }}>{(error as Error).message}</p>
+      ) : tasks.length === 0 ? (
+        <p style={{ color: '#666' }}>No tasks yet — add one above.</p>
+      ) : (
+        <ul style={{ listStyle: 'none', padding: 0 }}>
+          {tasks.map((task) => {
+            const toggling = toggle.isPending && toggle.variables?.id === task.id;
+            const deleting = remove.isPending && remove.variables === task.id;
+            return (
+              <li
+                key={task.id}
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 8, borderBottom: '1px solid #eee' }}
+              >
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input
+                    type="checkbox"
+                    checked={task.done}
+                    disabled={toggling}
+                    onChange={() => toggle.mutate({ id: task.id, done: !task.done })}
+                  />
+                  <span style={{ textDecoration: task.done ? 'line-through' : 'none' }}>{task.title}</span>
+                </label>
+                <button onClick={() => remove.mutate(task.id)} disabled={deleting}>
+                  {deleting ? 'Deleting…' : 'Delete'}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 }

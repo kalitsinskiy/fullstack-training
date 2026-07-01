@@ -1,4 +1,5 @@
 import { useParams, useNavigate } from "react-router";
+import { WishlistEditor } from "../components/WishlistEditor";
 
 export function WishlistPage() {
   const { id } = useParams<{ id: string }>();
@@ -12,10 +13,12 @@ export function WishlistPage() {
       >
         ← Back to Room
       </button>
-      <h1 className="text-text-base text-2xl font-semibold">Wishlist</h1>
-      <p className="text-text-muted mt-2">
-        Wishlist for room <strong>{id}</strong> coming in Lesson 09.
-      </p>
+      <h1 className="text-text-base mb-6 text-2xl font-semibold">Wishlist</h1>
+      {id ? (
+        <WishlistEditor roomId={id} />
+      ) : (
+        <p className="text-danger">Missing room id.</p>
+      )}
     </div>
   );
 }
