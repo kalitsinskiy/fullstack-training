@@ -1,10 +1,14 @@
-import { Link, NavLink, Outlet, useNavigate } from "react-router";
+import { Suspense } from "react";
+import { Link, NavLink, Outlet, useNavigate, useLocation } from "react-router";
+import { ErrorBoundary } from "react-error-boundary";
 import { useAuth } from "../contexts/AuthContext";
 import { CreateRoomDialog } from "./CreateRoomDialog";
+import { ErrorFallback } from "./ErrorFallback";
 
 export function Layout() {
   const auth = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = () => {
     auth.logout();
@@ -41,7 +45,16 @@ export function Layout() {
         </div>
       </header>
       <main className="mx-auto max-w-5xl px-4 py-10">
-        <Outlet />
+        <ErrorBoundary
+          FallbackComponent={ErrorFallback}
+          resetKeys={[location.pathname]}
+        >
+          <Suspense
+            fallback={<p className="text-text-muted">Loading page…</p>}
+          >
+            <Outlet />
+          </Suspense>
+        </ErrorBoundary>
       </main>
     </>
   );

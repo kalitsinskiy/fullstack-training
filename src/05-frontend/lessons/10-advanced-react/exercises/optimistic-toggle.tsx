@@ -26,7 +26,7 @@
 /* eslint-disable */
 // @ts-nocheck — exercise stub. Remove this directive after picking an approach.
 
-import { useState } from 'react';
+import { useState, useEffect, useOptimistic, useTransition } from 'react';
 
 interface Notification {
   id: string;
@@ -81,27 +81,57 @@ export default function OptimisticToggleDemo() {
 
   const [notifications, setNotifications] = useState<Notification[]>([]);
   // TODO: load notifications on mount (useQuery for B, useEffect+useState for A)
+  const [error, setError] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
+
+  useEffect(() => {
+    listNotifications().then(setNotifications);
+  }, []);
+
+  const [optimistic, addOptimistic] = useOptimistic(
+    notifications,
+    (current, patch: { id: string; read: boolean }) =>
+      current.map((n) =>
+        n.id === patch.id ? { ...n, read: patch.read, pending: true } : n,
+      ),
+  );
+
+  const handleToggle = (id: string, next: boolean) => {
+    setError(null);
+    startTransition(async () => {
+      addOptimistic({ id, read: next });
+      try {
+        const updated = await setRead(id, next);
+        setNotifications((prev) => prev.map((n) => (n.id === id ? updated : n)));
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Toggle failed');
+      }
+    });
+  };
 
   return (
     <div style={{ padding: 24, fontFamily: 'system-ui, sans-serif', maxWidth: 480 }}>
       <h2>Notifications</h2>
-      <p>TODO: render notifications with an optimistic toggle.</p>
+
+      {error && (
+        <p role="alert" style={{ color: '#b91c1c' }}>{error} (rolled back)</p>
+      )}
 
       <ul style={{ listStyle: 'none', padding: 0 }}>
-        {notifications.map((n) => (
+        {optimistic.map((n) => (
           <li
             key={n.id}
             style={{
               padding: 8,
               borderBottom: '1px solid #eee',
-              opacity: n.read ? 0.6 : 1,
+              opacity: n.pending ? 0.5 : n.read ? 0.6 : 1,
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
             }}
           >
             <span>{n.text}</span>
-            <button onClick={() => alert('TODO: implement toggle')}>
+            <button onClick={() => handleToggle(n.id, !n.read)} disabled={n.pending}>
               {n.read ? 'Mark unread' : 'Mark read'}
             </button>
           </li>

@@ -19,6 +19,8 @@ interface RawRoom {
   status: "pending" | "drawn";
 }
 
+const preloadRoomDetail = () => import("../pages/RoomDetailPage");
+
 export function mapRoom(raw: RawRoom): Room {
   return {
     id: raw._id,
@@ -82,10 +84,10 @@ export function RoomList() {
       <h2 className="text-brand mb-4 text-xl font-semibold">Rooms</h2>
       <div className="grid [grid-template-columns:repeat(auto-fill,minmax(15rem,1fr))] gap-4">
         {rooms.map((room) => {
+          let card;
           if (room.status === "open") {
-            return (
+            card = (
               <RoomCard
-                key={room.id}
                 status="open"
                 name={room.name}
                 code={room.code}
@@ -93,11 +95,9 @@ export function RoomList() {
                 onJoin={() => join.mutate(room.code)}
               />
             );
-          }
-          if (room.status === "drawn") {
-            return (
+          } else if (room.status === "drawn") {
+            card = (
               <RoomCard
-                key={room.id}
                 status="drawn"
                 name={room.name}
                 code={room.code}
@@ -105,15 +105,20 @@ export function RoomList() {
                 onView={() => navigate(`/rooms/${room.id}`)}
               />
             );
+          } else {
+            card = (
+              <RoomCard
+                status="closed"
+                name={room.name}
+                code={room.code}
+                participantCount={room.participantCount}
+              />
+            );
           }
           return (
-            <RoomCard
-              key={room.id}
-              status="closed"
-              name={room.name}
-              code={room.code}
-              participantCount={room.participantCount}
-            />
+            <div key={room.id} onMouseEnter={preloadRoomDetail}>
+              {card}
+            </div>
           );
         })}
       </div>

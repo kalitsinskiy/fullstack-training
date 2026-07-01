@@ -84,11 +84,16 @@ function RoutedContent() {
   // const location = useLocation();
   // TODO: wrap <Routes> with <Suspense fallback={<PageSpinner />}> and
   // <ErrorBoundary FallbackComponent={ErrorFallback} resetKeys={[location.pathname]}>
+  const location = useLocation();
   return (
-    <Routes>
-      <Route path="/" element={<AboutPage />} />
-      <Route path="/rooms" element={<RoomsPage />} />
-    </Routes>
+    <ErrorBoundary FallbackComponent={ErrorFallback} resetKeys={[location.pathname]}>
+      <Suspense fallback={<PageSpinner />}>
+        <Routes>
+          <Route path="/" element={<AboutPage />} />
+          <Route path="/rooms" element={<RoomsPage />} />
+        </Routes>
+      </Suspense>
+    </ErrorBoundary>
   );
 }
 

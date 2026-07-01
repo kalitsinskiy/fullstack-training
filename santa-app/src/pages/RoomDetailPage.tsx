@@ -1,7 +1,10 @@
 import { useParams, useNavigate } from "react-router";
 import { useQuery } from "@tanstack/react-query";
+import { ErrorBoundary } from "react-error-boundary";
 import { api } from "../services/api";
 import { WishlistEditor } from "../components/WishlistEditor";
+import { GifteeWishlist } from "../components/GifteeWishlist";
+import { ErrorFallback } from "../components/ErrorFallback";
 import { mapRoom } from "../components/RoomList";
 
 export function RoomDetailPage() {
@@ -54,7 +57,12 @@ export function RoomDetailPage() {
             </p>
           </div>
 
-          <WishlistEditor roomId={id} />
+          <div className="grid gap-8 lg:grid-cols-2">
+            <ErrorBoundary FallbackComponent={ErrorFallback}>
+              <WishlistEditor roomId={id} />
+            </ErrorBoundary>
+            <GifteeWishlist />
+          </div>
         </>
       )}
     </div>
