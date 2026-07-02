@@ -2,8 +2,9 @@ import { useEffect } from "react";
 import { useForm, useFieldArray, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useParams } from "react-router";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api, ApiError } from "../services/api";
 import { useAuth } from "../hooks/useAuth";
-import { useApi } from "../hooks/useApi";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -33,7 +34,28 @@ interface RoomResponse {
 export function WishlistPage() {
   const { id } = useParams();
   const { user } = useAuth();
-  const api = useApi();
+  const queryClient = useQueryClient();
+
+  // Need the room's inviteCode — the wishlist API uses it as the URL param
+  const { data: room } = useQuery({
+    queryKey: ["rooms", id],
+    queryFn: ({ signal }) => api.get<RoomResponse>(`/rooms/${id}`, { signal }),
+    enabled: !!id,
+  });
+
+  const roomCode = room?.inviteCode;
+
+  // §5: load existing wishlist once we have roomCode and userId
+  const { data: wishlistData } = useQuery({
+    queryKey: ["rooms", id, "wishlist", "me"],
+    queryFn: ({ signal }) =>
+      api.get<WishlistResponse>(`/rooms/${roomCode}/wishlist/${user!.id}`, { signal }),
+    enabled: !!roomCode && !!user?.id,
+    retry: (failureCount, err) => {
+      if (err instanceof ApiError && err.status === 404) return false;
+      return failureCount < 1;
+    },
+  });
 
   const {
     register,
@@ -41,6 +63,7 @@ export function WishlistPage() {
     handleSubmit,
     setError,
     reset,
+    getValues,
     formState: { errors, isSubmitting },
   } = useForm<WishlistInput>({
     resolver: zodResolver(WishlistSchema) as Resolver<WishlistInput>,
@@ -49,72 +72,92 @@ export function WishlistPage() {
 
   const { fields, append, remove } = useFieldArray({ control, name: "items" });
 
+  // Sync query data → form whenever server data arrives
   useEffect(() => {
-    if (!id || !user?.id) return;
+    if (!wishlistData) return;
+    const loaded =
+      wishlistData.items.length > 0
+        ? wishlistData.items
+        : [{ name: "", url: "", priority: undefined }];
+    reset({
+      items: loaded.map((item) => ({
+        name: item.name,
+        url: item.url ?? "",
+        priority: item.priority,
+      })),
+    });
+  }, [wishlistData, reset]);
 
-    const loadData = async () => {
-      try {
-        const room = await api.get<RoomResponse>(`/rooms/${id}`);
-
-        try {
-          const wishlist = await api.get<WishlistResponse>(
-            `/rooms/${room.inviteCode}/wishlist/${user.id}`,
-          );
-
-          const loaded = wishlist.items.length > 0 ? wishlist.items : [{ name: "", url: "", priority: undefined }];
-          reset({
-            items: loaded.map((item) => ({
-              name: item.name,
-              url: item.url ?? "",
-              priority: item.priority,
-            })),
-          });
-        } catch (err) {
-          const message = err instanceof Error ? err.message.toLowerCase() : "";
-          if (!message.includes("not found")) {
-            setError("root.serverError", {
-              message: err instanceof Error ? err.message : "Failed to load wishlist",
-            });
-          }
-        }
-      } catch (err) {
-        setError("root.serverError", {
-          message: err instanceof Error ? err.message : "Failed to load room",
-        });
-      }
-    };
-
-    void loadData();
-  }, [api, id, user?.id, reset, setError]);
+  // §6: save wishlist — POST /rooms/:roomCode/wishlist with { userId, items }
+  const saveWishlist = useMutation({
+    mutationFn: (items: WishlistItem[]) =>
+      api.post<WishlistResponse>(`/rooms/${roomCode}/wishlist`, {
+        userId: user?.id,
+        items,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["rooms", id, "wishlist", "me"] });
+    },
+    onError: (err) => {
+      setError("root.serverError", {
+        message: (err as Error).message ?? "Failed to save wishlist",
+      });
+    },
+  });
 
   const submit = async (data: WishlistInput) => {
-    try {
-      const room = await api.get<RoomResponse>(`/rooms/${id}`);
-      await api.post<WishlistResponse>(`/rooms/${room.inviteCode}/wishlist`, {
-        userId: user?.id,
-        items: data.items.map((item) => ({
+    await saveWishlist.mutateAsync(
+      data.items.map((item) => ({
+        name: item.name,
+        ...(item.url ? { url: item.url } : {}),
+        ...(item.priority !== undefined ? { priority: item.priority } : {}),
+      })),
+    );
+    setError("root.saveSuccess" as never, { message: "Wishlist saved" });
+  };
+
+  // §7: optimistic remove
+  const removeItem = useMutation({
+    mutationFn: (idx: number) => {
+      const filtered = getValues("items")
+        .filter((_, i) => i !== idx)
+        .map((item) => ({
           name: item.name,
           ...(item.url ? { url: item.url } : {}),
           ...(item.priority !== undefined ? { priority: item.priority } : {}),
-        })),
+        }));
+      return api.post<WishlistResponse>(`/rooms/${roomCode}/wishlist`, {
+        userId: user?.id,
+        items: filtered,
       });
-      setError("root.saveSuccess" as never, { message: "Wishlist saved" });
-    } catch (err) {
-      setError("root.serverError", {
-        message: err instanceof Error ? err.message : "Failed to save wishlist",
-      });
-    }
-  };
+    },
+    onMutate: async (idx) => {
+      await queryClient.cancelQueries({ queryKey: ["rooms", id, "wishlist", "me"] });
+      const previous = queryClient.getQueryData<WishlistResponse>(["rooms", id, "wishlist", "me"]);
+      if (previous) {
+        queryClient.setQueryData<WishlistResponse>(["rooms", id, "wishlist", "me"], {
+          ...previous,
+          items: previous.items.filter((_, i) => i !== idx),
+        });
+      }
+      remove(idx);
+      return { previous };
+    },
+    onError: (_err, _idx, ctx) => {
+      if (ctx?.previous) {
+        queryClient.setQueryData(["rooms", id, "wishlist", "me"], ctx.previous);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["rooms", id, "wishlist", "me"] });
+    },
+  });
 
   return (
     <section className="space-y-6">
       <header className="rounded-3xl border border-(--border) bg-(--surface) p-6 shadow">
-        <p className="text-xs tracking-[0.22em] text-(--muted) uppercase">
-          Wishlist
-        </p>
-        <h2 className="mt-2 text-3xl font-semibold text-(--text)">
-          Edit Wishlist
-        </h2>
+        <p className="text-xs tracking-[0.22em] text-(--muted) uppercase">Wishlist</p>
+        <h2 className="mt-2 text-3xl font-semibold text-(--text)">Edit Wishlist</h2>
         <p className="mt-2 text-sm text-(--muted)">
           Add gift ideas for this room. URL and priority are optional.
         </p>
@@ -214,12 +257,12 @@ export function WishlistPage() {
               <div className="flex items-end justify-end">
                 <Button
                   type="button"
-                  onClick={() => remove(idx)}
-                  disabled={fields.length === 1}
+                  onClick={() => removeItem.mutate(idx)}
+                  disabled={fields.length === 1 || removeItem.isPending}
                   variant="outline"
                   className="h-9 px-3 text-sm font-medium hover:bg-red-50"
                 >
-                  Remove
+                  {removeItem.isPending && removeItem.variables === idx ? "Removing…" : "Remove"}
                 </Button>
               </div>
             </article>
@@ -237,7 +280,7 @@ export function WishlistPage() {
           </Button>
           <Button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || !roomCode}
             className="bg-brand hover:bg-brand-dark rounded-full px-4 text-sm font-semibold text-(--button-text)"
           >
             {isSubmitting ? "Saving..." : "Save wishlist"}

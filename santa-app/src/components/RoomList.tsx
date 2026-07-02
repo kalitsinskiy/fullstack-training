@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { useApi } from "../hooks/useApi";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "../services/api";
 import RoomCard, { type RoomStatus } from "./RoomCard";
 
 export interface Room {
@@ -32,50 +32,21 @@ function mapRoomStatus(status: "pending" | "drawn"): RoomStatus {
 }
 
 export default function RoomList() {
-  const api = useApi();
   const navigate = useNavigate();
-  const [rooms, setRooms] = useState<Room[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let isMounted = true;
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ["rooms"],
+    queryFn: ({ signal }) =>
+      api.get<RoomsResponse>("/rooms?limit=100", { signal }),
+  });
 
-    const loadRooms = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const response = await api.get<RoomsResponse>("/rooms?limit=100");
-        if (!isMounted) {
-          return;
-        }
-
-        setRooms(
-          response.data.map((room) => ({
-            id: room.id,
-            name: room.name,
-            code: room.inviteCode,
-            participantCount: room.participants.length,
-            status: mapRoomStatus(room.status),
-          })),
-        );
-      } catch (err) {
-        if (isMounted) {
-          setError(err instanceof Error ? err.message : "Failed to load rooms");
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    void loadRooms();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [api]);
+  const rooms: Room[] = (data?.data ?? []).map((room) => ({
+    id: room.id,
+    name: room.name,
+    code: room.inviteCode,
+    participantCount: room.participants.length,
+    status: mapRoomStatus(room.status),
+  }));
 
   return (
     <section className="bg-(--bg)">
@@ -87,25 +58,25 @@ export default function RoomList() {
           <h2 className="text-3xl font-semibold text-(--text)">Your rooms</h2>
         </div>
 
-        {isLoading ? (
+        {isLoading && (
           <div className="rounded-3xl border border-(--border) bg-(--surface) p-6 text-sm text-(--muted) shadow-sm">
             Loading rooms...
           </div>
-        ) : null}
+        )}
 
-        {error ? (
+        {isError && (
           <div className="rounded-3xl border border-red-200 bg-red-50 p-6 text-sm text-red-700 shadow-sm">
-            {error}
+            {(error as Error).message}
           </div>
-        ) : null}
+        )}
 
-        {!isLoading && !error && rooms.length === 0 ? (
+        {!isLoading && !isError && rooms.length === 0 && (
           <div className="rounded-3xl border border-(--border) bg-(--surface) p-6 text-sm text-(--muted) shadow-sm">
             No rooms found yet.
           </div>
-        ) : null}
+        )}
 
-        {!isLoading && !error && rooms.length > 0 ? (
+        {!isLoading && !isError && rooms.length > 0 && (
           <div className="grid [grid-template-columns:repeat(auto-fill,minmax(15rem,1fr))] gap-4 p-6">
             {rooms.map((room) => (
               <RoomCard
@@ -118,7 +89,7 @@ export default function RoomList() {
               />
             ))}
           </div>
-        ) : null}
+        )}
       </div>
     </section>
   );

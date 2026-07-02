@@ -9,9 +9,10 @@ import {
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import { useApi } from "../hooks/useApi";
-import { useAuth } from "../hooks/useAuth";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "../services/api";
 import { useNavigate } from "react-router";
+import { useAuth } from "../hooks/useAuth";
 
 interface CreateRoomDialogProps {
   open: boolean;
@@ -26,47 +27,24 @@ export function CreateRoomDialog({
   open,
   onOpenChange,
 }: CreateRoomDialogProps) {
-  const api = useApi();
-  const { user } = useAuth();
   const navigate = useNavigate();
-
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [roomName, setRoomName] = useState("");
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleCreate = async () => {
-    const trimmedName = roomName.trim();
-
-    if (!trimmedName) {
-      setSubmitError("Room name is required");
-      return;
-    }
-
-    if (!user?.id) {
-      setSubmitError("You must be signed in to create a room");
-      return;
-    }
-
-    try {
-      setIsSubmitting(true);
-      setSubmitError(null);
-
-      const createdRoom = await api.post<CreateRoomResponse>("/rooms", {
-        name: trimmedName,
-        ownerId: user.id,
-      });
-
+  const create = useMutation({
+    mutationFn: (name: string) =>
+      api.post<CreateRoomResponse>("/rooms", { name, ownerId: user?.id }),
+    onSuccess: (createdRoom) => {
+      // §6: invalidate rooms list so RoomList auto-refreshes
+      queryClient.invalidateQueries({ queryKey: ["rooms"] });
       setRoomName("");
       onOpenChange(false);
       navigate(`/rooms/${createdRoom.id}`);
-    } catch (err) {
-      setSubmitError(
-        err instanceof Error ? err.message : "Failed to create room",
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+    },
+    onError: (err) => setSubmitError((err as Error).message),
+  });
 
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
@@ -76,22 +54,22 @@ export function CreateRoomDialog({
     onOpenChange(newOpen);
   };
 
-  const isCreateDisabled = roomName.trim().length === 0 || isSubmitting;
-
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Create Room</DialogTitle>
         </DialogHeader>
-        {submitError ? (
+
+        {submitError && (
           <div
             role="alert"
             className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
           >
             {submitError}
           </div>
-        ) : null}
+        )}
+
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="room-name" className="text-right">
@@ -102,27 +80,38 @@ export function CreateRoomDialog({
               placeholder="Enter room name"
               value={roomName}
               onChange={(e) => setRoomName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && roomName.trim())
+                  create.mutate(roomName.trim());
+              }}
               className="col-span-3"
               autoFocus
-              disabled={isSubmitting}
+              disabled={create.isPending}
             />
           </div>
         </div>
+
         <DialogFooter>
           <Button
             type="button"
             variant="outline"
             onClick={() => handleOpenChange(false)}
-            disabled={isSubmitting}
+            disabled={create.isPending}
           >
             Cancel
           </Button>
           <Button
             type="button"
-            onClick={handleCreate}
-            disabled={isCreateDisabled}
+            onClick={() => {
+              if (!roomName.trim()) {
+                setSubmitError("Room name is required");
+                return;
+              }
+              create.mutate(roomName.trim());
+            }}
+            disabled={!roomName.trim() || create.isPending}
           >
-            {isSubmitting ? "Creating..." : "Create"}
+            {create.isPending ? "Creating..." : "Create"}
           </Button>
         </DialogFooter>
       </DialogContent>

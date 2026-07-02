@@ -1,41 +1,12 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { AuthContext, type AuthContextType, type User } from "./auth-context";
+import { api } from "../services/api";
+import { queryClient } from "../main";
+
 const TOKEN_STORAGE_KEY = "token";
 
-function getBaseUrl() {
-  return import.meta.env.VITE_API_URL ?? "http://localhost:3001";
-}
-
-async function getErrorMessage(
-  response: Response,
-  fallbackMessage: string,
-): Promise<string> {
-  try {
-    const data = (await response.json()) as { message?: string | string[] };
-    if (Array.isArray(data.message) && data.message.length > 0) {
-      return data.message.join(", ");
-    }
-    if (typeof data.message === "string" && data.message.length > 0) {
-      return data.message;
-    }
-  } catch {
-    // Response body is not JSON or is empty. Fall through to fallback message.
-  }
-
-  return fallbackMessage;
-}
-
-async function fetchCurrentUser(accessToken: string): Promise<User> {
-  const meRes = await fetch(`${getBaseUrl()}/users/me`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-
-  if (!meRes.ok) {
-    const message = await getErrorMessage(meRes, "Failed to load profile");
-    throw new Error(message);
-  }
-
-  return (await meRes.json()) as User;
+async function fetchCurrentUser(): Promise<User> {
+  return api.get<User>("/users/me");
 }
 
 interface AuthProviderProps {
@@ -53,21 +24,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const restoreSession = async () => {
       const savedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
       if (!savedToken) {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+        if (isMounted) setIsLoading(false);
         return;
       }
-
-      if (isMounted) {
-        setToken(savedToken);
-      }
+      if (isMounted) setToken(savedToken);
 
       try {
-        const currentUser = await fetchCurrentUser(savedToken);
-        if (isMounted) {
-          setUser(currentUser);
-        }
+        const currentUser = await fetchCurrentUser();
+        if (isMounted) setUser(currentUser);
       } catch {
         localStorage.removeItem(TOKEN_STORAGE_KEY);
         if (isMounted) {
@@ -75,38 +39,27 @@ export function AuthProvider({ children }: AuthProviderProps) {
           setUser(null);
         }
       } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+        if (isMounted) setIsLoading(false);
       }
     };
 
     void restoreSession();
-
     return () => {
       isMounted = false;
     };
   }, []);
 
   async function login(email: string, password: string) {
-    const loginRes = await fetch(`${getBaseUrl()}/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-
-    if (!loginRes.ok) {
-      const message = await getErrorMessage(loginRes, "Invalid credentials");
-      throw new Error(message);
-    }
-
-    const { accessToken } = (await loginRes.json()) as { accessToken: string };
+    const { accessToken } = await api.post<{ accessToken: string }>(
+      "/auth/login",
+      { email, password },
+    );
 
     localStorage.setItem(TOKEN_STORAGE_KEY, accessToken);
     setToken(accessToken);
 
     try {
-      const currentUser = await fetchCurrentUser(accessToken);
+      const currentUser = await fetchCurrentUser();
       setUser(currentUser);
     } catch (error) {
       localStorage.removeItem(TOKEN_STORAGE_KEY);
@@ -116,25 +69,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }
 
-  async function register(email: string, password: string, displayName: string) {
-    const registerRes = await fetch(`${getBaseUrl()}/auth/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, displayName }),
-    });
-
-    if (!registerRes.ok) {
-      const message = await getErrorMessage(registerRes, "Registration failed");
-      throw new Error(message);
-    }
-
-    const { accessToken } = (await registerRes.json()) as { accessToken: string };
+  async function register(
+    email: string,
+    password: string,
+    displayName: string,
+  ) {
+    const { accessToken } = await api.post<{
+      id: string;
+      email: string;
+      displayName: string;
+      accessToken: string;
+    }>("/auth/register", { email, password, displayName });
 
     localStorage.setItem(TOKEN_STORAGE_KEY, accessToken);
     setToken(accessToken);
 
     try {
-      const currentUser = await fetchCurrentUser(accessToken);
+      const currentUser = await fetchCurrentUser();
       setUser(currentUser);
     } catch (error) {
       localStorage.removeItem(TOKEN_STORAGE_KEY);
@@ -148,6 +99,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     localStorage.removeItem(TOKEN_STORAGE_KEY);
     setToken(null);
     setUser(null);
+    queryClient.clear();
   }
 
   const value = useMemo<AuthContextType>(
