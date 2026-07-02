@@ -53,7 +53,7 @@ The default NestJS scaffold already ships a `test/jest-e2e.json`. Edit it to poi
 
 ```typescript
 import { MongoMemoryServer } from 'mongodb-memory-server';
-import mongoose from 'mongoose';
+import { Connection } from 'mongoose';
 
 let mongoServer: MongoMemoryServer;
 
@@ -62,18 +62,26 @@ export async function startInMemoryMongo(): Promise<string> {
   return mongoServer.getUri();
 }
 
-export async function stopInMemoryMongo(): Promise<void> {
-  await mongoose.disconnect();
-  await mongoServer.stop();
+// Pass the APP's connection (from the Nest DI container) — NOT the global
+// `mongoose` import. And enumerate collections from the live database via
+// `connection.db.collections()`, not from `connection.collections`. The
+// latter only lists models Mongoose has compiled *in this process*; under
+// NestJS that map lives on the Nest-managed connection, so on the global
+// `mongoose` instance it's usually empty — the old loop iterated over nothing
+// and silently cleared nothing, leaking state between tests.
+export async function clearAllCollections(connection: Connection): Promise<void> {
+  const collections = await connection.db.collections();
+  await Promise.all(collections.map((c) => c.deleteMany({})));
 }
 
-export async function clearAllCollections(): Promise<void> {
-  const collections = mongoose.connection.collections;
-  for (const key in collections) {
-    await collections[key].deleteMany({});
-  }
+export async function stopInMemoryMongo(): Promise<void> {
+  // The Nest-managed connection is closed by `app.close()` in afterAll, so
+  // here we only stop the in-memory server.
+  await mongoServer.stop();
 }
 ```
+
+> **Why `deleteMany`, not `dropDatabase()`, between tests:** `dropDatabase()` *does* clear everything — but it also drops your unique indexes (`email`, `inviteCode`), and Mongoose won't rebuild them until the next `syncIndexes()`. Your "409 on duplicate email" test would then start letting duplicates through — breaking the very check it's meant to protect. `deleteMany({})` wipes documents while leaving indexes intact. Reserve `dropDatabase()` for a final teardown if you want it, never for `afterEach`.
 
 ### Refactor `AppModule` first
 
@@ -101,7 +109,8 @@ That's all the production change you need. The test bootstrap then *replaces* th
 ```typescript
 // test/auth.e2e-spec.ts
 import { Test } from '@nestjs/testing';
-import { MongooseModule } from '@nestjs/mongoose';
+import { MongooseModule, getConnectionToken } from '@nestjs/mongoose';
+import { Connection } from 'mongoose';
 import { NestFastifyApplication, FastifyAdapter } from '@nestjs/platform-fastify';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
@@ -109,6 +118,7 @@ import { startInMemoryMongo, stopInMemoryMongo, clearAllCollections } from './se
 
 describe('Auth (e2e)', () => {
   let app: NestFastifyApplication;
+  let connection: Connection;
 
   beforeAll(async () => {
     const uri = await startInMemoryMongo();
@@ -125,11 +135,15 @@ describe('Auth (e2e)', () => {
     app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
     await app.init();
     await app.getHttpAdapter().getInstance().ready();
+
+    // Grab the connection the APP actually uses, straight from the DI container.
+    // This is the one models are registered on — the one clearAllCollections must wipe.
+    connection = app.get<Connection>(getConnectionToken());
   });
 
   afterEach(async () => {
     // Wipe collections between tests so they don't leak state.
-    await clearAllCollections();
+    await clearAllCollections(connection);
   });
 
   afterAll(async () => {

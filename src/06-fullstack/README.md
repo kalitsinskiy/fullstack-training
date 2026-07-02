@@ -46,7 +46,6 @@ A complete Secret Santa application with two backend microservices, a React fron
 
 Each lesson contains:
 - **README.md** — Theory for new concepts + step-by-step app task
-- **QUESTIONS.md** — Evaluation questions
 
 Unlike blocks 04-05, there are no separate exercises — the app **is** the exercise. You implement features directly in the three app projects.
 
@@ -54,16 +53,20 @@ Unlike blocks 04-05, there are no separate exercises — the app **is** the exer
 
 | #  | Topic | New Technology | What You Build |
 |----|-------|---------------|----------------|
+| 00 | [Kickoff](lessons/00-kickoff/) | — (onboarding) | Whole stack running locally, mockups reviewed, starting point chosen |
 | 01 | [Docker & Infrastructure](lessons/01-docker-and-infrastructure/) | Docker, Dockerfile, docker-compose | Dockerfiles for both backends, docker-compose with MongoDB |
 | 02 | [Environment & Config](lessons/02-environment-and-config/) | dotenv, config validation, 12-factor | EnvService for both backends, .env files, Vite env vars |
 | 03 | [Rooms & Draw](lessons/03-rooms-and-draw/) | Derangement algorithm, MongoDB transactions | Draw endpoint, assignments, atomic transaction, draw UI |
-| 04 | [Redis](lessons/04-redis/) | Redis, caching, TTL, rate limiting | Redis in compose, room caching, invite code expiry |
-| 05 | [RabbitMQ](lessons/05-rabbitmq/) | RabbitMQ, exchanges, queues, DLQ | Event publishing and consuming between services |
-| 06 | [Notifications](lessons/06-notifications/) | HTTP adapter, circuit breaker | Notification endpoints, HTTP inter-service calls, notification UI |
-| 07 | [WebSockets](lessons/07-websockets/) | Socket.IO, JWT auth for WS, Redis adapter | Real-time push, useSocket hook, toast notifications |
-| 08 | [Anonymous Messaging](lessons/08-anonymous-messaging/) | Service mediator, privacy patterns | Anonymous message relay, chat UI, real-time delivery |
-| 09 | [Testing Microservices](lessons/09-testing-microservices/) | E2E testing, integration tests | Cross-service tests, E2E critical paths |
-| 10 | [CI/CD & Deployment](lessons/10-ci-cd-and-deployment/) | GitHub Actions, Husky, cloud deploy | CI pipeline, deploy to cloud (free tiers) |
+| 04 | [Authorization: Roles & Permissions](lessons/04-authorization-roles-permissions/) | NestJS guards, custom decorators, permission-based authz | Room owner/member roles, RoomPermissionsGuard, owner-only endpoints, FE permission gating |
+| 05 | [Redis](lessons/05-redis/) | Redis, caching, TTL, rate limiting | Redis in compose, room caching, invite code expiry |
+| 06 | [RabbitMQ](lessons/06-rabbitmq/) | RabbitMQ, exchanges, queues, DLQ | Event publishing and consuming between services |
+| 07 | [Notifications](lessons/07-notifications/) | HTTP adapter, circuit breaker | Notification endpoints, HTTP inter-service calls, notification UI |
+| 08 | [WebSockets](lessons/08-websockets/) | Socket.IO, JWT auth for WS, Redis adapter | Real-time push, useSocket hook, toast notifications |
+| 09 | [Anonymous Messaging](lessons/09-anonymous-messaging/) | Service mediator, privacy patterns | Anonymous message relay, chat UI, real-time delivery |
+| 10 | [Testing Microservices](lessons/10-testing-microservices/) | E2E testing, integration tests | Cross-service tests, E2E critical paths |
+| 11 | [CI/CD & Deployment](lessons/11-ci-cd-and-deployment/) | Husky, commitlint, local CI gate, Render Blueprint (IaC) | Local pre-push gate, render.yaml, deploy to cloud (free tiers) |
+| 12 | [Code Review](lessons/12-code-review/) | PRs, static analysis, SonarCloud/Semgrep, security review | A production PR of the whole system, scanned and self-reviewed, for a human review |
+| 13 | [Going Further](lessons/13-going-further/) **(optional)** | Self-directed challenges | Build features solo — e.g. **email notifications** (approach + service + events given, no step-by-step) |
 
 ## Secret Santa Features
 
@@ -74,12 +77,13 @@ Unlike blocks 04-05, there are no separate exercises — the app **is** the exer
 | Join Room | 04-05 (NestJS) | 07 (API) | — |
 | Wishlists | 04-05 (NestJS) | 07 (API) | — |
 | The Draw | — | — | 03 (Rooms & Draw) |
-| Redis Caching | — | — | 04 (Redis) |
-| Event-Driven Notifications | — | — | 05-06 (RabbitMQ, Notifications) |
-| Real-Time Push | — | — | 07 (WebSockets) |
-| Anonymous Messages | — | — | 08 (Anonymous Messaging) |
+| Roles & Permissions | — | — | 04 (Authorization) |
+| Redis Caching | — | — | 05 (Redis) |
+| Event-Driven Notifications | — | — | 06-07 (RabbitMQ, Notifications) |
+| Real-Time Push | — | — | 08 (WebSockets) |
+| Anonymous Messages | — | — | 09 (Anonymous Messaging) |
 | Docker Infrastructure | — | — | 01 (Docker) |
-| Deployment | — | — | 10 (CI/CD) |
+| Deployment | — | — | 11 (CI/CD) |
 
 ## Infrastructure
 
@@ -98,16 +102,15 @@ santa-app     — port 5173 (Vite dev server, runs locally)
 
 | Service | Provider |
 |---------|----------|
-| santa-api + santa-notifications | Railway / Render |
+| santa-api + santa-notifications | Render (Docker web service, via `render.yaml` Blueprint) |
 | MongoDB | MongoDB Atlas (free 512MB) |
 | Redis | Redis Cloud (free 30MB) |
 | RabbitMQ | CloudAMQP (free Little Lemur) |
-| santa-app | Vercel / Netlify |
+| santa-app | Render (static site, via `render.yaml` Blueprint) |
 
 ## How to Work
 
 1. Read the lesson **README.md** — understand the new concept
 2. Follow the **step-by-step task** — implement the feature in the real apps
 3. Test your implementation — run the apps, verify with curl/Postman/browser
-4. Answer **QUESTIONS.md** for self-evaluation
-5. Commit your progress
+4. Commit your progress

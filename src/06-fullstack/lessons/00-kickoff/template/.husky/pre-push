@@ -1,0 +1,14 @@
+# Local CI gate — runs before every `git push`: lint + type-check + tests for
+# each app. This IS our CI (we keep it local — see lessons/11). Any failure
+# exits non-zero and aborts the push.
+#
+# Note: the backend suites use mongodb-memory-server, which downloads a MongoDB
+# binary on the FIRST run (cached afterwards), so the first push is slower.
+# The Playwright e2e (santa-app `npm run test:e2e`) needs the full stack up and
+# is deliberately NOT in this gate — run it manually before a deploy.
+set -e
+
+for app in santa-api santa-notifications santa-app; do
+  echo "▶ CI: $app"
+  ( cd "$app" && npm run lint && npm run type-check && npm test )
+done
