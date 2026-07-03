@@ -1,225 +1,258 @@
 import {
   Injectable,
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   NotFoundException,
+  NotImplementedException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { Room as RoomSchemaClass, RoomDocument } from './schemas/room.schema';
+import { MongoServerError } from 'mongodb';
+import { randomBytes } from 'node:crypto';
+import { UsersService } from '../users/users.service';
+import { WishlistService } from '../wishlist/wishlist.service';
 import {
-  paginate,
-  PaginationQuery,
   PaginatedResponse,
+  PaginationQuery,
+  paginate,
 } from '../common/pagination';
-
-export interface Room {
-  id: string;
-  name: string;
-  ownerId: string;
-  code: string;
-  members: string[];
-  status: 'pending' | 'drawn' | 'closed';
-  drawDate?: Date;
-  exchangeDate?: Date;
-  exchangePlace?: string;
-  assignments?: Record<string, string>;
-  createdAt: Date;
-}
-
-export interface CreateRoomInput {
-  name: string;
-  ownerId: string;
-}
+import { CreateRoomDto } from './dto/create-room.dto';
+import { UpdateRoomDto } from './dto/update-room.dto';
+import { AssignmentView, Room } from './room.types';
+import { Room as RoomModel, RoomDocument } from './schemas/room.schema';
+import { permissionsForRole } from './permissions';
 
 @Injectable()
 export class RoomsService {
   constructor(
-    @InjectModel(RoomSchemaClass.name)
-    private readonly roomModel: Model<RoomDocument>,
+    @InjectModel(RoomModel.name)
+    private readonly roomModel: Model<RoomModel>,
+    private readonly usersService: UsersService,
+    private readonly wishlistService: WishlistService,
   ) {}
 
-  async create(input: CreateRoomInput): Promise<Room> {
-    const inviteCode = await this.generateUniqueCode();
-    const doc = await this.roomModel.create({
-      name: input.name,
-      creatorId: input.ownerId,
-      inviteCode,
-      participants: [input.ownerId],
-    });
-    return this.toPublic(doc);
+  // NOTE: every room response uses the shape in docs/api-contract.md — map
+  // participants to populated { id, displayName, role }, include participantCount,
+  // and set `viewerPermissions` to the calling user's permissions for that room
+  // (resolve their role via permissionsForRole() from ./permissions).
+
+  // TODO (Kickoff): create a room with a unique invite code; the creator is the
+  // first participant with role 'owner'. Status starts as 'pending'.
+  // STRETCH (optional, see Kickoff §4): make the name unique PER CREATOR — add a
+  // compound unique index { creatorId, name } and translate the duplicate-key
+  // error (code 11000) into a 409 ConflictException. Don't make names globally
+  // unique — different users may reuse a name.
+  async create(dto: CreateRoomDto, creatorId: string): Promise<Room> {
+    try {
+      const created = await this.roomModel.create({
+        name: dto.name.trim(),
+        creatorId,
+        inviteCode: await this.generateUniqueInviteCode(),
+        participants: [{ userId: creatorId, role: 'owner' }],
+        status: 'pending',
+        ...(dto.budget !== undefined
+          ? { budget: dto.budget, currency: dto.currency ?? '$' }
+          : {}),
+      });
+
+      await created.populate('participants.userId', 'displayName');
+
+      return this.toRoomResponse(created, creatorId);
+    } catch (err) {
+      if (err instanceof MongoServerError && err.code === 11000) {
+        throw new ConflictException('You already have a room with this name');
+      }
+      throw err;
+    }
   }
 
+  // TODO (Kickoff): list rooms where the user is a participant (paginated).
   async findByUser(
     userId: string,
     query: PaginationQuery,
   ): Promise<PaginatedResponse<Room>> {
-    const res = await paginate(this.roomModel, { participants: userId }, query);
+    const filter = { 'participants.userId': userId };
+    const result = await paginate(this.roomModel, filter, query);
+
+    await this.roomModel.populate(result.data, {
+      path: 'participants.userId',
+      select: 'displayName',
+    });
+
     return {
-      data: res.data.map((doc) => this.toPublic(doc as RoomDocument)),
-      meta: res.meta,
+      data: result.data.map((doc) =>
+        this.toRoomResponse(doc as RoomDocument, userId),
+      ),
+      meta: result.meta,
     };
   }
 
-  async findById(id: string): Promise<Room | undefined> {
-    if (!Types.ObjectId.isValid(id)) return undefined;
-    const doc = await this.roomModel.findById(id);
-    return doc ? this.toPublic(doc) : undefined;
-  }
-
-  async findByCode(code: string): Promise<Room | undefined> {
-    const doc = await this.roomModel.findOne({ inviteCode: code });
-    return doc ? this.toPublic(doc) : undefined;
-  }
-
-  async addMember(code: string, userId: string): Promise<Room | undefined> {
-    const existing = await this.roomModel.findOne({ inviteCode: code });
-
-    if (!existing) return undefined;
-    if (existing.status === 'drawn') {
-      throw new ForbiddenException('Room is already drawn');
+  // TODO (Kickoff): return a room by id, but only if the user is a participant.
+  // A non-participant (or unknown id) must be indistinguishable: throw
+  // NotFoundException (404) in both cases — don't reveal that the room exists.
+  async findByIdForUser(id: string, userId: string): Promise<Room> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new NotFoundException('Room not found');
     }
 
-    const doc = await this.roomModel.findOneAndUpdate(
-      { inviteCode: code },
-      { $addToSet: { participants: userId } },
-      { new: true },
+    const room = await this.roomModel
+      .findOne({ _id: id, 'participants.userId': userId })
+      .populate('participants.userId', 'displayName')
+      .exec();
+
+    if (!room) {
+      throw new NotFoundException('Room not found');
+    }
+
+    return this.toRoomResponse(room, userId);
+  }
+
+  // TODO (Kickoff): join a room by id, authorised by the invite code in the body.
+  // The new participant is added with role 'member'.
+  // Reject a wrong code, and a room whose draw is already done.
+  async join(id: string, inviteCode: string, userId: string): Promise<Room> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new NotFoundException('Room not found');
+    }
+
+    const room = await this.roomModel.findById(id).exec();
+
+    if (!room) {
+      throw new NotFoundException('Room not found');
+    }
+    if (room.inviteCode !== inviteCode) {
+      throw new BadRequestException('Invalid invite code');
+    }
+    if (room.status === 'drawn') {
+      throw new ForbiddenException('The draw for this room is already done');
+    }
+
+    const already = room.participants.some(
+      (p) => p.userId.toString() === userId,
     );
-    return doc ? this.toPublic(doc) : undefined;
+
+    if (!already) {
+      room.participants.push({
+        userId: new Types.ObjectId(userId),
+        role: 'member',
+      });
+      await room.save();
+    }
+
+    await room.populate('participants.userId', 'displayName');
+
+    return this.toRoomResponse(room, userId);
   }
 
-  async draw(roomId: string, callerId: string): Promise<Room> {
-    if (!Types.ObjectId.isValid(roomId)) {
-      throw new NotFoundException(`Room ${roomId} not found`);
-    }
-
-    const doc = await this.roomModel.findById(roomId);
-
-    if (!doc) {
-      throw new NotFoundException(`Room ${roomId} not found`);
-    }
-    if (doc.creatorId !== callerId) {
-      throw new ForbiddenException('Only the room owner can run the draw');
-    }
-    if (doc.status === 'drawn') {
-      throw new BadRequestException('Room is already drawn');
-    }
-    if (doc.participants.length < 3) {
-      throw new BadRequestException(
-        'Need at least 3 participants to run the draw',
-      );
-    }
-
-    doc.assignments = this.makeDraw(doc.participants);
-    doc.status = 'drawn';
-    doc.drawDate = new Date();
-    await doc.save();
-
-    return this.toPublic(doc);
+  // TODO (Lesson 05): join using ONLY the invite code. Invitees have the code,
+  // not the room id (and a non-member can't open the room to find it). Resolve
+  // invite:{code} -> roomId from Redis (you store it in create()), then run the
+  // same join logic. 400 if the code is missing/expired.
+  joinByCode(inviteCode: string, userId: string): Promise<Room> {
+    throw new NotImplementedException(
+      'RoomsService.joinByCode is not implemented',
+    );
   }
 
-  async setExchange(
-    roomId: string,
-    callerId: string,
-    input: { exchangeDate: string; exchangePlace: string },
-  ): Promise<Room> {
-    if (!Types.ObjectId.isValid(roomId)) {
-      throw new NotFoundException(`Room ${roomId} not found`);
-    }
-
-    const doc = await this.roomModel.findById(roomId);
-
-    if (!doc) throw new NotFoundException(`Room ${roomId} not found`);
-    if (doc.creatorId !== callerId)
-      throw new ForbiddenException(
-        'Only the room owner can schedule the exchange',
-      );
-
-    const effective = this.toPublic(doc).status;
-
-    if (effective === 'pending') {
-      throw new BadRequestException(
-        'Run the draw before scheduling the exchange',
-      );
-    }
-
-    if (effective === 'closed') {
-      throw new ForbiddenException(
-        'Room is closed — the exchange date has passed',
-      );
-    }
-
-    doc.exchangeDate = new Date(input.exchangeDate);
-    doc.exchangePlace = input.exchangePlace;
-    await doc.save();
-
-    return this.toPublic(doc);
+  // TODO (Lesson 03): only the creator may draw, and only once, with >= 3 participants.
+  // Produce a derangement (Sattolo / Fisher–Yates with rejection — no self-assignment)
+  // and persist ALL assignments in a single document write (atomic, no transaction).
+  // Save `exchangeDate` (required) so every participant sees the gift-exchange day.
+  draw(id: string, requesterId: string, exchangeDate: string): Promise<Room> {
+    throw new NotImplementedException('RoomsService.draw is not implemented');
   }
 
-  async remove(roomId: string, callerId: string): Promise<void> {
-    if (!Types.ObjectId.isValid(roomId))
-      throw new NotFoundException(`Room ${roomId} not found`);
-
-    const doc = await this.roomModel.findById(roomId);
-
-    if (!doc) throw new NotFoundException(`Room ${roomId} not found`);
-    if (doc.creatorId !== callerId)
-      throw new ForbiddenException('Only the room owner can delete the room');
-
-    await doc.deleteOne();
+  // TODO (Lesson 03): return the giftee assigned to this user, plus their wishlist.
+  // Only a participant of a drawn room may read it.
+  getAssignment(id: string, userId: string): Promise<AssignmentView> {
+    throw new NotImplementedException(
+      'RoomsService.getAssignment is not implemented',
+    );
   }
 
-  private async generateUniqueCode(): Promise<string> {
-    while (true) {
-      const code = Math.random().toString(36).slice(2, 8).toUpperCase();
-      if (code.length !== 6) continue;
+  // TODO (Lesson 04): update the room's fields (e.g. name). Owner-only access is
+  // already enforced by RoomPermissionsGuard via @RequirePermissions('room:edit').
+  editRoom(id: string, dto: UpdateRoomDto, userId: string): Promise<Room> {
+    throw new NotImplementedException(
+      'RoomsService.editRoom is not implemented',
+    );
+  }
+
+  // TODO (Lesson 04): delete the room. Owner-only access is enforced by the guard.
+  deleteRoom(id: string, userId: string): Promise<void> {
+    throw new NotImplementedException(
+      'RoomsService.deleteRoom is not implemented',
+    );
+  }
+
+  // TODO (Lesson 04): remove a participant from the room. The owner can never be
+  // removed (respond 400). Owner-only access is enforced by the guard.
+  kickMember(id: string, targetUserId: string, userId: string): Promise<void> {
+    throw new NotImplementedException(
+      'RoomsService.kickMember is not implemented',
+    );
+  }
+
+  // TODO (Lesson 04): generate a fresh unique invite code and persist it.
+  // Owner-only access is enforced by the guard.
+  regenerateInviteCode(id: string, userId: string): Promise<Room> {
+    throw new NotImplementedException(
+      'RoomsService.regenerateInviteCode is not implemented',
+    );
+  }
+
+  private generateInviteCode(len = 6): string {
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    return Array.from(
+      randomBytes(len),
+      (b) => alphabet[b % alphabet.length],
+    ).join('');
+  }
+
+  private async generateUniqueInviteCode(): Promise<string> {
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const code = this.generateInviteCode();
       const exists = await this.roomModel.exists({ inviteCode: code });
       if (!exists) return code;
     }
+    throw new Error('Could not generate a unique invite code');
   }
 
-  private makeDraw(participants: string[]): Record<string, string> {
-    // Fisher–Yates shuffle - O(n)
-    while (true) {
-      const shuffled = [...participants];
+  private toRoomResponse(doc: RoomDocument, viewerId?: string): Room {
+    const participants = doc.participants.map((p) => {
+      const user = p.userId as unknown as {
+        _id: Types.ObjectId;
+        displayName: string;
+      };
 
-      for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-      }
+      return {
+        id: user._id.toString(),
+        displayName: user.displayName,
+        role: p.role,
+      };
+    });
 
-      const hasFixedPoint = participants.some((p, i) => p === shuffled[i]);
-
-      if (hasFixedPoint) continue;
-
-      const res: Record<string, string> = {};
-
-      for (let i = 0; i < participants.length; i++) {
-        res[participants[i]] = shuffled[i];
-      }
-
-      return res;
-    }
-  }
-
-  private toPublic(doc: RoomDocument): Room {
-    const isClosed =
-      doc.status === 'drawn' &&
-      !!doc.exchangeDate &&
-      doc.exchangeDate.getTime() <= Date.now();
-
-    return {
+    const room: Room = {
       id: doc._id.toString(),
       name: doc.name,
-      ownerId: doc.creatorId,
-      code: doc.inviteCode,
-      members: doc.participants,
-      status: isClosed ? 'closed' : doc.status,
-      drawDate: doc.drawDate,
-      exchangeDate: doc.exchangeDate,
-      exchangePlace: doc.exchangePlace,
-      assignments: doc.assignments,
-      createdAt: doc.get('createdAt') as Date,
+      creatorId: doc.creatorId.toString(),
+      inviteCode: doc.inviteCode,
+      participants,
+      participantCount: participants.length,
+      status: doc.status,
     };
+
+    if (doc.drawDate) room.drawDate = doc.drawDate.toISOString();
+    if (doc.budget !== undefined) room.budget = doc.budget;
+    if (doc.currency) room.currency = doc.currency;
+    if (doc.exchangeDate) room.exchangeDate = doc.exchangeDate.toISOString();
+
+    if (viewerId) {
+      const mine = participants.find((p) => p.id === viewerId);
+      if (mine) room.viewerPermissions = [...permissionsForRole(mine.role)];
+    }
+
+    return room;
   }
 }

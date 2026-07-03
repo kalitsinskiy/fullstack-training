@@ -1,1 +1,0 @@
-export { JoinRoomDialog } from './JoinRoomDialog';

@@ -4,72 +4,47 @@ import {
   ExceptionFilter,
   HttpException,
   HttpStatus,
-  Logger,
 } from '@nestjs/common';
-import { type FastifyReply } from 'fastify';
-
-interface ErrorEnvelope {
-  success: false;
-  statusCode: number;
-  message: string | string[];
-  timestamp: string;
-}
+import { FastifyReply } from 'fastify';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
-  private readonly logger = new Logger(AllExceptionsFilter.name);
-
   catch(exception: unknown, host: ArgumentsHost): void {
-    const context = host.switchToHttp();
-    const reply = context.getResponse<FastifyReply>();
+    const response = host.switchToHttp().getResponse<FastifyReply>();
 
-    const { statusCode, message } = this.toEnvelope(exception);
+    const statusCode =
+      exception instanceof HttpException
+        ? exception.getStatus()
+        : HttpStatus.INTERNAL_SERVER_ERROR;
 
-    if (statusCode >= 500) {
-      this.logger.error(
-        exception instanceof Error ? exception.stack : String(exception),
-      );
-    }
+    const message =
+      exception instanceof HttpException
+        ? this.getHttpExceptionMessage(exception)
+        : 'Internal server error';
 
-    const body: ErrorEnvelope = {
+    response.status(statusCode).send({
       success: false,
       statusCode,
       message,
       timestamp: new Date().toISOString(),
-    };
-
-    reply.status(statusCode).send(body);
+    });
   }
 
-  private toEnvelope(exception: unknown): {
-    statusCode: number;
-    message: string | string[];
-  } {
-    if (exception instanceof HttpException) {
-      const status = exception.getStatus();
-      const response = exception.getResponse();
+  private getHttpExceptionMessage(exception: HttpException): string | string[] {
+    const payload = exception.getResponse();
 
-      if (typeof response === 'string') {
-        return { statusCode: status, message: response };
-      }
-
-      if (
-        typeof response === 'object' &&
-        response !== null &&
-        'message' in response
-      ) {
-        return {
-          statusCode: status,
-          message: (response as { message: string | string[] }).message,
-        };
-      }
-
-      return { statusCode: status, message: exception.message };
+    if (typeof payload === 'string') {
+      return payload;
     }
 
-    return {
-      statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-      message: 'Internal server error',
-    };
+    if (
+      typeof payload === 'object' &&
+      payload !== null &&
+      'message' in payload
+    ) {
+      return payload.message as string | string[];
+    }
+
+    return exception.message;
   }
 }

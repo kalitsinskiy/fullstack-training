@@ -1,53 +1,43 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { User as UserSchemaClass, UserDocument } from './schemas/users.schema';
+import { UpdateCurrentUserDto } from './dto/update-current-user.dto';
+import { User } from './user.types';
+import { User as UserModel, UserDocument } from './schemas/user.schema';
 
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  createdAt: Date;
-}
-
-export interface CreateUserInput {
-  name: string;
-  email: string;
-}
-
-export interface CreateUserWithHashInput {
+type CreateUserInput = {
   email: string;
   displayName: string;
   passwordHash: string;
-}
+  role?: 'user' | 'admin';
+};
 
 @Injectable()
 export class UsersService {
   constructor(
-    @InjectModel(UserSchemaClass.name)
-    private readonly userModel: Model<UserDocument>,
+    @InjectModel(UserModel.name)
+    private readonly userModel: Model<UserModel>,
   ) {}
 
-  async createWithHash(input: CreateUserWithHashInput): Promise<UserDocument> {
-    return this.userModel.create({
+  // TODO (Kickoff / Auth): persist a new user (lower-case the email, default role 'user').
+  async create(input: CreateUserInput): Promise<User> {
+    const created = await this.userModel.create({
       email: input.email.toLowerCase(),
       displayName: input.displayName,
       passwordHash: input.passwordHash,
+      role: input.role ?? 'user',
     });
+
+    return this.toUser(created);
   }
 
-  async findById(id: string): Promise<User | undefined> {
-    if (!Types.ObjectId.isValid(id)) return undefined;
-
-    const doc = await this.userModel.findById(id);
-    return doc ? this.toPublic(doc) : undefined;
-  }
-
-  async findByEmail(
+  // TODO (Kickoff / Auth): find a user by email. When opts.withPassword is set,
+  // select('+passwordHash') so login can compare it. Returns the raw document or null.
+  findByEmail(
     email: string,
     opts: { withPassword?: boolean } = {},
   ): Promise<UserDocument | null> {
-    const query = this.userModel.findOne({ email: email.toLowerCase() });
+    const query = this.userModel.findOne({ email: email.toLocaleLowerCase() });
 
     if (opts.withPassword) {
       query.select('+passwordHash');
@@ -56,12 +46,43 @@ export class UsersService {
     return query.exec();
   }
 
-  private toPublic(doc: UserDocument): User {
+  // TODO (Profile): find a user by id; throw NotFoundException if missing or id invalid.
+  async findById(id: string): Promise<User> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new NotFoundException('User not found');
+    }
+
+    const user = await this.userModel.findById(id).exec();
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return this.toUser(user);
+  }
+
+  // TODO (Profile): update the current user's displayName and return the fresh user.
+  async updateCurrentUser(
+    id: string,
+    dto: UpdateCurrentUserDto,
+  ): Promise<User> {
+    const user = await this.userModel
+      .findByIdAndUpdate(id, { displayName: dto.displayName }, { new: true })
+      .exec();
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return this.toUser(user);
+  }
+
+  private toUser(doc: UserDocument): User {
     return {
       id: doc._id.toString(),
-      name: doc.displayName,
+      displayName: doc.displayName,
       email: doc.email,
-      createdAt: doc.get('createdAt'),
+      role: doc.role,
     };
   }
 }

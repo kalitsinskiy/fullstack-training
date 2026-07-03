@@ -1,30 +1,18 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument } from 'mongoose';
+import { HydratedDocument, Types } from 'mongoose';
 
 export type WishlistDocument = HydratedDocument<Wishlist>;
 
-export interface WishlistItem {
-  name: string;
-  url?: string;
-  priority?: number;
-}
-
 @Schema({ timestamps: true })
 export class Wishlist {
-  @Prop({ required: true })
-  userId!: string;
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  userId!: Types.ObjectId;
 
-  @Prop({ required: true })
-  roomId!: string;
+  @Prop({ type: Types.ObjectId, ref: 'Room', required: true })
+  roomId!: Types.ObjectId;
 
-  @Prop({
-    type: [
-      { name: { type: String, required: true }, url: String, priority: Number },
-    ],
-    default: [],
-    _id: false,
-  })
-  items!: WishlistItem[];
+  @Prop({ type: [String], default: [] })
+  items!: string[];
 }
 
 export const WishlistSchema = SchemaFactory.createForClass(Wishlist);

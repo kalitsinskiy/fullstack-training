@@ -1,63 +1,53 @@
-import { Injectable, ForbiddenException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { Wishlist } from './wishlist.types';
 import {
-  Wishlist as WishlistSchemaClass,
+  Wishlist as WishlistModel,
   WishlistDocument,
-  WishlistItem,
 } from './schemas/wishlist.schema';
-import { RoomsService } from '../rooms/rooms.service';
-
-export interface Wishlist {
-  roomId: string;
-  userId: string;
-  items: WishlistItem[];
-}
 
 @Injectable()
 export class WishlistService {
   constructor(
-    @InjectModel(WishlistSchemaClass.name)
-    private readonly wishlistModel: Model<WishlistDocument>,
-    private readonly roomsService: RoomsService,
+    @InjectModel(WishlistModel.name)
+    private readonly wishlistModel: Model<WishlistModel>,
   ) {}
 
+  // TODO (Lesson: Wishlist) — upsert the wishlist for {userId, roomId} with `items`.
   async set(
     roomId: string,
     userId: string,
-    items: WishlistItem[],
+    items: string[],
   ): Promise<Wishlist> {
-    const room = await this.roomsService.findById(roomId);
+    const doc = await this.wishlistModel
+      .findOneAndUpdate(
+        { roomId, userId },
+        { $set: { items } },
+        { upsert: true, new: true, setDefaultsOnInsert: true },
+      )
+      .exec();
 
-    if (room?.status === 'closed')
-      throw new ForbiddenException(
-        'Wishlist is locked - the exchange date has passed',
-      );
-
-    const doc = await this.wishlistModel.findOneAndUpdate(
-      { userId, roomId },
-      { $set: { items } },
-      { upsert: true, new: true, runValidators: true },
-    );
-
-    return this.toPublic(doc);
+    return this.toWishlist(doc);
   }
 
-  async get(roomId: string, userId: string): Promise<Wishlist | undefined> {
-    const doc = await this.wishlistModel.findOne({ userId, roomId });
-    return doc ? this.toPublic(doc) : undefined;
+  // TODO (Lesson: Wishlist) — return the wishlist for {roomId, userId}. If the user
+  // has none yet, return an EMPTY one ({ roomId, userId, items: [] }) — not a 404.
+  async get(roomId: string, userId: string): Promise<Wishlist> {
+    const doc = await this.wishlistModel.findOne({ roomId, userId }).exec();
+
+    if (!doc) {
+      return { roomId, userId, items: [] };
+    }
+
+    return this.toWishlist(doc);
   }
 
-  private toPublic(doc: WishlistDocument): Wishlist {
+  private toWishlist(doc: WishlistDocument): Wishlist {
     return {
-      roomId: doc.roomId,
-      userId: doc.userId,
-      items: doc.items.map((item) => {
-        const out: WishlistItem = { name: item.name };
-        if (item.url !== undefined) out.url = item.url;
-        if (item.priority !== undefined) out.priority = item.priority;
-        return out;
-      }),
+      roomId: doc.roomId.toString(),
+      userId: doc.userId.toString(),
+      items: doc.items,
     };
   }
 }

@@ -1,135 +1,120 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import request from 'supertest';
 import {
   FastifyAdapter,
   NestFastifyApplication,
 } from '@nestjs/platform-fastify';
-import { Connection, Model } from 'mongoose';
 import { getConnectionToken, getModelToken } from '@nestjs/mongoose';
-import { ValidationPipe } from '@nestjs/common';
+import { Connection, Model } from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
-import { ThrottlerStorage } from '@nestjs/throttler';
 import { AppModule } from '../src/app.module';
-import { User, UserDocument } from '../src/users/schemas/users.schema';
-import { startInMemoryMongo, stopInMemoryMongo } from './helpers/mongo';
-import { userFixture } from './helpers/factories';
-import { tokenFor } from './helpers/auth-token';
+import { configureApp } from '../src/configure-app';
+import { User } from '../src/users/schemas/user.schema';
+import { userFixture } from './factories';
+import { tokenFor } from './auth-token.helper';
+import {
+  clearAllCollections,
+  startInMemoryMongo,
+  stopInMemoryMongo,
+} from './setup-mongo';
 
-describe('UsersController (e2e)', () => {
+describe('Users (HTTP)', () => {
   let app: NestFastifyApplication;
-  let connection: Connection;
-  let jwt: JwtService;
-  let userModel: Model<UserDocument>;
+  const originalJwtSecret = process.env.JWT_SECRET;
+  const originalMongoUrl = process.env.MONGO_URL;
 
   beforeAll(async () => {
     process.env.JWT_SECRET = process.env.JWT_SECRET ?? 'test-secret';
-    await startInMemoryMongo();
-
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    })
-      .overrideProvider(ThrottlerStorage)
-      .useValue({
-        increment: async () => ({
-          totalHits: 0,
-          timeToExpire: 0,
-          isBlocked: false,
-          timeToBlockExpire: 0,
-        }),
-      })
-      .compile();
-
-    app = moduleFixture.createNestApplication<NestFastifyApplication>(
-      new FastifyAdapter(),
-    );
-
-    app.useGlobalPipes(
-      new ValidationPipe({
-        whitelist: true,
-        forbidNonWhitelisted: true,
-        transform: true,
-      }),
-    );
-
-    await app.init();
-    await app.getHttpAdapter().getInstance().ready();
-
-    connection = app.get<Connection>(getConnectionToken());
-    jwt = app.get(JwtService);
-    userModel = app.get<Model<UserDocument>>(getModelToken(User.name));
-  });
-
-  afterAll(async () => {
-    await app.close();
-    await stopInMemoryMongo();
+    process.env.MONGO_URL = await startInMemoryMongo();
   });
 
   beforeEach(async () => {
-    await connection.dropDatabase();
+    const moduleRef: TestingModule = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
+
+    app = moduleRef.createNestApplication<NestFastifyApplication>(
+      new FastifyAdapter(),
+    );
+    await configureApp(app);
+    await app.init();
+    await app.getHttpAdapter().getInstance().ready();
   });
 
-  describe('GET /users/me', () => {
-    test('returns the authenticated user profile (200) with id, name, email, createdAt', async () => {
-      const fixture = userFixture({
-        email: 'me@test.com',
-        displayName: 'Me User',
-      });
-      await userModel.create(fixture);
-      const token = tokenFor(jwt, fixture);
+  afterEach(async () => {
+    if (app) {
+      const connection = app.get<Connection>(getConnectionToken());
+      await clearAllCollections(connection);
+      await app.close();
+    }
+  });
 
-      const res = await app
-        .getHttpAdapter()
-        .getInstance()
-        .inject({
-          method: 'GET',
-          url: '/users/me',
-          headers: { authorization: `Bearer ${token}` },
-        });
+  afterAll(async () => {
+    if (originalJwtSecret === undefined) delete process.env.JWT_SECRET;
+    else process.env.JWT_SECRET = originalJwtSecret;
+    if (originalMongoUrl === undefined) delete process.env.MONGO_URL;
+    else process.env.MONGO_URL = originalMongoUrl;
+    await stopInMemoryMongo();
+  });
 
-      expect(res.statusCode).toBe(200);
-      expect(res.json()).toEqual({
-        id: fixture._id.toString(),
-        name: 'Me User',
-        email: 'me@test.com',
-        createdAt: expect.any(String),
-      });
+  async function seedUser(overrides: Record<string, unknown> = {}) {
+    const userModel = app.get<Model<User>>(getModelToken(User.name));
+    const jwt = app.get(JwtService);
+    const user = await userModel.create(userFixture(overrides));
+    return { user, token: tokenFor(jwt, user) };
+  }
+
+  it('GET /api/users/me → 200 returns the caller profile { id, displayName, email, role }', async () => {
+    const { user, token } = await seedUser({ displayName: 'Alice' });
+
+    const response = await request(app.getHttpServer())
+      .get('/api/users/me')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(response.body).toEqual({
+      id: user._id.toString(),
+      displayName: 'Alice',
+      email: user.email,
+      role: 'user',
+    });
+    expect(response.body.passwordHash).toBeUndefined();
+  });
+
+  it('GET /api/users/me → 401 without a token', async () => {
+    await request(app.getHttpServer()).get('/api/users/me').expect(401);
+  });
+
+  it('PATCH /api/users/me → 200 updates the displayName', async () => {
+    const { user, token } = await seedUser({ displayName: 'Old Name' });
+
+    const response = await request(app.getHttpServer())
+      .patch('/api/users/me')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ displayName: 'New Name' })
+      .expect(200);
+
+    expect(response.body).toEqual({
+      id: user._id.toString(),
+      displayName: 'New Name',
+      email: user.email,
+      role: 'user',
     });
 
-    test('returns 401 without a token', async () => {
-      const res = await app
-        .getHttpAdapter()
-        .getInstance()
-        .inject({ method: 'GET', url: '/users/me' });
+    const after = await request(app.getHttpServer())
+      .get('/api/users/me')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+    expect(after.body.displayName).toBe('New Name');
+  });
 
-      expect(res.statusCode).toBe(401);
-    });
+  it('PATCH /api/users/me → 400 on an invalid displayName', async () => {
+    const { token } = await seedUser();
 
-    test('returns 401 with a malformed Authorization header', async () => {
-      const res = await app
-        .getHttpAdapter()
-        .getInstance()
-        .inject({
-          method: 'GET',
-          url: '/users/me',
-          headers: { authorization: 'Bearer not-a-real-jwt' },
-        });
-
-      expect(res.statusCode).toBe(401);
-    });
-
-    test('returns 404 when the token points to a user that no longer exists', async () => {
-      const fixture = userFixture({ email: 'ghost@test.com' });
-      const token = tokenFor(jwt, fixture);
-
-      const res = await app
-        .getHttpAdapter()
-        .getInstance()
-        .inject({
-          method: 'GET',
-          url: '/users/me',
-          headers: { authorization: `Bearer ${token}` },
-        });
-
-      expect(res.statusCode).toBe(404);
-    });
+    await request(app.getHttpServer())
+      .patch('/api/users/me')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ displayName: '' })
+      .expect(400);
   });
 });

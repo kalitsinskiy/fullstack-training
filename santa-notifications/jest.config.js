@@ -1,74 +1,17 @@
-const path = require('node:path');
-
+/** @type {import('ts-jest').JestConfigWithTsJest} */
 module.exports = {
-  rootDir: __dirname,
-
-  // Prettier 3 is not supported by jest inline snapshots — disable it
-  prettierPath: null,
-
-  // Test match patterns
-  testMatch: ['<rootDir>/src/**/__tests__/**/*.test.{js,ts,jsx,tsx}'],
-
-  transform: {
-    '^.+\\.(ts|tsx)$': [
-      'ts-jest',
-      {
-        tsconfig: {
-          target: 'ES2020',
-          module: 'commonjs',
-          esModuleInterop: true,
-          allowSyntheticDefaultImports: true,
-          strict: true,
-          skipLibCheck: true,
-        },
-        diagnostics: false,
-      },
-    ],
-  },
-
-  moduleFileExtensions: ['js', 'jsx', 'ts', 'tsx', 'json', 'node'],
-
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
-
   testEnvironment: 'node',
-
-  testEnvironmentOptions: {
-    customExportConditions: ['node', 'node-addons'],
+  rootDir: '.',
+  testMatch: ['<rootDir>/test/**/*.test.ts'],
+  // This is an integration suite: buildApp() opens a real ioredis client whose
+  // reconnect timer keeps the event loop alive after the tests finish. The app
+  // is closed in afterEach, so the work is done — forceExit just stops Jest from
+  // hanging on that timer. Run `jest --detectOpenHandles` if you suspect a leak.
+  forceExit: true,
+  // The app uses module: "nodenext"; tsconfig.test.json switches the Jest
+  // transform to CommonJS (and node resolution) so ts-jest runs without ESM
+  // gymnastics, while still extending the base config.
+  transform: {
+    '^.+\\.ts$': ['ts-jest', { tsconfig: 'tsconfig.test.json' }],
   },
-
-  projects: [
-    {
-      displayName: 'node',
-      testEnvironment: 'node',
-      testMatch: ['<rootDir>/src/**/__tests__/**/*.test.{js,ts}'],
-      transform: {
-        '^.+\\.(ts|tsx)$': [
-          'ts-jest',
-          {
-            tsconfig: {
-              target: 'ES2020',
-              module: 'commonjs',
-              esModuleInterop: true,
-              allowSyntheticDefaultImports: true,
-              strict: true,
-              skipLibCheck: true,
-            },
-            diagnostics: false,
-          },
-        ],
-      },
-    },
-  ],
-
-  collectCoverageFrom: ['src/**/*.{js,ts,jsx,tsx}', '!src/**/__tests__/**', '!**/node_modules/**'],
-
-  coverageDirectory: '<rootDir>/coverage',
-  coverageReporters: ['text', 'lcov', 'html'],
-
-  testPathIgnorePatterns: ['/node_modules/'],
-
-  modulePaths: ['<rootDir>'],
-
-  clearMocks: true,
-  verbose: true,
 };

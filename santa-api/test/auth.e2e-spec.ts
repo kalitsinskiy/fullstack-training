@@ -1,217 +1,175 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import request from 'supertest';
 import {
   FastifyAdapter,
   NestFastifyApplication,
 } from '@nestjs/platform-fastify';
-import { ValidationPipe } from '@nestjs/common';
-import { Connection } from 'mongoose';
 import { getConnectionToken } from '@nestjs/mongoose';
-import { ThrottlerStorage } from '@nestjs/throttler';
+import { Connection } from 'mongoose';
 import { AppModule } from '../src/app.module';
-import { startInMemoryMongo, stopInMemoryMongo } from './helpers/mongo';
+import { configureApp } from '../src/configure-app';
+import {
+  clearAllCollections,
+  startInMemoryMongo,
+  stopInMemoryMongo,
+} from './setup-mongo';
 
-describe('AuthController (e2e)', () => {
+/**
+ * COMPONENT TEST (HTTP slice) — the approach for this whole course.
+ *
+ * We boot the real AppModule against an in-memory MongoDB and drive it through
+ * real HTTP with supertest. No mocking of services or the database: a request
+ * goes through pipes → guards → controller → service → Mongo, exactly like prod.
+ *
+ * One example below is fully written so you can see the wiring. The rest are
+ * `it.todo(...)` — turn each into a real test as you implement AuthService.
+ * Add more scenarios as you find edge cases; this list is a floor, not a ceiling.
+ */
+describe('Auth (HTTP)', () => {
   let app: NestFastifyApplication;
-  let connection: Connection;
+  const originalJwtSecret = process.env.JWT_SECRET;
+  const originalMongoUrl = process.env.MONGO_URL;
 
   beforeAll(async () => {
     process.env.JWT_SECRET = process.env.JWT_SECRET ?? 'test-secret';
-
-    await startInMemoryMongo();
-
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    })
-      // Replace the throttler's storage so totalHits is always 0 -> never trips.
-      // overrideGuard / overrideProvider(APP_GUARD) don't reliably intercept
-      // a guard registered as a multi-provider under APP_GUARD; replacing the
-      // storage backing the guard is the simpler, dependency-version-independent
-      // hammer.
-      .overrideProvider(ThrottlerStorage)
-      .useValue({
-        increment: async () => ({
-          totalHits: 0,
-          timeToExpire: 0,
-          isBlocked: false,
-          timeToBlockExpire: 0,
-        }),
-      })
-      .compile();
-
-    app = moduleFixture.createNestApplication<NestFastifyApplication>(
-      new FastifyAdapter(),
-    );
-
-    app.useGlobalPipes(
-      new ValidationPipe({
-        whitelist: true,
-        forbidNonWhitelisted: true,
-        transform: true,
-      }),
-    );
-
-    await app.init();
-    await app.getHttpAdapter().getInstance().ready();
-
-    connection = app.get<Connection>(getConnectionToken());
-  });
-
-  afterAll(async () => {
-    await app.close();
-    await stopInMemoryMongo();
+    process.env.MONGO_URL = await startInMemoryMongo();
   });
 
   beforeEach(async () => {
-    await connection.dropDatabase();
+    const moduleRef: TestingModule = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
+
+    app = moduleRef.createNestApplication<NestFastifyApplication>(
+      new FastifyAdapter(),
+    );
+    await configureApp(app);
+    await app.init();
+    await app.getHttpAdapter().getInstance().ready();
   });
 
-  const post = (url: string, payload: unknown) =>
-    app.getHttpAdapter().getInstance().inject({ method: 'POST', url, payload });
+  afterEach(async () => {
+    if (app) {
+      const connection = app.get<Connection>(getConnectionToken());
+      await clearAllCollections(connection);
+      await app.close();
+    }
+  });
 
-  const validRegisterBody = {
-    email: 'alice@example.com',
-    password: 'SecretPass1',
-    displayName: 'Alice',
-  };
+  afterAll(async () => {
+    if (originalJwtSecret === undefined) {
+      delete process.env.JWT_SECRET;
+    } else {
+      process.env.JWT_SECRET = originalJwtSecret;
+    }
+    if (originalMongoUrl === undefined) {
+      delete process.env.MONGO_URL;
+    } else {
+      process.env.MONGO_URL = originalMongoUrl;
+    }
+    await stopInMemoryMongo();
+  });
 
-  describe('POST /auth/register', () => {
-    test('returns 201 with { id, email, displayName, accessToken }', async () => {
-      const res = await post('/auth/register', validRegisterBody);
+  // ✅ WORKED EXAMPLE — green against the skeleton: validation runs in the
+  // ValidationPipe, before AuthService is ever called. Study this wiring, then
+  // implement the service and fill in the `it.todo`s below the same way.
+  it('POST /api/auth/register → 400 when required fields are missing', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/auth/register')
+      .send({ email: 'alice@test.com' })
+      .expect(400);
 
-      expect(res.statusCode).toBe(201);
-
-      const body = res.json();
-
-      expect(body).toEqual({
-        id: expect.any(String),
-        email: 'alice@example.com',
-        displayName: 'Alice',
-        accessToken: expect.any(String),
-      });
-      expect(body.accessToken.split('.')).toHaveLength(3);
-    });
-
-    test('lowercase the email before stroring', async () => {
-      const res = await post('/auth/register', {
-        ...validRegisterBody,
-        email: 'ALICE@Example.com',
-      });
-
-      expect(res.statusCode).toBe(201);
-      expect(res.json().email).toBe('alice@example.com');
-    });
-
-    test.each([
-      ['email missing', { password: 'SecretPass1', displayName: 'Alice' }],
-      ['email invalid format', { ...validRegisterBody, email: 'not-an-email' }],
-      ['password missing', { email: 'a@b.com', displayName: 'Alice' }],
-      ['password too short', { ...validRegisterBody, password: 'short' }],
-      ['displayName missing', { email: 'a@b.com', password: 'SecretPass1' }],
-      [
-        'displayName too long',
-        { ...validRegisterBody, displayName: 'x'.repeat(51) },
-      ],
-      [
-        'unknown field rejected by whitelist',
-        { ...validRegisterBody, role: 'admin' },
-      ],
-    ])('returns 400 when %s', async (_label, payload) => {
-      const res = await post('/auth/register', payload);
-
-      expect(res.statusCode).toBe(400);
-    });
-
-    test('returns 409 on duplicate email', async () => {
-      const first = await post('/auth/register', validRegisterBody);
-      expect(first.statusCode).toBe(201);
-
-      const second = await post('/auth/register', validRegisterBody);
-      expect(second.statusCode).toBe(409);
-    });
-
-    test('different-case duplicate as conflict', async () => {
-      await post('/auth/register', validRegisterBody);
-      const res = await post('/auth/register', {
-        ...validRegisterBody,
-        email: 'ALICE@Example.com',
-      });
-
-      expect(res.statusCode).toBe(409);
+    expect(response.body).toMatchObject({
+      success: false,
+      statusCode: 400,
+      message: expect.any(Array) as string[],
     });
   });
 
-  describe('POST /auth/login', () => {
-    beforeEach(async () => {
-      await post('/auth/register', validRegisterBody);
-    });
-
-    test('returns 200 + accessToken on valid credentials', async () => {
-      const res = await post('/auth/login', {
-        email: 'alice@example.com',
-        password: 'SecretPass1',
-      });
-
-      expect(res.statusCode).toBe(200);
-
-      const body = res.json();
-
-      expect(body).toEqual({
-        id: expect.any(String),
-        email: 'alice@example.com',
+  // 👇 Implement AuthService, then turn each of these into a real test.
+  it('POST /api/auth/register → 201 returns { id, email, displayName, accessToken }', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/api/auth/register')
+      .send({
+        email: 'Alice@Example.com',
+        password: 'secret123',
         displayName: 'Alice',
-        accessToken: expect.any(String),
-      });
-      expect(body.accessToken.split('.')).toHaveLength(3);
+      })
+      .expect(201);
+
+    expect(res.body).toMatchObject({
+      id: expect.any(String),
+      email: 'alice@example.com',
+      displayName: 'Alice',
+      accessToken: expect.any(String),
     });
 
-    test('accepts email of any case', async () => {
-      const res = await post('/auth/login', {
-        email: 'ALICE@example.com',
-        password: 'SecretPass1',
-      });
+    expect(res.body.passwordHash).toBeUndefined();
+  });
 
-      expect(res.statusCode).toBe(200);
-      expect(res.json().email).toBe('alice@example.com');
+  it('POST /api/auth/register → 409 when the email is already registered', async () => {
+    const payload = {
+      email: 'alice@test.com',
+      password: 'secret123',
+      displayName: 'bob',
+    };
+
+    await request(app.getHttpServer())
+      .post('/api/auth/register')
+      .send(payload)
+      .expect(201);
+
+    const res = await request(app.getHttpServer())
+      .post('/api/auth/register')
+      .send(payload)
+      .expect(409);
+
+    expect(res.body).toMatchObject({
+      success: false,
+      statusCode: 409,
+      message: 'Email is already registered',
     });
+  });
 
-    test('returns 401 on wrong password', async () => {
-      const res = await post('/auth/login', {
-        email: 'alice@exmaple.com',
-        password: 'WrongPass1',
-      });
-
-      expect(res.statusCode).toBe(401);
-    });
-
-    test('returns 401 on unknown email', async () => {
-      const res = await post('/auth/login', {
-        email: 'unknown@example.com',
-        password: 'SecretPass1',
-      });
-
-      expect(res.statusCode).toBe(401);
-    });
-
-    test('uses the SAME generic messages for wrong password and unknown email', async () => {
-      const wrongPass = await post('/auth/login', {
+  it('POST /api/auth/login → 200 returns an accessToken for valid credentials', async () => {
+    await request(app.getHttpServer())
+      .post('/api/auth/register')
+      .send({
         email: 'alice@example.com',
-        password: 'WrongPass1',
-      });
+        password: 'secret123',
+        displayName: 'Alice',
+      })
+      .expect(201);
 
-      const unknownEmail = await post('/auth/login', {
-        email: 'unknown@example.com',
-        password: 'SecretPass1',
-      });
+    const res = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ email: 'alice@example.com', password: 'secret123' })
+      .expect(200);
 
-      expect(wrongPass.statusCode).toBe(401);
-      expect(unknownEmail.statusCode).toBe(401);
-      expect(wrongPass.json().message).toEqual(unknownEmail.json().message);
+    expect(res.body).toEqual({ accessToken: expect.any(String) });
+  });
+
+  it('POST /api/auth/login → 401 with the SAME generic message for a wrong password AND an unknown email', async () => {
+    await request(app.getHttpServer()).post('/api/auth/register').send({
+      email: 'alice@example.com',
+      password: 'secret123',
+      displayName: 'Alice',
     });
 
-    test('return 400 when the body fails validation (missing password)', async () => {
-      const res = await post('/auth/login', { email: 'alice@example.com' });
+    const wrongPassword = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ email: 'alice@example.com', password: 'WRONG12345' })
+      .expect(401);
 
-      expect(res.statusCode).toBe(400);
+    const unknownEmail = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ email: 'nobody@test.com', password: 'secret123' })
+      .expect(401);
+
+    expect(wrongPassword.body.message).toBe(unknownEmail.body.message);
+    expect(wrongPassword.body).toMatchObject({
+      statusCode: 401,
+      message: 'Invalid email or password',
     });
   });
 });

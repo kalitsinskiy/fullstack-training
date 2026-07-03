@@ -1,11 +1,9 @@
 import {
-  Controller,
   Body,
+  Controller,
   Delete,
   Get,
   HttpCode,
-  HttpStatus,
-  NotFoundException,
   Param,
   Patch,
   Post,
@@ -13,159 +11,257 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
-  ApiTags,
   ApiBearerAuth,
   ApiOperation,
-  ApiResponse,
-  ApiQuery,
   ApiParam,
-  ApiBody,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
 } from '@nestjs/swagger';
-import { RoomsService, type Room } from './rooms.service';
-import { CreateRoomDto } from './dto/create-room.dto';
-import { SetExchangeDto } from './dto/set-exchange.dto';
-import { RoomResponseDto } from './dto/room-response.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { PaginatedResponse } from 'src/common/pagination';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import type { PaginatedResponse } from '../common/pagination';
+import { CreateRoomDto } from './dto/create-room.dto';
+import { DrawRoomDto } from './dto/draw-room.dto';
+import { JoinRoomDto } from './dto/join-room.dto';
+import { PaginatedRoomsResponseDto } from './dto/paginated-rooms-response.dto';
+import { RoomResponseDto } from './dto/room-response.dto';
+import { UpdateRoomDto } from './dto/update-room.dto';
+import { RequirePermissions } from './decorators/require-permissions.decorator';
+import { RoomPermissionsGuard } from './guards/room-permissions.guard';
+import type { AssignmentView, Room } from './room.types';
+import { RoomsService } from './rooms.service';
 
+@Controller('rooms')
 @ApiTags('rooms')
 @ApiBearerAuth('JWT')
-@Controller('rooms')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RoomPermissionsGuard)
 export class RoomsController {
   constructor(private readonly roomsService: RoomsService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Create a new Secret Santa room.' })
-  @ApiBody({ type: CreateRoomDto })
-  @ApiResponse({ status: 201, description: 'Room created.' })
-  @ApiResponse({ status: 400, description: 'Validation failed.' })
-  @ApiResponse({ status: 401, description: 'Missing or invalid token.' })
-  async create(
+  @ApiOperation({ summary: 'Create a new Secret Santa room' })
+  @ApiResponse({
+    status: 201,
+    description: 'Room created successfully',
+    type: RoomResponseDto,
+  })
+  @ApiResponse({ status: 400, description: 'Validation error' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  create(
+    @Body() body: CreateRoomDto,
     @CurrentUser('id') userId: string,
-    @Body() dto: CreateRoomDto,
   ): Promise<Room> {
-    return this.roomsService.create({ name: dto.name, ownerId: userId });
+    return this.roomsService.create(body, userId);
   }
 
   @Get()
-  @ApiOperation({
-    summary: 'List rooms the caller participates in (paginated).',
-  })
+  @ApiOperation({ summary: 'Get rooms for the authenticated user' })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
   @ApiResponse({
     status: 200,
-    description: 'Paginated list of rooms. Shape: { data, meta }.',
+    description: 'Paginated list of rooms',
+    type: PaginatedRoomsResponseDto,
   })
-  async findAll(
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  findAll(
     @CurrentUser('id') userId: string,
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
   ): Promise<PaginatedResponse<Room>> {
-    return this.roomsService.findByUser(userId, {
-      page: page === undefined ? undefined : Number(page),
-      limit: limit === undefined ? undefined : Number(limit),
-    });
+    return this.roomsService.findByUser(userId, { page, limit });
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get a room by id.' })
-  @ApiParam({ name: 'id', description: 'Room ObjectId.' })
-  @ApiResponse({ status: 200, description: 'Room found.' })
-  @ApiResponse({ status: 404, description: 'Room not found.' })
-  async findOne(@Param('id') id: string): Promise<Room> {
-    const room = await this.roomsService.findById(id);
-    if (!room) throw new NotFoundException(`Room ${id} not found`);
-    return room;
-  }
-
-  @Post(':code/join')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Join a room by its invite code.' })
-  @ApiParam({ name: 'code', description: '6-character invite code.' })
-  @ApiResponse({ status: 200, description: 'Joined. Updated room returned.' })
-  @ApiResponse({ status: 403, description: 'Room is already drawn.' })
-  @ApiResponse({ status: 404, description: 'Not found room with the code.' })
-  async join(
-    @Param('code') code: string,
-    @CurrentUser('id') userId: string,
-  ): Promise<Room> {
-    const room = await this.roomsService.addMember(code, userId);
-    if (!room) throw new NotFoundException(`Room with code ${code} not found`);
-    return room;
-  }
-
-  @Post(':id/draw')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: 'Run the Secret Snata draw for a room.',
-    description:
-      'Owner-only. Assings each participant a recipient (no self-assignment),' +
-      'flips status to "drawn" and stamps drawDate. Requires at least 3 participants.' +
-      'Refuses to re-draw a room that is already drawn.',
+  @RequirePermissions('room:view')
+  @ApiOperation({ summary: 'Get a room by id' })
+  @ApiParam({
+    name: 'id',
+    description: 'Room identifier',
+    example: '665f0c2ab7d13a5e8b1c4d9f',
   })
-  @ApiParam({ name: 'id', description: 'Room ObjectId.' })
   @ApiResponse({
     status: 200,
-    description: 'Draw complete. Room returned with assignments populated.',
+    description: 'Room returned successfully',
+    type: RoomResponseDto,
   })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({
-    status: 400,
-    description: 'Room is already drawn or has fewer than 3 participants.',
+    status: 404,
+    description: 'Room not found, or the caller is not a participant',
   })
-  @ApiResponse({ status: 401, description: 'Missing or invalid token.' })
-  @ApiResponse({ status: 404, description: 'Room not found.' })
-  async draw(
+  findById(
     @Param('id') id: string,
     @CurrentUser('id') userId: string,
   ): Promise<Room> {
-    return this.roomsService.draw(id, userId);
+    return this.roomsService.findByIdForUser(id, userId);
   }
 
-  @Patch(':id')
-  @ApiOperation({
-    summary: 'Set the exchange date & place (owner-only, after the draw).',
+  @Post('join')
+  @ApiOperation({ summary: 'Join a room using only its invite code' })
+  @ApiResponse({
+    status: 201,
+    description: 'Room joined successfully',
+    type: RoomResponseDto,
   })
-  @ApiParam({ name: 'id', description: 'Room ObjectId' })
-  @ApiBody({ type: SetExchangeDto })
+  @ApiResponse({ status: 400, description: 'Invalid or expired invite code' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  joinByCode(
+    @Body() body: JoinRoomDto,
+    @CurrentUser('id') userId: string,
+  ): Promise<Room> {
+    return this.roomsService.joinByCode(body.inviteCode, userId);
+  }
+
+  @Post(':id/join')
+  @ApiOperation({ summary: 'Join a room by id using its invite code' })
+  @ApiParam({
+    name: 'id',
+    description: 'Room identifier',
+    example: '665f0c2ab7d13a5e8b1c4d9f',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Room joined successfully',
+    type: RoomResponseDto,
+  })
+  @ApiResponse({ status: 400, description: 'Invalid invite code' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Draw already completed' })
+  @ApiResponse({ status: 404, description: 'Room not found' })
+  join(
+    @Param('id') id: string,
+    @Body() body: JoinRoomDto,
+    @CurrentUser('id') userId: string,
+  ): Promise<Room> {
+    return this.roomsService.join(id, body.inviteCode, userId);
+  }
+
+  @Post(':id/draw')
+  @HttpCode(200)
+  @RequirePermissions('room:draw')
+  @ApiOperation({ summary: 'Run the draw for a room (owner only)' })
+  @ApiParam({
+    name: 'id',
+    description: 'Room identifier',
+    example: '665f0c2ab7d13a5e8b1c4d9f',
+  })
   @ApiResponse({
     status: 200,
-    description: 'Exchange details saved.',
+    description: 'Draw completed; room is now drawn',
     type: RoomResponseDto,
   })
   @ApiResponse({
     status: 400,
-    description: 'Room is not drawn yet or invalid payload.',
+    description: 'Not enough participants / already drawn',
   })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({
     status: 403,
-    description: 'Not the owner, or room is closed.',
+    description: 'Only the creator can run the draw',
   })
-  @ApiResponse({ status: 404, description: 'Room not found.' })
-  async setExchange(
+  @ApiResponse({ status: 404, description: 'Room not found' })
+  draw(
     @Param('id') id: string,
-    @CurrentUser('id') userId: 'string',
-    @Body() dto: SetExchangeDto,
+    @Body() body: DrawRoomDto,
+    @CurrentUser('id') userId: string,
   ): Promise<Room> {
-    return this.roomsService.setExchange(id, userId, dto);
+    return this.roomsService.draw(id, userId, body.exchangeDate);
+  }
+
+  @Get(':id/assignment')
+  @ApiOperation({ summary: 'Get the giftee assigned to the current user' })
+  @ApiParam({
+    name: 'id',
+    description: 'Room identifier',
+    example: '665f0c2ab7d13a5e8b1c4d9f',
+  })
+  @ApiResponse({ status: 200, description: 'Your assignment' })
+  @ApiResponse({ status: 400, description: 'Draw not completed yet' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Not a room participant' })
+  @ApiResponse({ status: 404, description: 'Room or assignment not found' })
+  getAssignment(
+    @Param('id') id: string,
+    @CurrentUser('id') userId: string,
+  ): Promise<AssignmentView> {
+    return this.roomsService.getAssignment(id, userId);
+  }
+
+  @Patch(':id')
+  @RequirePermissions('room:edit')
+  @ApiOperation({ summary: 'Edit a room (owner only)' })
+  @ApiParam({ name: 'id', description: 'Room identifier' })
+  @ApiResponse({
+    status: 200,
+    description: 'Room updated',
+    type: RoomResponseDto,
+  })
+  @ApiResponse({ status: 400, description: 'Validation error' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Missing room:edit permission' })
+  @ApiResponse({ status: 404, description: 'Room not found' })
+  edit(
+    @Param('id') id: string,
+    @Body() body: UpdateRoomDto,
+    @CurrentUser('id') userId: string,
+  ): Promise<Room> {
+    return this.roomsService.editRoom(id, body, userId);
   }
 
   @Delete(':id')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Delete a room (onwer-only)' })
-  @ApiParam({ name: 'id', description: 'Room ObjectId' })
-  @ApiResponse({ status: 204, description: 'Room deleted.' })
-  @ApiResponse({
-    status: 403,
-    description: 'Only the owner can delete the room.',
-  })
-  @ApiResponse({ status: 404, description: 'Room not found.' })
-  async remove(
+  @HttpCode(204)
+  @RequirePermissions('room:delete')
+  @ApiOperation({ summary: 'Delete a room (owner only)' })
+  @ApiParam({ name: 'id', description: 'Room identifier' })
+  @ApiResponse({ status: 204, description: 'Room deleted' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Missing room:delete permission' })
+  @ApiResponse({ status: 404, description: 'Room not found' })
+  remove(
     @Param('id') id: string,
     @CurrentUser('id') userId: string,
   ): Promise<void> {
-    await this.roomsService.remove(id, userId);
+    return this.roomsService.deleteRoom(id, userId);
+  }
+
+  @Delete(':id/members/:userId')
+  @HttpCode(204)
+  @RequirePermissions('room:kick')
+  @ApiOperation({ summary: 'Remove a member from a room (owner only)' })
+  @ApiParam({ name: 'id', description: 'Room identifier' })
+  @ApiParam({ name: 'userId', description: 'Id of the member to remove' })
+  @ApiResponse({ status: 204, description: 'Member removed' })
+  @ApiResponse({ status: 400, description: 'Cannot remove the owner' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Missing room:kick permission' })
+  @ApiResponse({ status: 404, description: 'Room or member not found' })
+  kick(
+    @Param('id') id: string,
+    @Param('userId') targetUserId: string,
+    @CurrentUser('id') userId: string,
+  ): Promise<void> {
+    return this.roomsService.kickMember(id, targetUserId, userId);
+  }
+
+  @Post(':id/invite-code/regenerate')
+  @HttpCode(200)
+  @RequirePermissions('room:invite')
+  @ApiOperation({ summary: 'Regenerate the room invite code (owner only)' })
+  @ApiParam({ name: 'id', description: 'Room identifier' })
+  @ApiResponse({
+    status: 200,
+    description: 'New invite code generated',
+    type: RoomResponseDto,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Missing room:invite permission' })
+  @ApiResponse({ status: 404, description: 'Room not found' })
+  regenerateInvite(
+    @Param('id') id: string,
+    @CurrentUser('id') userId: string,
+  ): Promise<Room> {
+    return this.roomsService.regenerateInviteCode(id, userId);
   }
 }

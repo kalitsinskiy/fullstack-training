@@ -1,23 +1,25 @@
-import { Model, QueryFilter } from 'mongoose';
+import { FilterQuery, Model } from 'mongoose';
 
 export interface PaginationQuery {
   page?: number;
   limit?: number;
 }
 
+export interface PaginationMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 export interface PaginatedResponse<T> {
   data: T[];
-  meta: {
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-  };
+  meta: PaginationMeta;
 }
 
 export async function paginate<T>(
   model: Model<T>,
-  filter: QueryFilter<T>,
+  filter: FilterQuery<T>,
   query: PaginationQuery,
   sort: Record<string, 1 | -1> = { createdAt: -1 },
 ): Promise<PaginatedResponse<T>> {

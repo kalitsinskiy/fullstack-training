@@ -1,29 +1,44 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
-  IsDateString,
+  IsIn,
+  IsInt,
   IsOptional,
   IsString,
-  MaxLength,
+  Max,
+  Min,
   MinLength,
 } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+
+export const CURRENCIES = ['$', '€', '£', '₴', 'zł'] as const;
 
 export class CreateRoomDto {
   @ApiProperty({
     description: 'Name of the Secret Santa room',
-    example: 'Office Party 2025',
-    minLength: 2,
-    maxLength: 100,
+    example: 'New Year team building',
+    minLength: 3,
   })
   @IsString()
   @MinLength(3)
-  @MaxLength(100)
   name!: string;
 
   @ApiPropertyOptional({
-    description: 'Date when the Secret Santa draw will happen',
-    example: '2025-12-20T00:00:00.000Z',
+    description: 'Suggested per-gift budget amount',
+    example: 500,
+    minimum: 1,
+    maximum: 1000000,
   })
   @IsOptional()
-  @IsDateString()
-  drawDate?: string;
+  @IsInt()
+  @Min(1)
+  @Max(1000000)
+  budget?: number;
+
+  @ApiPropertyOptional({
+    description: 'Currency symbol for the budget',
+    example: '₴',
+    enum: CURRENCIES,
+  })
+  @IsOptional()
+  @IsIn(CURRENCIES)
+  currency?: string;
 }

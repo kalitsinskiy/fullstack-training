@@ -1,47 +1,46 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import { Body, Controller, HttpCode, Post } from '@nestjs/common';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+import type { LoginResponse, RegisterResponse } from './auth.service';
 import { AuthService } from './auth.service';
-import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { LoginResponseDto } from './dto/login-response.dto';
+import { RegisterDto } from './dto/register.dto';
+import { RegisterResponseDto } from './dto/register-response.dto';
 
-@ApiTags('auth')
 @Controller('auth')
+@ApiTags('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
-  @Throttle({ default: { limit: 3, ttl: 60000 } })
-  @ApiOperation({
-    summary: 'Register a new user and return a JWT',
-  })
-  @ApiBody({
-    type: RegisterDto,
-  })
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Register a new user account' })
   @ApiResponse({
     status: 201,
-    description: 'User created. Access token was returned.',
+    description: 'User registered successfully',
+    type: RegisterResponseDto,
   })
-  @ApiResponse({ status: 400, description: 'Validation failed.' })
-  @ApiResponse({ status: 409, description: 'Email already in use' })
-  @ApiResponse({ status: 429, description: 'Too many register attempts.' })
-  register(@Body() dto: RegisterDto) {
-    return this.authService.register(dto);
+  @ApiResponse({ status: 400, description: 'Validation error' })
+  @ApiResponse({ status: 409, description: 'Email is already registered' })
+  @ApiResponse({ status: 429, description: 'Too many registration attempts' })
+  register(@Body() body: RegisterDto): Promise<RegisterResponse> {
+    return this.authService.register(body);
   }
 
   @Post('login')
-  @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
-  @ApiOperation({ summary: 'Exchange credes for a JWT.' })
-  @ApiBody({ type: LoginDto })
+  @HttpCode(200)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Log in with email and password' })
   @ApiResponse({
     status: 200,
-    description: 'Logged in. accessToken was returned.',
+    description: 'Login successful',
+    type: LoginResponseDto,
   })
-  @ApiResponse({ status: 400, description: 'Validation failed.' })
+  @ApiResponse({ status: 400, description: 'Validation error' })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
   @ApiResponse({ status: 429, description: 'Too many login attempts' })
-  login(@Body() dto: LoginDto) {
-    return this.authService.login(dto);
+  login(@Body() body: LoginDto): Promise<LoginResponse> {
+    return this.authService.login(body);
   }
 }

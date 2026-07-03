@@ -1,25 +1,86 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import type { Permission } from '../permissions';
 
 export class RoomResponseDto {
-  @ApiProperty({ example: '6a1959b19080f995c722c00d' }) id!: string;
-  @ApiProperty({ example: 'Office Party 2026' }) name!: string;
-  @ApiProperty({ example: '6a15a51b445eec80c0113052' }) ownerId!: string;
-  @ApiProperty({ example: 'BL9CDK' }) code!: string;
-  @ApiProperty({ type: [String], example: ['6a15a51b445eec80c0113052'] })
-  members!: string[];
-  @ApiProperty({ enum: ['pending', 'drawn', 'closed'], example: 'drawn' })
-  status!: 'pending' | 'drawn' | 'closed';
-  @ApiPropertyOptional({ example: '2026-12-20T00:00:00.000Z' })
-  drawDate?: string;
-  @ApiPropertyOptional({ example: '2026-12-24T18:00:00.000Z' })
-  exchangeDate?: string;
-  @ApiPropertyOptional({ example: 'Office, 5th-floor kitchen' })
-  exchangePlace?: string;
-  @ApiPropertyOptional({
-    type: 'object',
-    additionalProperties: { type: 'string' },
-    description: 'giverId → recipientId (present after draw).',
+  @ApiProperty({
+    description: 'Room identifier',
+    example: '665f0c2ab7d13a5e8b1c4d9f',
   })
-  assignments?: Record<string, string>;
-  @ApiProperty({ example: '2026-05-29T09:17:37.783Z' }) createdAt!: string;
+  id!: string;
+
+  @ApiProperty({
+    description: 'Readable room name',
+    example: 'New Year team building',
+  })
+  name!: string;
+
+  @ApiProperty({
+    description: 'Identifier of the user who created the room',
+    example: '665f0c2ab7d13a5e8b1c4d1a',
+  })
+  creatorId!: string;
+
+  @ApiProperty({
+    description: 'Invite code used to join the room',
+    example: 'Q7X4LM',
+  })
+  inviteCode!: string;
+
+  @ApiProperty({
+    description: 'Room participants, populated to { id, displayName, role }',
+    example: [
+      { id: '665f0c2ab7d13a5e8b1c4d1a', displayName: 'Mariia', role: 'owner' },
+    ],
+    isArray: true,
+  })
+  participants!: {
+    id: string;
+    displayName: string;
+    role: 'owner' | 'member';
+  }[];
+
+  @ApiProperty({
+    description: 'Number of participants in the room',
+    example: 2,
+  })
+  participantCount!: number;
+
+  @ApiProperty({
+    description: 'Current room status',
+    enum: ['pending', 'drawn'],
+    example: 'pending',
+  })
+  status!: 'pending' | 'drawn';
+
+  @ApiPropertyOptional({
+    description: 'ISO date when the draw was completed (omitted until drawn)',
+    example: '2025-12-20T00:00:00.000Z',
+  })
+  drawDate?: string;
+
+  @ApiPropertyOptional({
+    description: 'Suggested per-gift budget amount (omitted when not set)',
+    example: 500,
+  })
+  budget?: number;
+
+  @ApiPropertyOptional({
+    description: 'Currency symbol for the budget',
+    example: '₴',
+  })
+  currency?: string;
+
+  @ApiPropertyOptional({
+    description: 'Gift-exchange day, ISO date (omitted until the draw sets it)',
+    example: '2026-12-24T00:00:00.000Z',
+  })
+  exchangeDate?: string;
+
+  @ApiPropertyOptional({
+    description:
+      "The caller's effective permissions for this room (from Lesson 04 onward)",
+    example: ['room:view', 'wishlist:set'],
+    isArray: true,
+  })
+  viewerPermissions?: Permission[];
 }

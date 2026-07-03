@@ -1,1 +1,0 @@
-export { AssigneeWishlist } from './AssigneeWishlist';

@@ -1,19 +1,23 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { WishlistItemDto } from './update-wishlist.dto';
 
 export class WishlistResponseDto {
-  @ApiProperty({ example: '6a1959b19080f995c722c00d' })
+  @ApiProperty({
+    description: 'Room identifier that owns this wishlist',
+    example: '665f0c2ab7d13a5e8b1c4d9f',
+  })
   roomId!: string;
 
-  @ApiProperty({ example: '6a15a51b445eec80c0113052' })
+  @ApiProperty({
+    description: 'User identifier that owns this wishlist',
+    example: '665f0c2ab7d13a5e8b1c4d1a',
+  })
   userId!: string;
 
   @ApiProperty({
-    example: 'Alice',
-    description: "Display name of the wishlist's owner.",
+    description: 'Wishlist items for the selected room',
+    type: String,
+    isArray: true,
+    example: ['Wool socks', 'A good book'],
   })
-  userName!: string;
-
-  @ApiProperty({ type: [WishlistItemDto] })
-  items!: WishlistItemDto[];
+  items!: string[];
 }

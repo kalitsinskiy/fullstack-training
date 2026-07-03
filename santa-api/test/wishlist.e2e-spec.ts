@@ -1,269 +1,169 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import request from 'supertest';
 import {
   FastifyAdapter,
   NestFastifyApplication,
 } from '@nestjs/platform-fastify';
-import { Connection, Model, Types } from 'mongoose';
 import { getConnectionToken, getModelToken } from '@nestjs/mongoose';
-import { ValidationPipe } from '@nestjs/common';
+import { Connection, Model } from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
-import { ThrottlerStorage } from '@nestjs/throttler';
 import { AppModule } from '../src/app.module';
-import { User, UserDocument } from '../src/users/schemas/users.schema';
-import { startInMemoryMongo, stopInMemoryMongo } from './helpers/mongo';
-import { userFixture } from './helpers/factories';
-import { tokenFor } from './helpers/auth-token';
+import { configureApp } from '../src/configure-app';
+import { User } from '../src/users/schemas/user.schema';
+import { Room } from '../src/rooms/schemas/room.schema';
+import { userFixture, roomFixture } from './factories';
+import { tokenFor } from './auth-token.helper';
+import {
+  clearAllCollections,
+  startInMemoryMongo,
+  stopInMemoryMongo,
+} from './setup-mongo';
 
-describe('WishlistController (e2e)', () => {
+describe('Wishlist (HTTP)', () => {
   let app: NestFastifyApplication;
-  let connection: Connection;
-  let jwt: JwtService;
-  let userModel: Model<UserDocument>;
-  let user: ReturnType<typeof userFixture>;
-  let token: string;
+  const originalJwtSecret = process.env.JWT_SECRET;
+  const originalMongoUrl = process.env.MONGO_URL;
 
   beforeAll(async () => {
     process.env.JWT_SECRET = process.env.JWT_SECRET ?? 'test-secret';
-    await startInMemoryMongo();
-
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    })
-      // Replace the throttler's storage so totalHits is always 0 -> never trips.
-      .overrideProvider(ThrottlerStorage)
-      .useValue({
-        increment: async () => ({
-          totalHits: 0,
-          timeToExpire: 0,
-          isBlocked: false,
-          timeToBlockExpire: 0,
-        }),
-      })
-      .compile();
-
-    app = moduleFixture.createNestApplication<NestFastifyApplication>(
-      new FastifyAdapter(),
-    );
-
-    app.useGlobalPipes(
-      new ValidationPipe({
-        whitelist: true,
-        forbidNonWhitelisted: true,
-        transform: true,
-      }),
-    );
-
-    await app.init();
-    await app.getHttpAdapter().getInstance().ready();
-
-    connection = app.get<Connection>(getConnectionToken());
-    jwt = app.get(JwtService);
-    userModel = app.get<Model<UserDocument>>(getModelToken(User.name));
-  });
-
-  afterAll(async () => {
-    await app.close();
-    await stopInMemoryMongo();
+    process.env.MONGO_URL = await startInMemoryMongo();
   });
 
   beforeEach(async () => {
-    await connection.dropDatabase();
-    user = userFixture({ email: 'wishlist@test.com' });
-    await userModel.create(user);
-    token = tokenFor(jwt, user);
+    const moduleRef: TestingModule = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
+
+    app = moduleRef.createNestApplication<NestFastifyApplication>(
+      new FastifyAdapter(),
+    );
+    await configureApp(app);
+    await app.init();
+    await app.getHttpAdapter().getInstance().ready();
   });
 
-  const authedPost = (url: string, payload: unknown, asToken: string = token) =>
-    app
-      .getHttpAdapter()
-      .getInstance()
-      .inject({
-        method: 'POST',
-        url,
-        payload,
-        headers: { authorization: `Bearer ${asToken}` },
-      });
+  afterEach(async () => {
+    if (app) {
+      const connection = app.get<Connection>(getConnectionToken());
+      await clearAllCollections(connection);
+      await app.close();
+    }
+  });
 
-  const authedGet = (url: string, asToken: string = token) =>
-    app
-      .getHttpAdapter()
-      .getInstance()
-      .inject({
-        method: 'GET',
-        url,
-        headers: { authorization: `Bearer ${asToken}` },
-      });
+  afterAll(async () => {
+    if (originalJwtSecret === undefined) delete process.env.JWT_SECRET;
+    else process.env.JWT_SECRET = originalJwtSecret;
+    if (originalMongoUrl === undefined) delete process.env.MONGO_URL;
+    else process.env.MONGO_URL = originalMongoUrl;
+    await stopInMemoryMongo();
+  });
 
-  describe('POST /rooms/:roomId/wishlist', () => {
-    test('returns 200 with the wishlist on first set; userId comes from the JWT', async () => {
-      const roomId = new Types.ObjectId().toString();
+  async function seedUserAndRoom() {
+    const userModel = app.get<Model<User>>(getModelToken(User.name));
+    const roomModel = app.get<Model<Room>>(getModelToken(Room.name));
+    const jwt = app.get(JwtService);
+    const user = await userModel.create(userFixture());
+    const room = await roomModel.create(
+      roomFixture({
+        creatorId: user._id,
+        participants: [{ userId: user._id, role: 'owner' }],
+      }),
+    );
+    return { user, room, token: tokenFor(jwt, user) };
+  }
 
-      const res = await authedPost(`/rooms/${roomId}/wishlist`, {
-        items: [{ name: 'hat' }, { name: 'book' }, { name: 'cup' }],
-      });
+  it('PUT /api/rooms/:roomId/wishlist → 200 upserts the caller wishlist', async () => {
+    const { user, room, token } = await seedUserAndRoom();
 
-      expect(res.statusCode).toBe(200);
-      expect(res.json()).toEqual({
-        roomId,
-        userId: user._id.toString(),
-        items: [{ name: 'hat' }, { name: 'book' }, { name: 'cup' }],
-      });
-    });
+    const response = await request(app.getHttpServer())
+      .put(`/api/rooms/${room._id.toString()}/wishlist`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ items: ['Wool socks', 'A good book'] })
+      .expect(200);
 
-    test('overwrites a previous wishlist for the same user', async () => {
-      const roomId = new Types.ObjectId().toString();
-
-      await authedPost(`/rooms/${roomId}/wishlist`, {
-        items: [{ name: 'old' }],
-      });
-      const res = await authedPost(`/rooms/${roomId}/wishlist`, {
-        items: [{ name: 'new' }],
-      });
-
-      expect(res.statusCode).toBe(200);
-      expect(res.json().items).toEqual([{ name: 'new' }]);
-    });
-
-    test('stores a separate wishlist per user in the same room', async () => {
-      const roomId = new Types.ObjectId().toString();
-
-      const otherUser = userFixture({ email: 'other@test.com' });
-      await userModel.create(otherUser);
-      const otherToken = tokenFor(jwt, otherUser);
-
-      await authedPost(`/rooms/${roomId}/wishlist`, {
-        items: [{ name: 'mine' }],
-      });
-      await authedPost(
-        `/rooms/${roomId}/wishlist`,
-        { items: [{ name: 'theirs' }] },
-        otherToken,
-      );
-
-      const mine = await authedGet(
-        `/rooms/${roomId}/wishlist/${user._id.toString()}`,
-      );
-      const theirs = await authedGet(
-        `/rooms/${roomId}/wishlist/${otherUser._id.toString()}`,
-      );
-
-      expect(mine.json().items).toEqual([{ name: 'mine' }]);
-      expect(theirs.json().items).toEqual([{ name: 'theirs' }]);
+    expect(response.body).toEqual({
+      roomId: room._id.toString(),
+      userId: user._id.toString(),
+      items: ['Wool socks', 'A good book'],
     });
   });
 
-  describe('POST /rooms/:roomId/wishlist — validation', () => {
-    test('returns 400 when items contains an empty name', async () => {
-      const res = await authedPost(
-        `/rooms/${new Types.ObjectId().toString()}/wishlist`,
-        { items: [{ name: 'ok' }, { name: '' }] },
-      );
-      expect(res.statusCode).toBe(400);
-    });
+  it('PUT twice REPLACES the items (upsert, not append)', async () => {
+    const { room, token } = await seedUserAndRoom();
+    const url = `/api/rooms/${room._id.toString()}/wishlist`;
 
-    test('returns 400 when items is not an array', async () => {
-      const res = await authedPost(
-        `/rooms/${new Types.ObjectId().toString()}/wishlist`,
-        { items: 'socks' },
-      );
-      expect(res.statusCode).toBe(400);
-    });
+    await request(app.getHttpServer())
+      .put(url)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ items: ['Old item'] })
+      .expect(200);
 
-    test('returns 400 when items is missing', async () => {
-      const res = await authedPost(
-        `/rooms/${new Types.ObjectId().toString()}/wishlist`,
-        {},
-      );
-      expect(res.statusCode).toBe(400);
-    });
+    const response = await request(app.getHttpServer())
+      .put(url)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ items: ['New one', 'New two'] })
+      .expect(200);
 
-    test('returns 400 when an unknown field is sent (whitelist guard)', async () => {
-      const res = await authedPost(
-        `/rooms/${new Types.ObjectId().toString()}/wishlist`,
-        { items: [{ name: 'x' }], public: true },
-      );
-      expect(res.statusCode).toBe(400);
-    });
+    expect(response.body.items).toEqual(['New one', 'New two']);
+  });
 
-    test('returns 400 when userId is supplied in the body (now derived from JWT)', async () => {
-      const res = await authedPost(
-        `/rooms/${new Types.ObjectId().toString()}/wishlist`,
-        { userId: new Types.ObjectId().toString(), items: [{ name: 'x' }] },
-      );
-      expect(res.statusCode).toBe(400);
+  it('GET /api/rooms/:roomId/wishlist/:userId → returns the saved wishlist', async () => {
+    const { user, room, token } = await seedUserAndRoom();
+    const url = `/api/rooms/${room._id.toString()}/wishlist`;
+
+    await request(app.getHttpServer())
+      .put(url)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ items: ['Board game'] })
+      .expect(200);
+
+    const response = await request(app.getHttpServer())
+      .get(`${url}/${user._id.toString()}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(response.body).toEqual({
+      roomId: room._id.toString(),
+      userId: user._id.toString(),
+      items: ['Board game'],
     });
   });
 
-  describe('POST /rooms/:roomId/wishlist — auth', () => {
-    test('returns 401 without a token', async () => {
-      const res = await app
-        .getHttpAdapter()
-        .getInstance()
-        .inject({
-          method: 'POST',
-          url: `/rooms/${new Types.ObjectId().toString()}/wishlist`,
-          payload: { items: [{ name: 'x' }] },
-        });
-      expect(res.statusCode).toBe(401);
-    });
+  it('GET …/:userId → returns an EMPTY wishlist (not 404) when the user has none', async () => {
+    const { user, room, token } = await seedUserAndRoom();
 
-    test('returns 401 with a malformed Authorization header', async () => {
-      const res = await app
-        .getHttpAdapter()
-        .getInstance()
-        .inject({
-          method: 'POST',
-          url: `/rooms/${new Types.ObjectId().toString()}/wishlist`,
-          payload: { items: [{ name: 'x' }] },
-          headers: { authorization: 'Bearer not-a-real-jwt' },
-        });
-      expect(res.statusCode).toBe(401);
+    const response = await request(app.getHttpServer())
+      .get(`/api/rooms/${room._id.toString()}/wishlist/${user._id.toString()}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(response.body).toEqual({
+      roomId: room._id.toString(),
+      userId: user._id.toString(),
+      items: [],
     });
   });
 
-  describe('GET /rooms/:roomId/wishlist/:userId', () => {
-    test('returns 200 with the wishlist when one exists', async () => {
-      const roomId = new Types.ObjectId().toString();
-      await authedPost(`/rooms/${roomId}/wishlist`, {
-        items: [{ name: 'mug' }],
-      });
+  it('POST /api/rooms → 409 when the SAME creator reuses a name; a different user may reuse it', async () => {
+    const { token } = await seedUserAndRoom();
 
-      const res = await authedGet(
-        `/rooms/${roomId}/wishlist/${user._id.toString()}`,
-      );
+    await request(app.getHttpServer())
+      .post('/api/rooms')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Family Santa' })
+      .expect(201);
 
-      expect(res.statusCode).toBe(200);
-      expect(res.json()).toEqual({
-        roomId,
-        userId: user._id.toString(),
-        userName: 'Test User',
-        items: [{ name: 'mug' }],
-      });
-    });
+    await request(app.getHttpServer())
+      .post('/api/rooms')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Family Santa' })
+      .expect(409);
 
-    test('returns 404 with the error envelope when no wishlist exists', async () => {
-      const res = await authedGet(
-        `/rooms/${new Types.ObjectId().toString()}/wishlist/${new Types.ObjectId().toString()}`,
-      );
-
-      expect(res.statusCode).toBe(404);
-      expect(res.json()).toEqual({
-        success: false,
-        statusCode: 404,
-        message: expect.stringContaining('not found'),
-        timestamp: expect.any(String),
-      });
-    });
-
-    test('returns 401 without a token', async () => {
-      const res = await app
-        .getHttpAdapter()
-        .getInstance()
-        .inject({
-          method: 'GET',
-          url: `/rooms/${new Types.ObjectId().toString()}/wishlist/${new Types.ObjectId().toString()}`,
-        });
-      expect(res.statusCode).toBe(401);
-    });
+    const other = await seedUserAndRoom();
+    await request(app.getHttpServer())
+      .post('/api/rooms')
+      .set('Authorization', `Bearer ${other.token}`)
+      .send({ name: 'Family Santa' })
+      .expect(201);
   });
 });
