@@ -3,7 +3,7 @@ import animate from 'tailwindcss-animate';
 
 // Design tokens live as CSS variables in src/index.css.
 // This config maps them to Tailwind utility classes.
-// See docs/design-system.md for the full token reference.
+// See design/design-system.md for the full token reference.
 export default {
   darkMode: ['class'],
   content: ['./index.html', './src/**/*.{ts,tsx}'],

@@ -17,7 +17,9 @@ area, named `*.e2e-spec.ts` (picked up by `jest-e2e.json`).
 
 ```
 test/
-  setup-mongo.ts        # in-memory Mongo lifecycle + clearAllCollections (provided)
+  global-setup.ts       # starts the in-memory Mongo ONCE, before any import (provided)
+  global-teardown.ts    # stops it after the whole run (provided)
+  setup-mongo.ts        # exposes the URI to specs + clearAllCollections (provided)
   auth-token.helper.ts  # tokenFor(jwt, user) → a signed JWT (provided)
   factories.ts          # userFixture / roomFixture (provided)
   auth.e2e-spec.ts      # 1 worked example + it.todo scenarios
@@ -25,7 +27,17 @@ test/
   …                     # add wishlist / users specs the same way
 ```
 
-The harness (`setup-mongo`, `factories`, `auth-token.helper`) is given to you.
+### Why a *global* setup (a real gotcha)
+
+`AppModule` wires `ConfigModule.forRoot({ validationSchema })`, which validates —
+and **snapshots** — `MONGO_URL` / `JWT_SECRET` the instant the module is
+*imported*. A spec's `beforeAll` runs after that import, so starting Mongo there
+is too late: the app fails to build with `"MONGO_URL" is required`. That's why
+the in-memory Mongo is started in **`global-setup.ts`** (Jest runs it before any
+test file loads) and the URI is published on `process.env`. With `--runInBand`
+the specs share that process, so the value is in place at import time.
+
+The harness (`global-setup`, `setup-mongo`, `factories`, `auth-token.helper`) is given to you.
 The specs ship with **one worked example each** (green against the skeleton,
 because validation/guards run before the service) plus an `it.todo(...)` list of
 the scenarios to cover. As you implement each service, turn the todos into real

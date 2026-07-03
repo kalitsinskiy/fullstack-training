@@ -36,6 +36,14 @@ function toNotification(notification: NotificationDocument): Notification {
   };
 }
 
+/**
+ * ⚠️ SECURITY (intentional, until Lesson 07): these routes are NOT authenticated
+ * and trust the `userId` from the query/body — a classic IDOR (anyone can read,
+ * mark-read, or delete another user's notifications by id, or list them via
+ * `?userId=`). This is deliberate kickoff scaffolding. Lesson 07 adds a JWT
+ * `fastify.authenticate` preHandler and scopes every query to `request.user`,
+ * which closes the IDOR. DO NOT deploy this service as-is (see Lesson 11).
+ */
 export default async function notificationRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/',

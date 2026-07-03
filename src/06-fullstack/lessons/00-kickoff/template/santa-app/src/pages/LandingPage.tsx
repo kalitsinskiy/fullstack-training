@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 /**
  * Public landing page — STUB.
  *
- * Build this from the Santa Figma mockup (see santa-app/docs/mockups/).
+ * Build this from the Santa Figma mockup (see design/screens/).
  * The LoginPage is provided as a worked example of the patterns you'll need
  * (layout, tokens, components). Replicate that approach here: hero section,
  * feature highlights, and calls-to-action.

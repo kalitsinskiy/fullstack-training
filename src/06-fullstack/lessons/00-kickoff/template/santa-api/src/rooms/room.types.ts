@@ -1,7 +1,10 @@
+import type { Permission, RoomRole } from './permissions';
+
 /** A room member, as returned in room responses (participants are populated). */
 export interface RoomParticipant {
   id: string;
   displayName: string;
+  role: RoomRole;
 }
 
 export interface Room {
@@ -13,6 +16,15 @@ export interface Room {
   participantCount: number;
   status: 'pending' | 'drawn';
   drawDate?: string;
+  budget?: number;
+  currency?: string;
+  exchangeDate?: string;
+  /**
+   * The caller's effective permissions for THIS room — the single source for FE
+   * gating. Optional: populated from Lesson 04 onward (the authorization lesson);
+   * earlier lessons may omit it.
+   */
+  viewerPermissions?: Permission[];
 }
 
 /** Persisted giver -> receiver pairing produced by the draw. */

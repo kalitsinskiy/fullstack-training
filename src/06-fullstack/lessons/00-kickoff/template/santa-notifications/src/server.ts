@@ -1,3 +1,4 @@
+import 'dotenv/config'; // load .env into process.env (same as santa-api/main.ts)
 import { buildApp } from './app';
 import { connectDb } from './db';
 
