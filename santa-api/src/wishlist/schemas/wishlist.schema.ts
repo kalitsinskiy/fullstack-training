@@ -3,18 +3,6 @@ import { HydratedDocument, Types } from 'mongoose';
 
 export type WishlistDocument = HydratedDocument<Wishlist>;
 
-@Schema({ _id: false })
-export class WishlistItem {
-  @Prop({ required: true })
-  name!: string;
-
-  @Prop()
-  url?: string;
-
-  @Prop()
-  priority?: number;
-}
-
 @Schema({ timestamps: true })
 export class Wishlist {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
@@ -23,8 +11,8 @@ export class Wishlist {
   @Prop({ type: Types.ObjectId, ref: 'Room', required: true })
   roomId!: Types.ObjectId;
 
-  @Prop({ type: [WishlistItem], default: [] })
-  items!: WishlistItem[];
+  @Prop({ type: [String], default: [] })
+  items!: string[];
 }
 
 export const WishlistSchema = SchemaFactory.createForClass(Wishlist);

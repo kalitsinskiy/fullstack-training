@@ -11,8 +11,13 @@ export async function configureApp(
   app: NestFastifyApplication<RawServerDefault>,
 ): Promise<void> {
   app.setGlobalPrefix('api');
+  // CORS for the Vite frontend (santa-app runs on :5173). Override with
+  // CORS_ORIGIN (comma-separated) in production.
+  const corsOrigin = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
+    : ['http://localhost:5173'];
   await app.register(cors, {
-    origin: ['http://localhost:3000', 'http://localhost:5173'],
+    origin: corsOrigin,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,

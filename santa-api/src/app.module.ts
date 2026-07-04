@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { MongooseModule } from '@nestjs/mongoose';
@@ -21,12 +18,22 @@ import { WishlistModule } from './wishlist/wishlist.module';
         uri: process.env.MONGO_URL ?? 'mongodb://localhost:27017/santa-api',
       }),
     }),
-    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
+    ThrottlerModule.forRoot({
+      throttlers: [{ ttl: 60_000, limit: 100 }],
+      // Disable rate limiting under test so multi-user e2e scenarios don't 429.
+      skipIf: () => process.env.NODE_ENV === 'test',
+    }),
     LoggerModule.forRoot({
       pinoHttp: {
-        level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
+        level:
+          process.env.NODE_ENV === 'production'
+            ? 'info'
+            : process.env.NODE_ENV === 'test'
+              ? 'silent'
+              : 'debug',
         transport:
-          process.env.NODE_ENV !== 'production'
+          process.env.NODE_ENV !== 'production' &&
+          process.env.NODE_ENV !== 'test'
             ? {
                 target: 'pino-pretty',
                 options: {

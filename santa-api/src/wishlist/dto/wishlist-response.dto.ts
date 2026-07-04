@@ -1,5 +1,4 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { WishlistItemDto } from './update-wishlist.dto';
 
 export class WishlistResponseDto {
   @ApiProperty({
@@ -16,8 +15,9 @@ export class WishlistResponseDto {
 
   @ApiProperty({
     description: 'Wishlist items for the selected room',
-    type: () => WishlistItemDto,
+    type: String,
     isArray: true,
+    example: ['Wool socks', 'A good book'],
   })
-  items!: WishlistItemDto[];
+  items!: string[];
 }

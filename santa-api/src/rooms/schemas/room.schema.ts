@@ -6,10 +6,10 @@ export type RoomDocument = HydratedDocument<Room>;
 @Schema({ _id: false })
 export class RoomAssignment {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
-  santaId!: Types.ObjectId;
+  giverId!: Types.ObjectId;
 
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
-  recipientId!: Types.ObjectId;
+  receiverId!: Types.ObjectId;
 }
 
 @Schema({ timestamps: true })
@@ -23,8 +23,16 @@ export class Room {
   @Prop({ required: true, unique: true })
   inviteCode!: string;
 
-  @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
-  participants!: Types.ObjectId[];
+  @Prop({
+    type: [
+      {
+        userId: { type: Types.ObjectId, ref: 'User', required: true },
+        role: { type: String, enum: ['owner', 'member'], required: true },
+      },
+    ],
+    default: [],
+  })
+  participants!: { userId: Types.ObjectId; role: 'owner' | 'member' }[];
 
   @Prop({ enum: ['pending', 'drawn'], default: 'pending' })
   status!: 'pending' | 'drawn';
@@ -32,11 +40,23 @@ export class Room {
   @Prop()
   drawDate?: Date;
 
+  // Suggested per-gift budget (optional): amount + currency symbol.
+  @Prop()
+  budget?: number;
+
+  @Prop()
+  currency?: string;
+
+  // The day participants exchange gifts — set when the owner runs the draw,
+  // editable afterwards.
+  @Prop()
+  exchangeDate?: Date;
+
   @Prop({
     type: [
       {
-        santaId: { type: Types.ObjectId, ref: 'User', required: true },
-        recipientId: { type: Types.ObjectId, ref: 'User', required: true },
+        giverId: { type: Types.ObjectId, ref: 'User', required: true },
+        receiverId: { type: Types.ObjectId, ref: 'User', required: true },
       },
     ],
     default: [],

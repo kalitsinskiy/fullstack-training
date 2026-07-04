@@ -1,4 +1,4 @@
-# React + TypeScript + Vite
+# Santa App
 
 Secret Santa frontend SPA — React + Vite + TypeScript.
 
@@ -6,7 +6,7 @@ This is the **baseline scaffold**. Pages are intentional stubs marked with
 `TODO(lesson NN)` comments — you fill them in as you progress through the
 Fullstack block (`src/06-fullstack`).
 
-Currently, two official plugins are available:
+## Tech Stack
 
 - **React 18** + **TypeScript** + **Vite 6**
 - **Tailwind CSS** + **shadcn/ui** (Radix primitives) — design tokens in `src/index.css`
@@ -19,7 +19,7 @@ Currently, two official plugins are available:
 - **Vitest + Testing Library + MSW** — tests
 - **Playwright** — E2E (fullstack lesson 09)
 
-## Expanding the ESLint configuration
+## Getting Started
 
 ```bash
 cd santa-app
@@ -69,27 +69,40 @@ src/
 
 ## Routes
 
-| Route            | Component         | Auth | Lesson to flesh out               |
-| ---------------- | ----------------- | ---- | --------------------------------- |
-| `/`              | LandingPage       | No   | done (baseline)                   |
-| `/login`         | LoginPage         | No   | done; upgrade to RHF+Zod in fe-08 |
-| `/register`      | RegisterPage      | No   | done; upgrade to RHF+Zod in fe-08 |
-| `/rooms`         | RoomListPage      | Yes  | fullstack 03/04                   |
-| `/rooms/:id`     | RoomDetailPage    | Yes  | fullstack 03                      |
-| `/messages`      | MessagesPage      | Yes  | fullstack 07/08                   |
-| `/notifications` | NotificationsPage | Yes  | fullstack 06/07                   |
-| `/profile`       | ProfilePage       | Yes  | done (read-only)                  |
+| Route | Component | Auth | Lesson to flesh out |
+|-------|-----------|------|---------------------|
+| `/` | LandingPage | No | done (baseline) |
+| `/login` | LoginPage | No | done; upgrade to RHF+Zod in fe-08 |
+| `/register` | RegisterPage | No | done; upgrade to RHF+Zod in fe-08 |
+| `/rooms` | RoomListPage | Yes | fullstack 03/04 |
+| `/rooms/:id` | RoomDetailPage | Yes | fullstack 03 |
+| `/messages` | MessagesPage | Yes | fullstack 07/08 |
+| `/notifications` | NotificationsPage | Yes | fullstack 06/07 |
+| `/profile` | ProfilePage | Yes | done (read-only) |
 
 ## Design System
 
-See [`docs/design-system.md`](docs/design-system.md) for the full token
-reference (colors, typography, spacing, radii), wireframes, and responsive
+See the `design/` folder (`design/design-system.md`) for the full token
+reference (colors, typography, spacing, radii), the screen mockups, and responsive
 patterns. Adapted from a Figma reference; the palette is Santa-warm
 (red / pine-green / gold on a cream background).
 
 ## Environment Variables
 
+Leave both **empty** for local dev — the app then uses Vite's same-origin proxy
+(`vite.config.ts`), which forwards `/api` and `/socket.io` to the backends on
+localhost. This works on localhost and from another device on your LAN (phone)
+with no CORS and no hardcoded IP. See `.env.example` for details.
+
 ```env
-VITE_API_URL=http://localhost:3001    # santa-api
-VITE_WS_URL=http://localhost:3002     # santa-notifications (WebSocket)
+VITE_API_URL=     # empty → same-origin Vite proxy (recommended for local dev)
+VITE_WS_URL=      # empty → same-origin Vite proxy
+```
+
+Set absolute URLs **only** to target a remote/separate backend (which must then
+allow this origin via CORS); that also bypasses the proxy:
+
+```env
+# VITE_API_URL=http://localhost:3001    # santa-api (NestJS)
+# VITE_WS_URL=http://localhost:3002     # santa-notifications (WebSocket)
 ```

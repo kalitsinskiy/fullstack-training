@@ -29,7 +29,23 @@ export default tseslint.config(
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-floating-promises': 'warn',
       '@typescript-eslint/no-unsafe-argument': 'warn',
+      // Skeleton methods ship unimplemented, so unused *parameters* are expected.
+      // Unused imports and local variables are still reported.
+      '@typescript-eslint/no-unused-vars': ['error', { args: 'none' }],
       "prettier/prettier": ["error", { endOfLine: "auto" }],
+    },
+  },
+  {
+    // HTTP tests assert on supertest's `res.body`, which is typed `any`; the
+    // type-aware "no-unsafe-*" rules then fire on every `.body.foo`. That's
+    // expected for black-box HTTP assertions, so relax them in tests only.
+    files: ['test/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
     },
   },
 );

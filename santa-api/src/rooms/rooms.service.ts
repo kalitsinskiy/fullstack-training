@@ -1,20 +1,20 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { isValidObjectId, Model, Types } from 'mongoose';
 import { UsersService } from '../users/users.service';
-import {
-  paginate,
-  PaginatedResponse,
-  PaginationQuery,
-} from '../common/pagination';
+import { WishlistService } from '../wishlist/wishlist.service';
+import { PaginatedResponse, PaginationQuery, paginate } from '../common/pagination';
 import { CreateRoomDto } from './dto/create-room.dto';
-import { Room } from './room.types';
+import { UpdateRoomDto } from './dto/update-room.dto';
+import { AssignmentView, Room } from './room.types';
 import { Room as RoomModel, RoomDocument } from './schemas/room.schema';
+import { permissionsForRole } from './permissions';
 
 @Injectable()
 export class RoomsService {
@@ -22,198 +22,157 @@ export class RoomsService {
     @InjectModel(RoomModel.name)
     private readonly roomModel: Model<RoomModel>,
     private readonly usersService: UsersService,
+    private readonly wishlistService: WishlistService,
   ) {}
 
-  async create({ name }: CreateRoomDto, ownerId: string): Promise<Room> {
-    await this.usersService.findById(ownerId);
+  async create(dto: CreateRoomDto, creatorId: string): Promise<Room> {
+    const inviteCode = this.generateInviteCode();
 
-    const room = await this.roomModel.create({
-      name,
-      creatorId: ownerId,
-      inviteCode: await this.generateCode(),
-      participants: [ownerId],
-      status: 'pending',
-    });
+    try {
+      const doc = await this.roomModel.create({
+        name: dto.name.trim(),
+        creatorId: new Types.ObjectId(creatorId),
+        inviteCode,
+        participants: [{ userId: new Types.ObjectId(creatorId), role: 'owner' }],
+        status: 'pending',
+        budget: dto.budget,
+        currency: dto.currency,
+      });
 
-    return this.toRoom(room);
+      return this.toRoom(doc, creatorId);
+    } catch (err: any) {
+      if (err?.code === 11000) {
+        throw new ConflictException('A room with this name already exists');
+      }
+      throw err;
+    }
   }
 
   async findByUser(
     userId: string,
     query: PaginationQuery,
   ): Promise<PaginatedResponse<Room>> {
-    const result = await paginate(
-      this.roomModel,
-      { participants: userId },
-      query,
-    );
-
+    const filter = { 'participants.userId': new Types.ObjectId(userId) };
+    const result = await paginate(this.roomModel, filter, query);
     return {
-      data: result.data.map((room) => this.toRoom(room as RoomDocument)),
+      data: result.data.map((doc) => this.toRoom(doc as unknown as RoomDocument, userId)),
       meta: result.meta,
     };
   }
 
-  async findById(id: string): Promise<Room> {
-    const room = await this.findRoomDocumentById(id);
-
-    return this.toRoom(room);
-  }
-
   async findByIdForUser(id: string, userId: string): Promise<Room> {
-    const room = await this.findRoomDocumentById(id);
-
-    if (
-      !room.participants.some(
-        (participant) => participant.toString() === userId,
-      )
-    ) {
-      throw new ForbiddenException(`Room ${id} is not accessible`);
-    }
-
-    return this.toRoom(room);
+    const doc = await this.findRoomForParticipant(id, userId);
+    return this.toRoom(doc, userId);
   }
 
-  async join(code: string, userId: string): Promise<Room> {
-    await this.usersService.findById(userId);
-
-    const existingRoom = await this.roomModel
-      .findOne({ inviteCode: code })
-      .exec();
-
-    if (!existingRoom) {
-      throw new NotFoundException(`Room with code ${code} not found`);
+  async join(id: string, inviteCode: string, userId: string): Promise<Room> {
+    if (!isValidObjectId(id)) {
+      throw new NotFoundException('Room not found');
     }
 
-    if (existingRoom.status === 'drawn') {
-      throw new ForbiddenException('Room draw has already been completed');
+    const doc = await this.roomModel.findById(id).exec();
+    if (!doc) {
+      throw new NotFoundException('Room not found');
     }
 
-    const room = await this.roomModel
-      .findOneAndUpdate(
-        { inviteCode: code },
-        { $addToSet: { participants: userId } },
-        { new: true },
-      )
-      .exec();
-
-    if (!room) {
-      throw new NotFoundException(`Room with code ${code} not found`);
+    if (doc.inviteCode !== inviteCode) {
+      throw new BadRequestException('Invalid invite code');
     }
 
-    return this.toRoom(room);
+    if (doc.status === 'drawn') {
+      throw new BadRequestException('Cannot join a room after the draw has been done');
+    }
+
+    const alreadyIn = doc.participants.some(
+      (p) => p.userId.toString() === userId,
+    );
+    if (alreadyIn) {
+      return this.toRoom(doc, userId);
+    }
+
+    doc.participants.push({ userId: new Types.ObjectId(userId), role: 'member' });
+    await doc.save();
+
+    return this.toRoom(doc, userId);
   }
 
-  async joinByCode(code: string, userId: string): Promise<Room> {
-    return this.join(code, userId);
+  joinByCode(inviteCode: string, userId: string): Promise<Room> {
+    throw new Error('RoomsService.joinByCode is not implemented — see Lesson 05');
   }
 
-  async draw(id: string): Promise<Room> {
-    const room = await this.findRoomDocumentById(id);
-
-    if (room.participants.length < 3) {
-      throw new BadRequestException(
-        'At least 3 participants are required to draw',
-      );
-    }
-
-    const drawDate = new Date();
-    const assignments = this.buildAssignments(room.participants);
-    const updatedRoom = await this.roomModel
-      .findByIdAndUpdate(
-        id,
-        {
-          status: 'drawn',
-          drawDate,
-          assignments,
-        },
-        { new: true },
-      )
-      .exec();
-
-    if (!updatedRoom) {
-      throw new NotFoundException(`Room ${id} not found`);
-    }
-
-    return this.toRoom(updatedRoom);
+  draw(id: string, requesterId: string, exchangeDate: string): Promise<Room> {
+    throw new Error('RoomsService.draw is not implemented — see Lesson 03');
   }
 
-  private async generateCode(): Promise<string> {
-    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-
-    while (true) {
-      const inviteCode = Array.from({ length: 6 }, () => {
-        const index = Math.floor(Math.random() * alphabet.length);
-        return alphabet[index];
-      }).join('');
-
-      const existingRoom = await this.roomModel
-        .findOne({ inviteCode })
-        .select('_id')
-        .lean()
-        .exec();
-
-      if (!existingRoom) {
-        return inviteCode;
-      }
-    }
+  getAssignment(id: string, userId: string): Promise<AssignmentView> {
+    throw new Error('RoomsService.getAssignment is not implemented — see Lesson 03');
   }
 
-  private async findRoomDocumentById(id: string): Promise<RoomDocument> {
-    if (!Types.ObjectId.isValid(id)) {
-      throw new NotFoundException(`Room ${id} not found`);
-    }
-
-    const room = await this.roomModel.findById(id).exec();
-
-    if (!room) {
-      throw new NotFoundException(`Room ${id} not found`);
-    }
-
-    return room;
+  editRoom(id: string, dto: UpdateRoomDto, userId: string): Promise<Room> {
+    throw new Error('RoomsService.editRoom is not implemented — see Lesson 04');
   }
 
-  private buildAssignments(
-    participants: Types.ObjectId[],
-  ): Array<{ giverId: Types.ObjectId; receiverId: Types.ObjectId }> {
-    const shuffledParticipants = [...participants];
+  deleteRoom(id: string, userId: string): Promise<void> {
+    throw new Error('RoomsService.deleteRoom is not implemented — see Lesson 04');
+  }
 
-    for (let index = shuffledParticipants.length - 1; index > 0; index -= 1) {
-      const swapIndex = Math.floor(Math.random() * (index + 1));
-      const currentParticipant = shuffledParticipants[index];
+  kickMember(id: string, targetUserId: string, userId: string): Promise<void> {
+    throw new Error('RoomsService.kickMember is not implemented — see Lesson 04');
+  }
 
-      shuffledParticipants[index] = shuffledParticipants[swapIndex];
-      shuffledParticipants[swapIndex] = currentParticipant;
+  regenerateInviteCode(id: string, userId: string): Promise<Room> {
+    throw new Error('RoomsService.regenerateInviteCode is not implemented — see Lesson 04');
+  }
+
+  // ── helpers ──────────────────────────────────────────────────────────────
+
+  private async findRoomForParticipant(id: string, userId: string): Promise<RoomDocument> {
+    if (!isValidObjectId(id)) {
+      throw new NotFoundException('Room not found');
     }
+    const doc = await this.roomModel.findById(id).exec();
+    const isParticipant = doc?.participants.some(
+      (p) => p.userId.toString() === userId,
+    );
+    if (!doc || !isParticipant) {
+      throw new NotFoundException('Room not found');
+    }
+    return doc;
+  }
 
-    const hasSelfAssignment = shuffledParticipants.some((participant, index) =>
-      participant.equals(participants[index]),
+  private toRoom(doc: RoomDocument, viewerId: string): Room {
+    const viewerParticipant = doc.participants.find(
+      (p) => p.userId.toString() === viewerId,
     );
 
-    if (hasSelfAssignment) {
-      const rotatedParticipants = [...participants.slice(1), participants[0]];
-
-      return participants.map((participant, index) => ({
-        giverId: participant,
-        receiverId: rotatedParticipants[index],
-      }));
-    }
-
-    return participants.map((participant, index) => ({
-      giverId: participant,
-      receiverId: shuffledParticipants[index],
-    }));
+    return {
+      id: doc._id.toString(),
+      name: doc.name,
+      creatorId: doc.creatorId.toString(),
+      inviteCode: doc.inviteCode,
+      participants: doc.participants.map((p) => ({
+        id: p.userId.toString(),
+        displayName: p.userId.toString(), // populated in later lessons
+        role: p.role,
+      })),
+      participantCount: doc.participants.length,
+      status: doc.status,
+      drawDate: doc.drawDate?.toISOString(),
+      budget: doc.budget,
+      currency: doc.currency,
+      exchangeDate: doc.exchangeDate?.toISOString(),
+      viewerPermissions: viewerParticipant
+        ? [...permissionsForRole(viewerParticipant.role)]
+        : [],
+    };
   }
 
-  private toRoom(room: RoomDocument): Room {
-    return {
-      id: room._id.toString(),
-      name: room.name,
-      ownerId: room.creatorId.toString(),
-      code: room.inviteCode,
-      members: room.participants.map((participant) => participant.toString()),
-      status: room.status,
-      drawDate: room.drawDate?.toISOString(),
-    };
+  private generateInviteCode(): string {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 6; i++) {
+      code += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return code;
   }
 }

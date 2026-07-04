@@ -1,31 +1,10 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import { createTheme, ThemeProvider, CssBaseline } from '@mui/material'
-import { QueryClientProvider } from '@tanstack/react-query'
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
-import './index.css'
-import App from './App.tsx'
-import { AuthProvider } from './contexts/AuthContext.tsx'
-import { queryClient } from './queryClient.ts'
-
-const theme = createTheme({
-  palette: {
-    primary:   { main: '#2d5a27' },
-    secondary: { main: '#6c757d' },
-    error:     { main: '#c0392b' },
-  },
-})
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import App from './App.tsx';
+import './index.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <App />
-        </AuthProvider>
-        <ReactQueryDevtools />
-      </QueryClientProvider>
-    </ThemeProvider>
+    <App />
   </StrictMode>,
-)
+);
