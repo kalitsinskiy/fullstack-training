@@ -96,32 +96,93 @@ export class RoomsService {
     return this.toRoom(doc, userId);
   }
 
-  joinByCode(inviteCode: string, userId: string): Promise<Room> {
-    throw new Error('RoomsService.joinByCode is not implemented — see Lesson 05');
+  async joinByCode(inviteCode: string, userId: string): Promise<Room> {
+    const doc = await this.roomModel.findOne({ inviteCode }).exec();
+    if (!doc) {
+      throw new BadRequestException('Invalid or expired invite code');
+    }
+
+    if (doc.status === 'drawn') {
+      throw new BadRequestException('Cannot join a room after the draw has been done');
+    }
+
+    const alreadyIn = doc.participants.some((p) => p.userId.toString() === userId);
+    if (alreadyIn) {
+      return this.toRoom(doc, userId);
+    }
+
+    doc.participants.push({ userId: new Types.ObjectId(userId), role: 'member' });
+    await doc.save();
+
+    return this.toRoom(doc, userId);
   }
 
   draw(id: string, requesterId: string, exchangeDate: string): Promise<Room> {
     throw new Error('RoomsService.draw is not implemented — see Lesson 03');
   }
 
-  getAssignment(id: string, userId: string): Promise<AssignmentView> {
-    throw new Error('RoomsService.getAssignment is not implemented — see Lesson 03');
+  async getAssignment(id: string, userId: string): Promise<AssignmentView> {
+    const doc = await this.findRoomForParticipant(id, userId);
+
+    if (doc.status !== 'drawn') {
+      throw new BadRequestException('Draw has not been completed yet');
+    }
+
+    const assignment = doc.assignments.find((a) => a.giverId.toString() === userId);
+    if (!assignment) {
+      throw new NotFoundException('Assignment not found');
+    }
+
+    const receiverId = assignment.receiverId.toString();
+    const receiver = await this.usersService.findById(receiverId);
+    const wishlist = await this.wishlistService.get(id, receiverId);
+
+    return {
+      receiver: {
+        id: receiver.id,
+        displayName: receiver.displayName,
+        wishlist: wishlist.items,
+      },
+    };
   }
 
-  editRoom(id: string, dto: UpdateRoomDto, userId: string): Promise<Room> {
-    throw new Error('RoomsService.editRoom is not implemented — see Lesson 04');
+  async editRoom(id: string, dto: UpdateRoomDto, userId: string): Promise<Room> {
+    const doc = await this.findRoomForParticipant(id, userId);
+
+    if (dto.name !== undefined) doc.name = dto.name.trim();
+    if (dto.budget !== undefined) doc.budget = dto.budget;
+    if (dto.currency !== undefined) doc.currency = dto.currency;
+    if (dto.exchangeDate !== undefined) doc.exchangeDate = new Date(dto.exchangeDate);
+
+    await doc.save();
+    return this.toRoom(doc, userId);
   }
 
-  deleteRoom(id: string, userId: string): Promise<void> {
-    throw new Error('RoomsService.deleteRoom is not implemented — see Lesson 04');
+  async deleteRoom(id: string, userId: string): Promise<void> {
+    const doc = await this.findRoomForParticipant(id, userId);
+    await doc.deleteOne();
   }
 
-  kickMember(id: string, targetUserId: string, userId: string): Promise<void> {
-    throw new Error('RoomsService.kickMember is not implemented — see Lesson 04');
+  async kickMember(id: string, targetUserId: string, userId: string): Promise<void> {
+    const doc = await this.findRoomForParticipant(id, userId);
+
+    const target = doc.participants.find((p) => p.userId.toString() === targetUserId);
+    if (!target) {
+      throw new NotFoundException('Member not found');
+    }
+    if (target.role === 'owner') {
+      throw new BadRequestException('Cannot remove the owner');
+    }
+
+    doc.participants = doc.participants.filter((p) => p.userId.toString() !== targetUserId);
+    await doc.save();
   }
 
-  regenerateInviteCode(id: string, userId: string): Promise<Room> {
-    throw new Error('RoomsService.regenerateInviteCode is not implemented — see Lesson 04');
+  async regenerateInviteCode(id: string, userId: string): Promise<Room> {
+    const doc = await this.findRoomForParticipant(id, userId);
+    doc.inviteCode = this.generateInviteCode();
+    await doc.save();
+    return this.toRoom(doc, userId);
   }
 
   // ── helpers ──────────────────────────────────────────────────────────────
