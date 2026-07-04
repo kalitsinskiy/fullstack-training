@@ -3,9 +3,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "../hooks/useAuth";
 import { Navigate, useLocation, useNavigate } from "react-router";
 import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
 import { LoginSchema, type LoginInput } from "../schemas/auth";
+import { FormField } from "./FormField";
 
 export default function LoginForm() {
   const auth = useAuth();
@@ -56,56 +55,23 @@ export default function LoginForm() {
         </div>
       )}
 
-      <div className="flex flex-col gap-1">
-        <Label htmlFor="login-email" className="text-muted-foreground text-sm">
-          Email
-        </Label>
-        <Input
-          id="login-email"
-          type="email"
-          autoComplete="email"
-          aria-invalid={!!errors.email}
-          aria-describedby={errors.email ? "login-email-error" : undefined}
-          disabled={isSubmitting}
-          {...register("email")}
-        />
-        {errors.email && (
-          <span
-            id="login-email-error"
-            role="alert"
-            className="text-xs text-red-600"
-          >
-            {errors.email.message}
-          </span>
-        )}
-      </div>
+      <FormField
+        label="Email"
+        type="email"
+        autoComplete="email"
+        disabled={isSubmitting}
+        error={errors.email?.message}
+        {...register("email")}
+      />
 
-      <div className="flex flex-col gap-1">
-        <Label
-          htmlFor="login-password"
-          className="text-muted-foreground text-sm"
-        >
-          Password
-        </Label>
-        <Input
-          id="login-password"
-          type="password"
-          autoComplete="current-password"
-          aria-invalid={!!errors.password}
-          aria-describedby={errors.password ? "login-password-error" : undefined}
-          disabled={isSubmitting}
-          {...register("password")}
-        />
-        {errors.password && (
-          <span
-            id="login-password-error"
-            role="alert"
-            className="text-xs text-red-600"
-          >
-            {errors.password.message}
-          </span>
-        )}
-      </div>
+      <FormField
+        label="Password"
+        type="password"
+        autoComplete="current-password"
+        disabled={isSubmitting}
+        error={errors.password?.message}
+        {...register("password")}
+      />
 
       <Button
         type="submit"

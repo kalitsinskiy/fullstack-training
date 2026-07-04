@@ -26,29 +26,41 @@ import { ErrorBoundary } from 'react-error-boundary';
 
 // ---- Lazy chunks ----
 
-const RoomsPage = lazy(() =>
-  new Promise<{ default: React.FC }>((resolve) => {
-    setTimeout(() => {
-      resolve({
-        default: function RoomsPageImpl() {
-          // 30% chance to throw on render to test the error boundary
-          if (Math.random() < 0.3) throw new Error('RoomsPage failed to mount');
-          return (
-            <div style={{ padding: 16 }}>
-              <h2>Rooms</h2>
-              <p>List of rooms (stub).</p>
-            </div>
-          );
-        },
-      });
-    }, 800);
-  }),
+const RoomsPage = lazy(
+  () =>
+    new Promise<{ default: React.FC }>((resolve) => {
+      setTimeout(() => {
+        resolve({
+          default: function RoomsPageImpl() {
+            // 30% chance to throw on render to test the error boundary
+            if (Math.random() < 0.3) throw new Error('RoomsPage failed to mount');
+            return (
+              <div style={{ padding: 16 }}>
+                <h2>Rooms</h2>
+                <p>List of rooms (stub).</p>
+              </div>
+            );
+          },
+        });
+      }, 800);
+    })
 );
 
-const AboutPage = lazy(() =>
-  new Promise<{ default: React.FC }>((resolve) => {
-    setTimeout(() => resolve({ default: () => <div style={{ padding: 16 }}><h2>About</h2></div> }), 400);
-  }),
+const AboutPage = lazy(
+  () =>
+    new Promise<{ default: React.FC }>((resolve) => {
+      setTimeout(
+        () =>
+          resolve({
+            default: () => (
+              <div style={{ padding: 16 }}>
+                <h2>About</h2>
+              </div>
+            ),
+          }),
+        400
+      );
+    })
 );
 
 // ---- Provided fallbacks ----
@@ -59,7 +71,15 @@ function PageSpinner() {
 
 function ErrorFallback({ error, resetErrorBoundary }: any) {
   return (
-    <div role="alert" style={{ padding: 12, background: '#fee2e2', borderRadius: 6, margin: 16 }}>
+    <div
+      role="alert"
+      style={{
+        padding: 12,
+        background: '#fee2e2',
+        borderRadius: 6,
+        margin: 16,
+      }}
+    >
       <p style={{ color: '#991b1b', fontWeight: 600 }}>Something went wrong:</p>
       <pre style={{ fontSize: 12 }}>{error.message}</pre>
       <button onClick={resetErrorBoundary}>Try again</button>
@@ -71,7 +91,14 @@ function ErrorFallback({ error, resetErrorBoundary }: any) {
 
 function Nav() {
   return (
-    <nav style={{ display: 'flex', gap: 12, padding: 12, borderBottom: '1px solid #eee' }}>
+    <nav
+      style={{
+        display: 'flex',
+        gap: 12,
+        padding: 12,
+        borderBottom: '1px solid #eee',
+      }}
+    >
       <Link to="/">About</Link>
       <Link to="/rooms">Rooms</Link>
     </nav>
@@ -84,11 +111,17 @@ function RoutedContent() {
   // const location = useLocation();
   // TODO: wrap <Routes> with <Suspense fallback={<PageSpinner />}> and
   // <ErrorBoundary FallbackComponent={ErrorFallback} resetKeys={[location.pathname]}>
+  const location = useLocation();
   return (
-    <Routes>
-      <Route path="/" element={<AboutPage />} />
-      <Route path="/rooms" element={<RoomsPage />} />
-    </Routes>
+    <Suspense fallback={<PageSpinner />}>
+      <ErrorBoundary FallbackComponent={ErrorFallback} resetKeys={[location.pathname]}>
+        <Routes>
+          <Route path="/" element={<AboutPage />} />
+
+          <Route path="/rooms" element={<RoomsPage />} />
+        </Routes>
+      </ErrorBoundary>
+    </Suspense>
   );
 }
 

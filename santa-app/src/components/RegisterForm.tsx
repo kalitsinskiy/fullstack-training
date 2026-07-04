@@ -3,9 +3,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "../hooks/useAuth";
 import { useNavigate } from "react-router";
 import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
 import { RegisterSchema, type RegisterInput } from "../schemas/auth";
+import { FormField } from "./FormField";
 
 export default function RegisterForm() {
   const auth = useAuth();
@@ -50,112 +49,40 @@ export default function RegisterForm() {
         </div>
       )}
 
-      <div className="flex flex-col gap-1">
-        <Label
-          htmlFor="register-name"
-          className="text-muted-foreground text-sm"
-        >
-          Full name
-        </Label>
-        <Input
-          id="register-name"
-          autoComplete="name"
-          aria-invalid={!!errors.displayName}
-          aria-describedby={errors.displayName ? "register-name-error" : undefined}
-          disabled={isSubmitting}
-          {...register("displayName")}
-        />
-        {errors.displayName && (
-          <span
-            id="register-name-error"
-            role="alert"
-            className="text-xs text-red-600"
-          >
-            {errors.displayName.message}
-          </span>
-        )}
-      </div>
+      <FormField
+        type="text"
+        label="Display name"
+        disabled={isSubmitting}
+        error={errors.displayName?.message}
+        {...register("displayName")}
+      />
 
-      <div className="flex flex-col gap-1">
-        <Label
-          htmlFor="register-email"
-          className="text-muted-foreground text-sm"
-        >
-          Email
-        </Label>
-        <Input
-          id="register-email"
-          type="email"
-          autoComplete="email"
-          aria-invalid={!!errors.email}
-          aria-describedby={errors.email ? "register-email-error" : undefined}
-          disabled={isSubmitting}
-          {...register("email")}
-        />
-        {errors.email && (
-          <span
-            id="register-email-error"
-            role="alert"
-            className="text-xs text-red-600"
-          >
-            {errors.email.message}
-          </span>
-        )}
-      </div>
+      <FormField
+        type="email"
+        label="Email"
+        autoComplete="email"
+        disabled={isSubmitting}
+        error={errors.email?.message}
+        {...register("email")}
+      />
 
-      <div className="flex flex-col gap-1">
-        <Label
-          htmlFor="register-password"
-          className="text-muted-foreground text-sm"
-        >
-          Password
-        </Label>
-        <Input
-          id="register-password"
-          type="password"
-          autoComplete="new-password"
-          aria-invalid={!!errors.password}
-          aria-describedby={errors.password ? "register-password-error" : undefined}
-          disabled={isSubmitting}
-          {...register("password")}
-        />
-        {errors.password && (
-          <span
-            id="register-password-error"
-            role="alert"
-            className="text-xs text-red-600"
-          >
-            {errors.password.message}
-          </span>
-        )}
-      </div>
+      <FormField
+        type="password"
+        label="Password"
+        autoComplete="new-password"
+        disabled={isSubmitting}
+        error={errors.password?.message}
+        {...register("password")}
+      />
 
-      <div className="flex flex-col gap-1">
-        <Label
-          htmlFor="register-confirm"
-          className="text-muted-foreground text-sm"
-        >
-          Confirm password
-        </Label>
-        <Input
-          id="register-confirm"
-          type="password"
-          autoComplete="new-password"
-          aria-invalid={!!errors.confirm}
-          aria-describedby={errors.confirm ? "register-confirm-error" : undefined}
-          disabled={isSubmitting}
-          {...register("confirm")}
-        />
-        {errors.confirm && (
-          <span
-            id="register-confirm-error"
-            role="alert"
-            className="text-xs text-red-600"
-          >
-            {errors.confirm.message}
-          </span>
-        )}
-      </div>
+      <FormField
+        type="password"
+        label="Confirm password"
+        autoComplete="new-password"
+        disabled={isSubmitting}
+        error={errors.confirm?.message}
+        {...register("confirm")}
+      />
 
       <div className="flex items-center gap-3">
         <Button

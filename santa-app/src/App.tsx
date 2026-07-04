@@ -1,13 +1,15 @@
+import { lazy } from "react";
 import "./App.css";
 import { Layout } from "./components/Layout";
 import LoginForm from "./components/LoginForm";
 import { NotFoundPage } from "./components/NotFoundPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import RegisterForm from "./components/RegisterForm";
-import { RoomDetailsPage } from "./components/RoomDetailsPage";
-import RoomList from "./components/RoomList";
-import { WishlistPage } from "./components/WishlistPage";
 import { BrowserRouter, Route, Routes } from "react-router";
+
+const RoomDetailsPage = lazy(() => import("./components/RoomDetailsPage"));
+const RoomList = lazy(() => import("./components/RoomList"));
+const WishlistPage = lazy(() => import("./components/WishlistPage"));
 
 function App() {
   return (

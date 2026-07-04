@@ -31,7 +31,7 @@ interface RoomResponse {
   inviteCode: string;
 }
 
-export function WishlistPage() {
+export default function WishlistPage() {
   const { id } = useParams();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -49,7 +49,9 @@ export function WishlistPage() {
   const { data: wishlistData } = useQuery({
     queryKey: ["rooms", id, "wishlist", "me"],
     queryFn: ({ signal }) =>
-      api.get<WishlistResponse>(`/rooms/${roomCode}/wishlist/${user!.id}`, { signal }),
+      api.get<WishlistResponse>(`/rooms/${roomCode}/wishlist/${user!.id}`, {
+        signal,
+      }),
     enabled: !!roomCode && !!user?.id,
     retry: (failureCount, err) => {
       if (err instanceof ApiError && err.status === 404) return false;
@@ -96,7 +98,9 @@ export function WishlistPage() {
         items,
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["rooms", id, "wishlist", "me"] });
+      queryClient.invalidateQueries({
+        queryKey: ["rooms", id, "wishlist", "me"],
+      });
     },
     onError: (err) => {
       setError("root.serverError", {
@@ -132,13 +136,23 @@ export function WishlistPage() {
       });
     },
     onMutate: async (idx) => {
-      await queryClient.cancelQueries({ queryKey: ["rooms", id, "wishlist", "me"] });
-      const previous = queryClient.getQueryData<WishlistResponse>(["rooms", id, "wishlist", "me"]);
+      await queryClient.cancelQueries({
+        queryKey: ["rooms", id, "wishlist", "me"],
+      });
+      const previous = queryClient.getQueryData<WishlistResponse>([
+        "rooms",
+        id,
+        "wishlist",
+        "me",
+      ]);
       if (previous) {
-        queryClient.setQueryData<WishlistResponse>(["rooms", id, "wishlist", "me"], {
-          ...previous,
-          items: previous.items.filter((_, i) => i !== idx),
-        });
+        queryClient.setQueryData<WishlistResponse>(
+          ["rooms", id, "wishlist", "me"],
+          {
+            ...previous,
+            items: previous.items.filter((_, i) => i !== idx),
+          },
+        );
       }
       remove(idx);
       return { previous };
@@ -149,15 +163,21 @@ export function WishlistPage() {
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["rooms", id, "wishlist", "me"] });
+      queryClient.invalidateQueries({
+        queryKey: ["rooms", id, "wishlist", "me"],
+      });
     },
   });
 
   return (
     <section className="space-y-6">
       <header className="rounded-3xl border border-(--border) bg-(--surface) p-6 shadow">
-        <p className="text-xs tracking-[0.22em] text-(--muted) uppercase">Wishlist</p>
-        <h2 className="mt-2 text-3xl font-semibold text-(--text)">Edit Wishlist</h2>
+        <p className="text-xs tracking-[0.22em] text-(--muted) uppercase">
+          Wishlist
+        </p>
+        <h2 className="mt-2 text-3xl font-semibold text-(--text)">
+          Edit Wishlist
+        </h2>
         <p className="mt-2 text-sm text-(--muted)">
           Add gift ideas for this room. URL and priority are optional.
         </p>
@@ -165,14 +185,24 @@ export function WishlistPage() {
 
       <form onSubmit={handleSubmit(submit)} noValidate className="space-y-4">
         {errors.root?.serverError && (
-          <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div
+            role="alert"
+            className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+          >
             {errors.root.serverError.message}
           </div>
         )}
 
-        {(errors.root as { saveSuccess?: { message?: string } })?.saveSuccess && (
-          <div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-            {(errors.root as { saveSuccess?: { message?: string } }).saveSuccess?.message}
+        {(errors.root as { saveSuccess?: { message?: string } })
+          ?.saveSuccess && (
+          <div
+            role="status"
+            className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700"
+          >
+            {
+              (errors.root as { saveSuccess?: { message?: string } })
+                .saveSuccess?.message
+            }
           </div>
         )}
 
@@ -199,11 +229,19 @@ export function WishlistPage() {
                   id={`items-${idx}-name`}
                   placeholder="Gift idea"
                   aria-invalid={!!errors.items?.[idx]?.name}
-                  aria-describedby={errors.items?.[idx]?.name ? `items-${idx}-name-error` : undefined}
+                  aria-describedby={
+                    errors.items?.[idx]?.name
+                      ? `items-${idx}-name-error`
+                      : undefined
+                  }
                   {...register(`items.${idx}.name`)}
                 />
                 {errors.items?.[idx]?.name && (
-                  <span id={`items-${idx}-name-error`} role="alert" className="text-xs text-red-600">
+                  <span
+                    id={`items-${idx}-name-error`}
+                    role="alert"
+                    className="text-xs text-red-600"
+                  >
                     {errors.items[idx]?.name?.message}
                   </span>
                 )}
@@ -220,11 +258,19 @@ export function WishlistPage() {
                   id={`items-${idx}-url`}
                   placeholder="https://..."
                   aria-invalid={!!errors.items?.[idx]?.url}
-                  aria-describedby={errors.items?.[idx]?.url ? `items-${idx}-url-error` : undefined}
+                  aria-describedby={
+                    errors.items?.[idx]?.url
+                      ? `items-${idx}-url-error`
+                      : undefined
+                  }
                   {...register(`items.${idx}.url`)}
                 />
                 {errors.items?.[idx]?.url && (
-                  <span id={`items-${idx}-url-error`} role="alert" className="text-xs text-red-600">
+                  <span
+                    id={`items-${idx}-url-error`}
+                    role="alert"
+                    className="text-xs text-red-600"
+                  >
                     {errors.items[idx]?.url?.message}
                   </span>
                 )}
@@ -244,11 +290,19 @@ export function WishlistPage() {
                   max={5}
                   placeholder="—"
                   aria-invalid={!!errors.items?.[idx]?.priority}
-                  aria-describedby={errors.items?.[idx]?.priority ? `items-${idx}-priority-error` : undefined}
+                  aria-describedby={
+                    errors.items?.[idx]?.priority
+                      ? `items-${idx}-priority-error`
+                      : undefined
+                  }
                   {...register(`items.${idx}.priority`)}
                 />
                 {errors.items?.[idx]?.priority && (
-                  <span id={`items-${idx}-priority-error`} role="alert" className="text-xs text-red-600">
+                  <span
+                    id={`items-${idx}-priority-error`}
+                    role="alert"
+                    className="text-xs text-red-600"
+                  >
                     {errors.items[idx]?.priority?.message}
                   </span>
                 )}
@@ -262,7 +316,9 @@ export function WishlistPage() {
                   variant="outline"
                   className="h-9 px-3 text-sm font-medium hover:bg-red-50"
                 >
-                  {removeItem.isPending && removeItem.variables === idx ? "Removing…" : "Remove"}
+                  {removeItem.isPending && removeItem.variables === idx
+                    ? "Removing…"
+                    : "Remove"}
                 </Button>
               </div>
             </article>
@@ -285,7 +341,11 @@ export function WishlistPage() {
           >
             {isSubmitting ? "Saving..." : "Save wishlist"}
           </Button>
-          <Button asChild variant="outline" className="rounded-full px-4 text-sm font-medium">
+          <Button
+            asChild
+            variant="outline"
+            className="rounded-full px-4 text-sm font-medium"
+          >
             <Link to={id ? `/rooms/${id}` : "/rooms"}>Back to room</Link>
           </Button>
         </div>

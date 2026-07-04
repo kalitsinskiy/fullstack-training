@@ -23,10 +23,7 @@
  * need the optimistic behavior in one spot.
  */
 
-/* eslint-disable */
-// @ts-nocheck — exercise stub. Remove this directive after picking an approach.
-
-import { useState } from 'react';
+import { startTransition, useEffect, useOptimistic, useState } from 'react';
 
 interface Notification {
   id: string;
@@ -37,9 +34,9 @@ interface Notification {
 // ---- Fake API ----
 
 let store: Notification[] = [
-  { id: '1', text: 'Welcome to santa-app!',        read: false },
-  { id: '2', text: 'Alice joined "Office Party"',  read: false },
-  { id: '3', text: 'Wishlist updated',             read: true  },
+  { id: '1', text: 'Welcome to santa-app!', read: false },
+  { id: '2', text: 'Alice joined "Office Party"', read: false },
+  { id: '3', text: 'Wishlist updated', read: true },
 ];
 const FAIL_RATE = 0.3;
 
@@ -49,7 +46,7 @@ async function listNotifications(): Promise<Notification[]> {
 }
 
 async function setRead(id: string, value: boolean): Promise<Notification> {
-  await new Promise((r) => setTimeout(r, 600));     // slow on purpose
+  await new Promise((r) => setTimeout(r, 600)); // slow on purpose
   if (Math.random() < FAIL_RATE) throw new Error('Server rejected the toggle');
   const idx = store.findIndex((n) => n.id === id);
   if (idx === -1) throw new Error('Not found');
@@ -80,28 +77,71 @@ export default function OptimisticToggleDemo() {
   //   });
 
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  // TODO: load notifications on mount (useQuery for B, useEffect+useState for A)
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState<Set<string>>(new Set());
+
+  // Bug fixes:
+  // 1. Reducer must accept a single action object matching addOptimistic's argument
+  // 2. Use findIndex (not find) to get a numeric index
+  // 3. Return a new array instead of mutating state in place
+  const [optimistic, addOptimistic] = useOptimistic(
+    notifications,
+    (current, { id, read }: { id: string; read: boolean }) =>
+      current.map((n) => (n.id === id ? { ...n, read } : n))
+  );
+
+  const handleToggle = (id: string, nextValue: boolean) => {
+    startTransition(async () => {
+      addOptimistic({ id, read: nextValue });
+      setPending((prev) => new Set(prev).add(id));
+      try {
+        const result = await setRead(id, nextValue);
+        setNotifications((prev) => prev.map((n) => (n.id === id ? result : n)));
+        setError(null);
+      } catch {
+        setError('Failed to toggle — change rolled back');
+      } finally {
+        setPending((prev) => {
+          const s = new Set(prev);
+          s.delete(id);
+          return s;
+        });
+      }
+    });
+  };
+
+  useEffect(() => {
+    listNotifications().then(setNotifications);
+  }, []);
 
   return (
-    <div style={{ padding: 24, fontFamily: 'system-ui, sans-serif', maxWidth: 480 }}>
+    <div
+      style={{
+        padding: 24,
+        fontFamily: 'system-ui, sans-serif',
+        maxWidth: 480,
+      }}
+    >
       <h2>Notifications</h2>
       <p>TODO: render notifications with an optimistic toggle.</p>
 
+      {error && <p style={{ color: 'red', fontSize: 13 }}>{error}</p>}
+
       <ul style={{ listStyle: 'none', padding: 0 }}>
-        {notifications.map((n) => (
+        {optimistic.map((n) => (
           <li
             key={n.id}
             style={{
               padding: 8,
               borderBottom: '1px solid #eee',
-              opacity: n.read ? 0.6 : 1,
+              opacity: pending.has(n.id) ? 0.4 : n.read ? 0.6 : 1,
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
             }}
           >
             <span>{n.text}</span>
-            <button onClick={() => alert('TODO: implement toggle')}>
+            <button onClick={() => handleToggle(n.id, !n.read)} disabled={pending.has(n.id)}>
               {n.read ? 'Mark unread' : 'Mark read'}
             </button>
           </li>

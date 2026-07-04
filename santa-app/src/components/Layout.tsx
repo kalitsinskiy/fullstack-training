@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router";
 import { useAuth } from "../hooks/useAuth";
 import { CreateRoomDialog } from "./CreateRoomDialog";
 import { Button } from "./ui/button";
 import { Plus } from "lucide-react";
+import { PageSpinner } from "./PageSpinner";
 
 export function Layout() {
   const auth = useAuth();
@@ -76,7 +77,9 @@ export function Layout() {
       </header>
 
       <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
-        <Outlet /> {/* protected page renders here */}
+        <Suspense fallback={<PageSpinner />}>
+          <Outlet /> {/* protected page renders here */}
+        </Suspense>
       </main>
 
       <CreateRoomDialog
