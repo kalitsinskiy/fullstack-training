@@ -28,21 +28,18 @@
 // - For async error appearance: await screen.findByText(...) or findByRole('alert')
 // - Multiple alerts on screen → use findAllByRole('alert') and pick by text
 
-/* eslint-disable */
-// @ts-nocheck — exercise stub. Remove this directive after implementing.
-
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { describe, test, expect, vi } from 'vitest';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { describe, test, expect, vi } from "vitest";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 
 // ---- Schema + Component Under Test (do NOT modify) ----
 
 const LoginSchema = z.object({
-  email: z.string().email('Enter a valid email'),
-  password: z.string().min(8, 'At least 8 characters'),
+  email: z.string().email("Enter a valid email"),
+  password: z.string().min(8, "At least 8 characters"),
 });
 type LoginInput = z.infer<typeof LoginSchema>;
 
@@ -56,14 +53,17 @@ function LoginForm({ onSubmit }: LoginFormProps) {
     handleSubmit,
     setError,
     formState: { errors, isSubmitting },
-  } = useForm<LoginInput>({ resolver: zodResolver(LoginSchema), mode: 'onSubmit' });
+  } = useForm<LoginInput>({
+    resolver: zodResolver(LoginSchema),
+    mode: "onSubmit",
+  });
 
   const submit = async (data: LoginInput) => {
     try {
       await onSubmit(data);
     } catch (err) {
-      setError('root.serverError', {
-        message: err instanceof Error ? err.message : 'Login failed',
+      setError("root.serverError", {
+        message: err instanceof Error ? err.message : "Login failed",
       });
     }
   };
@@ -72,22 +72,24 @@ function LoginForm({ onSubmit }: LoginFormProps) {
     <form onSubmit={handleSubmit(submit)} noValidate>
       <h2>Sign in</h2>
 
-      {errors.root?.serverError && <div role="alert">{errors.root.serverError.message}</div>}
+      {errors.root?.serverError && (
+        <div role="alert">{errors.root.serverError.message}</div>
+      )}
 
       <div>
         <label htmlFor="login-email">Email</label>
-        <input id="login-email" type="email" {...register('email')} />
+        <input id="login-email" type="email" {...register("email")} />
         {errors.email && <span role="alert">{errors.email.message}</span>}
       </div>
 
       <div>
         <label htmlFor="login-password">Password</label>
-        <input id="login-password" type="password" {...register('password')} />
+        <input id="login-password" type="password" {...register("password")} />
         {errors.password && <span role="alert">{errors.password.message}</span>}
       </div>
 
       <button type="submit" disabled={isSubmitting}>
-        {isSubmitting ? 'Signing in…' : 'Sign In'}
+        {isSubmitting ? "Signing in…" : "Sign In"}
       </button>
     </form>
   );
@@ -95,34 +97,107 @@ function LoginForm({ onSubmit }: LoginFormProps) {
 
 // ---- Tests — implement each TODO ----
 
-describe('LoginForm', () => {
+describe("LoginForm", () => {
   // TODO 1: Renders email + password + submit; no alert before first submit
-  test('renders email, password, and submit button — no alert initially', () => {
-    // TODO: Implement
+  test("renders email, password, and submit button — no alert initially", () => {
+    render(<LoginForm onSubmit={vi.fn()} />);
+
+    expect(screen.getByLabelText("Email")).toBeInTheDocument();
+    expect(screen.getByLabelText("Password")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /sign in/i }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   // TODO 2: Empty submit → both Zod errors render, onSubmit NOT called
-  test('shows validation errors on empty submit and does not call onSubmit', async () => {
-    // TODO: Implement
+  test("shows validation errors on empty submit and does not call onSubmit", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(<LoginForm onSubmit={onSubmit} />);
+
+    await user.click(screen.getByRole("button", { name: /sign in/i }));
+
+    expect(await screen.findByText(/valid email/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/at least \d+ characters/i),
+    ).toBeInTheDocument();
+
+    expect(onSubmit).not.toHaveBeenCalled();
   });
 
   // TODO 3: Invalid email format → email error, no password error
-  test('shows email error when email is invalid but password is OK', async () => {
-    // TODO: Implement
+  test("shows email error when email is invalid but password is OK", async () => {
+    const user = userEvent.setup();
+    render(<LoginForm onSubmit={vi.fn()} />);
+
+    await user.type(screen.getByLabelText("Email"), "invalid email");
+    await user.type(screen.getByLabelText("Password"), "ValidPassword123!");
+    await user.click(screen.getByRole("button", { name: /sign in/i }));
+
+    expect(await screen.findByText(/valid email/i)).toBeInTheDocument();
+    expect(
+      screen.queryByText(/at least \d+ characters/i),
+    ).not.toBeInTheDocument();
   });
 
   // TODO 4: Valid input → onSubmit called with the parsed data
-  test('calls onSubmit with { email, password } on valid submit', async () => {
-    // TODO: Implement
+  test("calls onSubmit with { email, password } on valid submit", async () => {
+    const user = userEvent.setup();
+    const submit = vi.fn();
+    render(<LoginForm onSubmit={submit} />);
+
+    await user.type(screen.getByLabelText("Email"), "valid.email@example.com");
+    await user.type(screen.getByLabelText("Password"), "ValidPassword123!");
+    await user.click(screen.getByRole("button", { name: /sign in/i }));
+
+    await waitFor(() => {
+      expect(submit).toHaveBeenCalledOnce();
+      expect(submit).toHaveBeenCalledWith({
+        email: "valid.email@example.com",
+        password: "ValidPassword123!",
+      });
+      expect(screen.queryByText(/valid email/i)).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/at least \d+ characters/i),
+      ).not.toBeInTheDocument();
+    });
   });
 
   // TODO 5: Rejected onSubmit → message in role="alert"
-  test('renders server error message when onSubmit rejects', async () => {
-    // TODO: Implement
+  test("renders server error message when onSubmit rejects", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn().mockRejectedValue(new Error("Login failed"));
+    render(<LoginForm onSubmit={onSubmit} />);
+
+    await user.type(screen.getByLabelText("Email"), "valid.email@example.com");
+    await user.type(screen.getByLabelText("Password"), "ValidPassword123!");
+    await user.click(screen.getByRole("button", { name: /sign in/i }));
+
+    const alerts = await screen.findAllByRole("alert");
+    expect(alerts[0]).toHaveTextContent(/login failed/i);
   });
 
   // TODO 6: Successful resubmit after error → error disappears
-  test('clears server error on a fresh successful submit', async () => {
-    // TODO: Implement
+  test("clears server error on a fresh successful submit", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("Login failed"))
+      .mockResolvedValueOnce(undefined);
+
+    render(<LoginForm onSubmit={onSubmit} />);
+
+    await user.type(screen.getByLabelText("Email"), "alice@test.com");
+    await user.type(screen.getByLabelText("Password"), "SecretPass1");
+    await user.click(screen.getByRole("button", { name: /sign in/i }));
+
+    expect(await screen.findByText(/login failed/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /sign in/i }));
+
+    await waitFor(() => {
+      expect(screen.queryByText(/login failed/i)).not.toBeInTheDocument();
+    });
   });
 });

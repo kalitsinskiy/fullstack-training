@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { AuthContext, type AuthContextType, type User } from "./auth-context";
 import { api } from "../services/api";
-import { queryClient } from "../main";
+import { queryClient } from "../query-client";
 
 const TOKEN_STORAGE_KEY = "token";
 

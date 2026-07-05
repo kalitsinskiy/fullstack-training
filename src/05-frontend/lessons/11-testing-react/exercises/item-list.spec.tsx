@@ -31,21 +31,18 @@
 // - Use `screen.queryByText(...)` for absence assertions.
 // - To track which DELETE id was hit: capture it inside the handler.
 
-/* eslint-disable */
-// @ts-nocheck — exercise stub. Remove this directive after implementing.
-
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { describe, test, expect, beforeAll, afterEach, afterAll } from 'vitest';
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { describe, test, expect, beforeAll, afterEach, afterAll } from "vitest";
 import {
   QueryClient,
   QueryClientProvider,
   useQuery,
   useMutation,
   useQueryClient,
-} from '@tanstack/react-query';
-import { setupServer } from 'msw/node';
-import { http, HttpResponse } from 'msw';
+} from "@tanstack/react-query";
+import { setupServer } from "msw/node";
+import { http, HttpResponse } from "msw";
 
 // ---- Types ----
 
@@ -55,7 +52,7 @@ interface Item {
   description: string;
 }
 
-const BASE_URL = 'http://localhost:3001';
+const BASE_URL = "http://localhost:3001";
 
 // ---- Component Under Test (do NOT modify) ----
 
@@ -66,7 +63,7 @@ async function getItems({ signal }: { signal: AbortSignal }): Promise<Item[]> {
 }
 
 async function deleteItem(id: string): Promise<void> {
-  const res = await fetch(`${BASE_URL}/api/items/${id}`, { method: 'DELETE' });
+  const res = await fetch(`${BASE_URL}/api/items/${id}`, { method: "DELETE" });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
 }
 
@@ -74,13 +71,13 @@ function ItemList() {
   const queryClient = useQueryClient();
 
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ['items'],
+    queryKey: ["items"],
     queryFn: ({ signal }) => getItems({ signal }),
   });
 
   const remove = useMutation({
     mutationFn: deleteItem,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['items'] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["items"] }),
   });
 
   if (isLoading) return <p>Loading…</p>;
@@ -105,7 +102,9 @@ function ItemList() {
             onClick={() => remove.mutate(it.id)}
             disabled={remove.isPending && remove.variables === it.id}
           >
-            {remove.isPending && remove.variables === it.id ? 'Deleting…' : 'Delete'}
+            {remove.isPending && remove.variables === it.id
+              ? "Deleting…"
+              : "Delete"}
           </button>
         </li>
       ))}
@@ -119,51 +118,66 @@ function renderWithQuery(ui: React.ReactElement) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+  return render(
+    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
+  );
 }
 
 const sampleItems: Item[] = [
-  { id: '1', name: 'Warm socks', description: 'Wool, size M' },
-  { id: '2', name: 'Coffee mug', description: 'Ceramic, 350ml' },
-  { id: '3', name: 'Book', description: 'Clean Code' },
+  { id: "1", name: "Warm socks", description: "Wool, size M" },
+  { id: "2", name: "Coffee mug", description: "Ceramic, 350ml" },
+  { id: "3", name: "Book", description: "Clean Code" },
 ];
 
 // ---- MSW — default handlers ----
 
 const server = setupServer(
   http.get(`${BASE_URL}/api/items`, () => HttpResponse.json(sampleItems)),
-  http.delete(`${BASE_URL}/api/items/:id`, () => new HttpResponse(null, { status: 204 })),
+  http.delete(
+    `${BASE_URL}/api/items/:id`,
+    () => new HttpResponse(null, { status: 204 }),
+  ),
 );
 
-beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
 // ---- Tests — implement each TODO ----
 
-describe('ItemList', () => {
+describe("ItemList", () => {
   // TODO 1: Loading state
   // - Override the GET handler to return a never-resolving promise
   //   (Hint: `await new Promise(() => {})` inside the handler delays forever)
   // - Render and assert "Loading…" is visible
-  test('shows loading state on mount', () => {
-    // TODO: Implement
+  test("shows loading state on mount", () => {
+    renderWithQuery(<ItemList />);
+    expect(screen.getByText(/loading/i)).toBeInTheDocument();
   });
 
   // TODO 2: Renders items from default handler
   // - Render — default handler returns sampleItems
   // - Wait for at least one item name to appear
   // - Assert all 3 names are present, "Loading…" is gone
-  test('renders items after successful fetch', async () => {
-    // TODO: Implement
+  test("renders items after successful fetch", async () => {
+    renderWithQuery(<ItemList />);
+
+    expect(await screen.findByText(/warm socks/i)).toBeInTheDocument();
+    expect(screen.getByText(/coffee mug/i)).toBeInTheDocument();
+    expect(screen.getByText(/book/i)).toBeInTheDocument();
+    expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
   });
 
   // TODO 3: Empty state
   // - server.use a GET that returns []
   // - Render
   // - Wait for "No items yet." to appear
-  test('shows empty state when no items', async () => {
-    // TODO: Implement
+  test("shows empty state when no items", async () => {
+    server.use(http.get(`${BASE_URL}/api/items`, () => HttpResponse.json([])));
+
+    renderWithQuery(<ItemList />);
+
+    expect(await screen.findByText(/no items yet/i)).toBeInTheDocument();
   });
 
   // TODO 4: Error state
@@ -171,16 +185,55 @@ describe('ItemList', () => {
   // - Render
   // - Wait for the alert; assert message contains "HTTP 500"
   // - Assert "Retry" button is present
-  test('shows error message on fetch failure', async () => {
-    // TODO: Implement
+  test("shows error message on fetch failure", async () => {
+    server.use(
+      http.get(`${BASE_URL}/api/items`, () =>
+        HttpResponse.json({ message: "Error by design" }, { status: 500 }),
+      ),
+    );
+
+    renderWithQuery(<ItemList />);
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(/http 500/i);
+    expect(
+      screen.queryByRole("button", { name: /retry/i }),
+    ).toBeInTheDocument();
   });
 
   // TODO 5: Retry recovers from error
   // - First GET → 500, second → sampleItems (track call count or use `.use(...)` chain)
   // - Render, wait for alert, click Retry
   // - Wait for items to appear, assert alert is gone
-  test('retry button refetches items after error', async () => {
-    // TODO: Implement
+  test("retry button refetches items after error", async () => {
+    const user = userEvent.setup();
+
+    // Fail once, then succeed
+    let callCount = 0;
+    server.use(
+      http.get(`${BASE_URL}/api/items`, () => {
+        callCount++;
+        if (callCount === 1) {
+          return HttpResponse.json(
+            { message: "Error by design" },
+            { status: 500 },
+          );
+        }
+        return HttpResponse.json([
+          { id: "1", name: "Recovered", description: "After an error" },
+        ]);
+      }),
+    );
+
+    renderWithQuery(<ItemList />);
+
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /retry/i }));
+
+    expect(await screen.findByText(/recovered/i)).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(callCount).toBe(2);
   });
 
   // TODO 6: Delete
@@ -191,7 +244,21 @@ describe('ItemList', () => {
   // - Assert the row with "Warm socks" is gone (after invalidation refetch returns
   //   the remaining 2 items — override GET on retest, OR keep it simple by asserting
   //   the DELETE was sent with the right id)
-  test('clicking Delete sends DELETE with the correct id', async () => {
-    // TODO: Implement
+  test("clicking Delete sends DELETE with the correct id", async () => {
+    const user = userEvent.setup();
+    let actualId = -1;
+    server.use(
+      http.delete(`${BASE_URL}/api/items/:id`, (req) => {
+        actualId = Number(req.params["id"]);
+      }),
+    );
+    renderWithQuery(<ItemList />);
+
+    const item = await screen.findByText(/warm socks/i);
+    expect(item).toBeInTheDocument();
+
+    await user.click(screen.getAllByRole("button", { name: "Delete" })[0]);
+
+    expect(actualId).toBe(1);
   });
 });
