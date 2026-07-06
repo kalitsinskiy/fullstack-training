@@ -16,11 +16,11 @@ services:
     image: mongo:8
     container_name: santa-mongodb
     ports:
-      - "27017:27017"
+      - '27017:27017'
     volumes:
       - mongodb_data:/data/db
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      test: ['CMD', 'mongosh', '--eval', "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -29,11 +29,11 @@ services:
     image: redis:8-alpine
     container_name: santa-redis
     ports:
-      - "6379:6379"
+      - '6379:6379'
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -44,15 +44,15 @@ services:
     image: rabbitmq:4-management-alpine
     container_name: santa-rabbitmq
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - '5672:5672'
+      - '15672:15672'
     environment:
       RABBITMQ_DEFAULT_USER: santa
       RABBITMQ_DEFAULT_PASS: santa123
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -68,10 +68,16 @@ services:
     container_name: santa-api
     restart: unless-stopped
     ports:
-      - "3001:3001"
+      - '3001:3001'
     # Liveness probe — node has global fetch, so no curl/wget needed in the image.
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://localhost:3001/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://localhost:3001/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -101,9 +107,15 @@ services:
     container_name: santa-notifications
     restart: unless-stopped
     ports:
-      - "3002:3002"
+      - '3002:3002'
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://localhost:3002/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://localhost:3002/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -125,6 +137,19 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+
+  santa-app:
+    build:
+      context: ./santa-app
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://localhost:3001
+    container_name: santa-app
+    restart: unless-stopped
+    ports:
+      - '5173:80'
+    depends_on:
+      - santa-api
 
 volumes:
   mongodb_data:
