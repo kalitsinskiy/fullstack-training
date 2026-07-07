@@ -1,0 +1,9 @@
+node_modules
+dist
+docs
+test
+examples
+exercises
+.env
+.env.*
+*.log
