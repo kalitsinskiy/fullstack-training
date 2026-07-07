@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { ErrorBoundary } from "react-error-boundary";
+import { BrowserRouter } from "react-router";
 import { AuthProvider } from "./contexts/AuthContext.tsx";
 import { ErrorFallback } from "./components/ErrorFallback.tsx";
 import "./index.css";
@@ -25,7 +26,9 @@ createRoot(document.getElementById("root")!).render(
     <ErrorBoundary FallbackComponent={ErrorFallback}>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <App />
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
         </AuthProvider>
         <ReactQueryDevtools />
       </QueryClientProvider>

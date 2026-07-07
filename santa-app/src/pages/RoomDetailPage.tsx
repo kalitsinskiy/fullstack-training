@@ -7,7 +7,7 @@ import { GifteeWishlist } from "../components/GifteeWishlist";
 import { ErrorFallback } from "../components/ErrorFallback";
 import { mapRoom } from "../components/RoomList";
 
-export function RoomDetailPage() {
+export default function RoomDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
