@@ -1,7 +1,6 @@
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -9,7 +8,11 @@ import { InjectModel } from '@nestjs/mongoose';
 import { isValidObjectId, Model, Types } from 'mongoose';
 import { UsersService } from '../users/users.service';
 import { WishlistService } from '../wishlist/wishlist.service';
-import { PaginatedResponse, PaginationQuery, paginate } from '../common/pagination';
+import {
+  PaginatedResponse,
+  PaginationQuery,
+  paginate,
+} from '../common/pagination';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
 import { AssignmentView, Room } from './room.types';
@@ -33,15 +36,23 @@ export class RoomsService {
         name: dto.name.trim(),
         creatorId: new Types.ObjectId(creatorId),
         inviteCode,
-        participants: [{ userId: new Types.ObjectId(creatorId), role: 'owner' }],
+        participants: [
+          { userId: new Types.ObjectId(creatorId), role: 'owner' },
+        ],
         status: 'pending',
         budget: dto.budget,
         currency: dto.currency,
       });
 
-      return this.toRoom(doc, creatorId);
-    } catch (err: any) {
-      if (err?.code === 11000) {
+      const displayNames = await this.resolveDisplayNames(doc);
+      return this.toRoom(doc, creatorId, displayNames);
+    } catch (err: unknown) {
+      if (
+        typeof err === 'object' &&
+        err !== null &&
+        'code' in err &&
+        err.code === 11000
+      ) {
         throw new ConflictException('A room with this name already exists');
       }
       throw err;
@@ -54,15 +65,20 @@ export class RoomsService {
   ): Promise<PaginatedResponse<Room>> {
     const filter = { 'participants.userId': new Types.ObjectId(userId) };
     const result = await paginate(this.roomModel, filter, query);
-    return {
-      data: result.data.map((doc) => this.toRoom(doc as unknown as RoomDocument, userId)),
-      meta: result.meta,
-    };
+    const rooms = await Promise.all(
+      result.data.map(async (doc) => {
+        const d = doc as unknown as RoomDocument;
+        const displayNames = await this.resolveDisplayNames(d);
+        return this.toRoom(d, userId, displayNames);
+      }),
+    );
+    return { data: rooms, meta: result.meta };
   }
 
   async findByIdForUser(id: string, userId: string): Promise<Room> {
     const doc = await this.findRoomForParticipant(id, userId);
-    return this.toRoom(doc, userId);
+    const displayNames = await this.resolveDisplayNames(doc);
+    return this.toRoom(doc, userId, displayNames);
   }
 
   async join(id: string, inviteCode: string, userId: string): Promise<Room> {
@@ -80,20 +96,27 @@ export class RoomsService {
     }
 
     if (doc.status === 'drawn') {
-      throw new BadRequestException('Cannot join a room after the draw has been done');
+      throw new BadRequestException(
+        'Cannot join a room after the draw has been done',
+      );
     }
 
     const alreadyIn = doc.participants.some(
       (p) => p.userId.toString() === userId,
     );
     if (alreadyIn) {
-      return this.toRoom(doc, userId);
+      const displayNames = await this.resolveDisplayNames(doc);
+      return this.toRoom(doc, userId, displayNames);
     }
 
-    doc.participants.push({ userId: new Types.ObjectId(userId), role: 'member' });
+    doc.participants.push({
+      userId: new Types.ObjectId(userId),
+      role: 'member',
+    });
     await doc.save();
 
-    return this.toRoom(doc, userId);
+    const displayNames = await this.resolveDisplayNames(doc);
+    return this.toRoom(doc, userId, displayNames);
   }
 
   async joinByCode(inviteCode: string, userId: string): Promise<Room> {
@@ -103,18 +126,27 @@ export class RoomsService {
     }
 
     if (doc.status === 'drawn') {
-      throw new BadRequestException('Cannot join a room after the draw has been done');
+      throw new BadRequestException(
+        'Cannot join a room after the draw has been done',
+      );
     }
 
-    const alreadyIn = doc.participants.some((p) => p.userId.toString() === userId);
+    const alreadyIn = doc.participants.some(
+      (p) => p.userId.toString() === userId,
+    );
     if (alreadyIn) {
-      return this.toRoom(doc, userId);
+      const displayNames = await this.resolveDisplayNames(doc);
+      return this.toRoom(doc, userId, displayNames);
     }
 
-    doc.participants.push({ userId: new Types.ObjectId(userId), role: 'member' });
+    doc.participants.push({
+      userId: new Types.ObjectId(userId),
+      role: 'member',
+    });
     await doc.save();
 
-    return this.toRoom(doc, userId);
+    const displayNames = await this.resolveDisplayNames(doc);
+    return this.toRoom(doc, userId, displayNames);
   }
 
   draw(id: string, requesterId: string, exchangeDate: string): Promise<Room> {
@@ -128,7 +160,9 @@ export class RoomsService {
       throw new BadRequestException('Draw has not been completed yet');
     }
 
-    const assignment = doc.assignments.find((a) => a.giverId.toString() === userId);
+    const assignment = doc.assignments.find(
+      (a) => a.giverId.toString() === userId,
+    );
     if (!assignment) {
       throw new NotFoundException('Assignment not found');
     }
@@ -146,16 +180,22 @@ export class RoomsService {
     };
   }
 
-  async editRoom(id: string, dto: UpdateRoomDto, userId: string): Promise<Room> {
+  async editRoom(
+    id: string,
+    dto: UpdateRoomDto,
+    userId: string,
+  ): Promise<Room> {
     const doc = await this.findRoomForParticipant(id, userId);
 
     if (dto.name !== undefined) doc.name = dto.name.trim();
     if (dto.budget !== undefined) doc.budget = dto.budget;
     if (dto.currency !== undefined) doc.currency = dto.currency;
-    if (dto.exchangeDate !== undefined) doc.exchangeDate = new Date(dto.exchangeDate);
+    if (dto.exchangeDate !== undefined)
+      doc.exchangeDate = new Date(dto.exchangeDate);
 
     await doc.save();
-    return this.toRoom(doc, userId);
+    const displayNames = await this.resolveDisplayNames(doc);
+    return this.toRoom(doc, userId, displayNames);
   }
 
   async deleteRoom(id: string, userId: string): Promise<void> {
@@ -163,10 +203,16 @@ export class RoomsService {
     await doc.deleteOne();
   }
 
-  async kickMember(id: string, targetUserId: string, userId: string): Promise<void> {
+  async kickMember(
+    id: string,
+    targetUserId: string,
+    userId: string,
+  ): Promise<void> {
     const doc = await this.findRoomForParticipant(id, userId);
 
-    const target = doc.participants.find((p) => p.userId.toString() === targetUserId);
+    const target = doc.participants.find(
+      (p) => p.userId.toString() === targetUserId,
+    );
     if (!target) {
       throw new NotFoundException('Member not found');
     }
@@ -174,7 +220,9 @@ export class RoomsService {
       throw new BadRequestException('Cannot remove the owner');
     }
 
-    doc.participants = doc.participants.filter((p) => p.userId.toString() !== targetUserId);
+    doc.participants = doc.participants.filter(
+      (p) => p.userId.toString() !== targetUserId,
+    );
     await doc.save();
   }
 
@@ -182,12 +230,16 @@ export class RoomsService {
     const doc = await this.findRoomForParticipant(id, userId);
     doc.inviteCode = this.generateInviteCode();
     await doc.save();
-    return this.toRoom(doc, userId);
+    const displayNames = await this.resolveDisplayNames(doc);
+    return this.toRoom(doc, userId, displayNames);
   }
 
   // ── helpers ──────────────────────────────────────────────────────────────
 
-  private async findRoomForParticipant(id: string, userId: string): Promise<RoomDocument> {
+  private async findRoomForParticipant(
+    id: string,
+    userId: string,
+  ): Promise<RoomDocument> {
     if (!isValidObjectId(id)) {
       throw new NotFoundException('Room not found');
     }
@@ -201,7 +253,11 @@ export class RoomsService {
     return doc;
   }
 
-  private toRoom(doc: RoomDocument, viewerId: string): Room {
+  private toRoom(
+    doc: RoomDocument,
+    viewerId: string,
+    displayNames: Record<string, string> = {},
+  ): Room {
     const viewerParticipant = doc.participants.find(
       (p) => p.userId.toString() === viewerId,
     );
@@ -211,11 +267,14 @@ export class RoomsService {
       name: doc.name,
       creatorId: doc.creatorId.toString(),
       inviteCode: doc.inviteCode,
-      participants: doc.participants.map((p) => ({
-        id: p.userId.toString(),
-        displayName: p.userId.toString(), // populated in later lessons
-        role: p.role,
-      })),
+      participants: doc.participants.map((p) => {
+        const uid = p.userId.toString();
+        return {
+          id: uid,
+          displayName: displayNames[uid] ?? uid,
+          role: p.role,
+        };
+      }),
       participantCount: doc.participants.length,
       status: doc.status,
       drawDate: doc.drawDate?.toISOString(),
@@ -226,6 +285,17 @@ export class RoomsService {
         ? [...permissionsForRole(viewerParticipant.role)]
         : [],
     };
+  }
+
+  private async resolveDisplayNames(
+    doc: RoomDocument,
+  ): Promise<Record<string, string>> {
+    const users = await Promise.all(
+      doc.participants.map((p) =>
+        this.usersService.findById(p.userId.toString()),
+      ),
+    );
+    return Object.fromEntries(users.map((u) => [u.id, u.displayName]));
   }
 
   private generateInviteCode(): string {
