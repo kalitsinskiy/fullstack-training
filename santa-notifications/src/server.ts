@@ -6,9 +6,9 @@ const app = buildApp();
 
 async function start() {
   try {
-    await connectDb();
-    app.log.info('Connected to MongoDB');
     await app.ready();
+    await connectDb(app.config.mongoUrl);
+    app.log.info('Connected to MongoDB');
     await app.listen({ port: app.config.port, host: '0.0.0.0' });
     app.log.info({ port: app.config.port }, 'santa-notifications listening');
   } catch (error) {

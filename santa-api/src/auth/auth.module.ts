@@ -1,3 +1,4 @@
+import { ConfigService } from '@nestjs/config';
 import { Module } from '@nestjs/common';
 import { JwtModule, JwtSignOptions } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
@@ -11,21 +12,16 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
   imports: [
     PassportModule,
     JwtModule.registerAsync({
-      useFactory: () => {
-        const secret = process.env.JWT_SECRET;
-
-        if (!secret) {
-          throw new Error('JWT_SECRET environment variable is required');
-        }
-
-        return {
-          secret,
-          signOptions: {
-            expiresIn: (process.env.JWT_EXPIRATION ??
-              '1h') as JwtSignOptions['expiresIn'],
-          },
-        };
-      },
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        secret: config.getOrThrow<string>('JWT_SECRET'),
+        signOptions: {
+          expiresIn: config.get<string>(
+            'JWT_EXPIRATION',
+            '7d',
+          ) as JwtSignOptions['expiresIn'],
+        },
+      }),
     }),
     UsersModule,
   ],

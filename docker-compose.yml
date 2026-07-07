@@ -89,9 +89,9 @@ services:
       REDIS_URL: redis://redis:6379
       RABBITMQ_URL: amqp://santa:santa123@rabbitmq:5672
       CORS_ORIGIN: http://localhost:5173
-      JWT_SECRET: dev-secret-change-in-production
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in the repo-root .env}
       JWT_EXPIRATION: 7d
-      SERVICE_API_KEY: dev-service-key-change-in-production
+      SERVICE_API_KEY: ${SERVICE_API_KEY:?set SERVICE_API_KEY in the repo-root .env}
     depends_on:
       mongodb:
         condition: service_healthy
@@ -139,6 +139,7 @@ services:
         condition: service_healthy
 
   santa-app:
+    profiles: ['frontend']
     build:
       context: ./santa-app
       dockerfile: Dockerfile
