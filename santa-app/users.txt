@@ -1,0 +1,15 @@
+Users: 6
+Rooms: 3
+Wishlists: 12
+Login password for seeded users: Password123!
+┌─────────┬─────────────────────────────────────┬─────────┐
+│ (index) │ email                               │ role    │
+├─────────┼─────────────────────────────────────┼─────────┤
+│ 0       │ 'alice.santa@example.com'           │ 'admin' │
+│ 1       │ 'bob.santa@example.com'             │ 'user'  │
+│ 2       │ 'carol.santa@example.com'           │ 'user'  │
+│ 3       │ 'dave.santa@example.com'            │ 'user'  │
+│ 4       │ 'eve.santa@example.com'             │ 'user'  │
+│ 5       │ 'frank.santa@example.com'           │ 'user'  │
+│ 6       │ 'Vitalii.Rozbyiholova@udelphi.com'  │ 'user'  │
+└─────────┴─────────────────────────────────────┴─────────┘
