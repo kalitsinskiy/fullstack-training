@@ -1,35 +1,51 @@
-import { Injectable } from '@nestjs/common';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UserResponseDto } from './dto/user-response.dto';
-import { UsersRepository } from './repositories/users.repository';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model, Types } from 'mongoose';
+import { UpdateCurrentUserDto } from './dto/update-current-user.dto';
+import { User } from './user.types';
+import { User as UserModel, UserDocument } from './schemas/user.schema';
+
+type CreateUserInput = {
+  email: string;
+  displayName: string;
+  passwordHash: string;
+  role?: 'user' | 'admin';
+};
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly usersRepository: UsersRepository) {}
+  constructor(
+    @InjectModel(UserModel.name)
+    private readonly userModel: Model<UserModel>,
+  ) {}
 
-  create(user: CreateUserDto): Promise<UserResponseDto> {
-    return this.usersRepository.create(user);
+  async create(input: CreateUserInput): Promise<User> {
+    const doc = await this.userModel.create({
+      email: input.email.toLowerCase(),
+      displayName: input.displayName,
+      passwordHash: input.passwordHash,
+      role: input.role ?? 'user',
+    });
+    return { id: doc.id as string, email: doc.email, displayName: doc.displayName, role: doc.role };
   }
 
-  findById(id: string): Promise<UserResponseDto | null> {
-    return this.usersRepository.findById(id);
+  async findByEmail(email: string, opts: { withPassword?: boolean } = {}): Promise<UserDocument | null> {
+    const query = this.userModel.findOne({ email: email.toLowerCase() });
+    if (opts.withPassword) query.select('+passwordHash');
+    return query.exec();
   }
 
-  findByEmail(
-    email: string,
-    opts: { withPassword?: boolean } = {},
-  ): Promise<UserResponseDto | null> {
-    return this.usersRepository.findByEmail(email, opts);
+  async findById(id: string): Promise<User> {
+    if (!Types.ObjectId.isValid(id)) throw new NotFoundException('User not found');
+    const doc = await this.userModel.findById(id).exec();
+    if (!doc) throw new NotFoundException('User not found');
+    return { id: doc.id as string, email: doc.email, displayName: doc.displayName, role: doc.role };
   }
 
-  updateById(
-    id: string,
-    updates: Partial<Pick<CreateUserDto, 'displayName' | 'email'>>,
-  ): Promise<UserResponseDto | null> {
-    return this.usersRepository.updateById(id, updates);
-  }
-
-  deleteById(id: string): Promise<boolean> {
-    return this.usersRepository.deleteById(id);
+  async updateCurrentUser(id: string, dto: UpdateCurrentUserDto): Promise<User> {
+    if (!Types.ObjectId.isValid(id)) throw new NotFoundException('User not found');
+    const doc = await this.userModel.findByIdAndUpdate(id, { displayName: dto.displayName }, { new: true }).exec();
+    if (!doc) throw new NotFoundException('User not found');
+    return { id: doc.id as string, email: doc.email, displayName: doc.displayName, role: doc.role };
   }
 }

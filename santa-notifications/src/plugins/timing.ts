@@ -1,5 +1,5 @@
-import fp from 'fastify-plugin';
 import { FastifyInstance } from 'fastify';
+import fp from 'fastify-plugin';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -18,10 +18,6 @@ async function timingPlugin(fastify: FastifyInstance) {
     const elapsed = Date.now() - request.startTime;
     reply.header('X-Response-Time', `${elapsed}ms`);
   });
-
-  fastify.log.info('Timing plugin loaded');
 }
 
-const timingPluginWrapped = fp(timingPlugin, { name: 'timing' });
-
-export { timingPluginWrapped as timingPlugin };
+export default fp(timingPlugin, { name: 'timing' });

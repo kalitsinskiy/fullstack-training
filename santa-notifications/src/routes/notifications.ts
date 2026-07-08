@@ -1,87 +1,91 @@
-import { FastifyInstance, FastifyPluginOptions } from 'fastify';
+import { FastifyInstance } from 'fastify';
 import { NotFoundError } from '../errors';
-import { NotificationModel } from '../models/notification';
-import { paginate } from '../pagination';
+import { NotificationDocument, NotificationModel, NotificationType } from '../models/notification';
 
-type NotificationType = 'room_invite' | 'assignment' | 'wishlist_update' | 'system';
-
-type NotificationDTO = {
+interface Notification {
+  id: string;
   userId: string;
-  type: NotificationType;
+  type: string;
   message: string;
   payload?: unknown;
+  read: boolean;
+  createdAt: string;
+}
+
+const notificationTypeValues = ['room_invite', 'assignment', 'wishlist_update', 'system'] as const;
+
+const idParamsSchema = {
+  type: 'object',
+  required: ['id'],
+  properties: {
+    id: { type: 'string', pattern: '^[a-fA-F0-9]{24}$' },
+  },
 };
 
-const OBJECT_ID_PATTERN = '^[a-fA-F0-9]{24}$';
+const objectIdSchema = { type: 'string', pattern: '^[a-fA-F0-9]{24}$' };
 
-async function notificationsRoutes(fastify: FastifyInstance, _opts: FastifyPluginOptions) {
-  fastify.log.info({ prefix: '/api/notifications' }, 'Registering notifications routes');
-
-  const idParamSchema = {
-    schema: {
-      params: {
-        type: 'object',
-        required: ['id'],
-        properties: {
-          id: { type: 'string', pattern: OBJECT_ID_PATTERN },
-        },
-        additionalProperties: false,
-      },
-    },
+function toNotification(notification: NotificationDocument): Notification {
+  return {
+    id: notification._id.toString(),
+    userId: notification.userId.toString(),
+    type: notification.type,
+    message: notification.message,
+    payload: notification.payload,
+    read: notification.read,
+    createdAt: notification.createdAt.toISOString(),
   };
+}
 
-  fastify.get<{
-    Querystring: { userId?: string; page?: number; limit?: number };
-  }>(
+/**
+ * ⚠️ SECURITY (intentional, until Lesson 07): these routes are NOT authenticated
+ * and trust the `userId` from the query/body — a classic IDOR (anyone can read,
+ * mark-read, or delete another user's notifications by id, or list them via
+ * `?userId=`). This is deliberate kickoff scaffolding. Lesson 07 adds a JWT
+ * `fastify.authenticate` preHandler and scopes every query to `request.user`,
+ * which closes the IDOR. DO NOT deploy this service as-is (see Lesson 11).
+ */
+export default async function notificationRoutes(fastify: FastifyInstance) {
+  fastify.get(
     '/',
     {
       schema: {
         querystring: {
           type: 'object',
           properties: {
-            userId: {
-              type: 'string',
-              pattern: OBJECT_ID_PATTERN,
-            },
-            page: { type: 'integer', minimum: 1, default: 1 },
-            limit: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+            userId: objectIdSchema,
           },
-          additionalProperties: false,
         },
       },
     },
     async (request) => {
-      const { userId, page, limit } = request.query;
-      const query: { userId?: string } = {};
+      const { userId } = request.query as { userId?: string };
+      const query = userId ? { userId } : {};
+      const notifications = await NotificationModel.find(query).sort({ createdAt: -1 }).exec();
 
-      if (userId !== undefined) {
-        query.userId = userId;
-      }
-
-      return paginate(NotificationModel, query, { page, limit }, { createdAt: -1 });
+      return notifications.map((notification) => toNotification(notification));
     }
   );
 
-  fastify.log.info({ route: '/api/notifications/', method: 'GET' }, 'Route registered');
+  fastify.get(
+    '/:id',
+    {
+      schema: {
+        params: idParamsSchema,
+      },
+    },
+    async (request) => {
+      const { id } = request.params as { id: string };
+      const notification = await NotificationModel.findById(id).exec();
 
-  fastify.get<{
-    Params: { id: string };
-  }>('/:id', idParamSchema, async (request, _reply) => {
-    const { id } = request.params;
-    const notification = await NotificationModel.findById(id);
+      if (!notification) {
+        throw new NotFoundError('Notification', id);
+      }
 
-    if (!notification) {
-      throw new NotFoundError('Notification', id);
+      return toNotification(notification);
     }
+  );
 
-    return notification;
-  });
-
-  fastify.log.info({ route: '/api/notifications/:id', method: 'GET' }, 'Route registered');
-
-  fastify.post<{
-    Body: NotificationDTO;
-  }>(
+  fastify.post(
     '/',
     {
       schema: {
@@ -89,67 +93,83 @@ async function notificationsRoutes(fastify: FastifyInstance, _opts: FastifyPlugi
           type: 'object',
           required: ['userId', 'type', 'message'],
           properties: {
-            userId: {
-              type: 'string',
-              pattern: OBJECT_ID_PATTERN,
-            },
-            type: {
-              type: 'string',
-              enum: ['room_invite', 'assignment', 'wishlist_update', 'system'],
-            },
-            message: { type: 'string', minLength: 1, maxLength: 500 },
+            userId: objectIdSchema,
+            type: { type: 'string', enum: [...notificationTypeValues] },
             payload: {},
+            message: { type: 'string', minLength: 1, maxLength: 500 },
           },
           additionalProperties: false,
         },
       },
     },
     async (request, reply) => {
-      const data = request.body;
-      const notification = await NotificationModel.create({
-        userId: data.userId,
-        type: data.type,
-        payload: data.payload,
-        message: data.message,
+      const { userId, type, payload, message } = request.body as {
+        userId: string;
+        type: NotificationType;
+        payload?: unknown;
+        message: string;
+      };
+
+      const createdNotification = await NotificationModel.create({
+        userId,
+        type,
+        payload,
+        message,
       });
 
+      request.log.info(
+        { notificationId: createdNotification._id.toString(), userId, type },
+        'Notification created'
+      );
       reply.code(201);
-      return notification;
+      return toNotification(createdNotification);
     }
   );
 
-  fastify.log.info({ route: '/api/notifications/', method: 'POST' }, 'Route registered');
+  fastify.patch(
+    '/:id/read',
+    {
+      schema: {
+        params: idParamsSchema,
+      },
+    },
+    async (request) => {
+      const { id } = request.params as { id: string };
+      const notification = await NotificationModel.findByIdAndUpdate(
+        id,
+        { read: true },
+        { new: true }
+      ).exec();
 
-  fastify.patch<{
-    Params: { id: string };
-  }>('/:id/read', idParamSchema, async (request, _reply) => {
-    const { id } = request.params;
-    const updated = await NotificationModel.findByIdAndUpdate(id, { read: true }, { new: true });
+      if (!notification) {
+        throw new NotFoundError('Notification', id);
+      }
 
-    if (updated) {
-      return updated;
+      request.log.info(
+        { notificationId: notification._id.toString(), read: true },
+        'Notification marked as read'
+      );
+      return toNotification(notification);
     }
+  );
 
-    throw new NotFoundError('Notification', id);
-  });
+  fastify.delete(
+    '/:id',
+    {
+      schema: {
+        params: idParamsSchema,
+      },
+    },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const notification = await NotificationModel.findByIdAndDelete(id).exec();
 
-  fastify.log.info({ route: '/api/notifications/:id/read', method: 'PATCH' }, 'Route registered');
+      if (!notification) {
+        throw new NotFoundError('Notification', id);
+      }
 
-  fastify.delete<{
-    Params: { id: string };
-  }>('/:id', idParamSchema, async (request, reply) => {
-    const { id } = request.params;
-    const deleted = await NotificationModel.findByIdAndDelete(id);
-
-    if (deleted) {
-      reply.code(204);
-      return;
-    } else {
-      throw new NotFoundError('Notification', id);
+      request.log.info({ notificationId: notification._id.toString() }, 'Notification deleted');
+      reply.code(204).send();
     }
-  });
-
-  fastify.log.info({ route: '/api/notifications/:id', method: 'DELETE' }, 'Route registered');
+  );
 }
-
-export { notificationsRoutes };

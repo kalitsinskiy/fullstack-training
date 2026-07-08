@@ -1,170 +1,85 @@
 import {
   Body,
   Controller,
-  Delete,
   Get,
-  NotFoundException,
   Param,
-  Patch,
-  Post,
+  Put,
   UseGuards,
 } from '@nestjs/common';
-import { Types } from 'mongoose';
-import { WishlistService } from './wishlist.service';
-import UpdateWishlistDto from './dto/update-wishlist.dto';
-import { UpdateWishlistItemsDto } from './dto/update-wishlist-items.dto';
-import { RoomsService } from 'src/rooms/rooms.service';
-import { UsersService } from 'src/users/users.service';
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import {
+  ApiBody,
   ApiBearerAuth,
   ApiOperation,
   ApiParam,
+  ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RequirePermissions } from '../rooms/decorators/require-permissions.decorator';
+import { RoomPermissionsGuard } from '../rooms/guards/room-permissions.guard';
+import { UpdateWishlistDto } from './dto/update-wishlist.dto';
+import { WishlistResponseDto } from './dto/wishlist-response.dto';
+import { WishlistService } from './wishlist.service';
+import type { Wishlist } from './wishlist.types';
 
-@ApiTags('wishlist')
+@ApiTags('wishlists')
 @ApiBearerAuth('JWT')
-@UseGuards(JwtAuthGuard)
-@Controller('/rooms/:roomCode/wishlist')
+@Controller('rooms/:roomId/wishlist')
+@UseGuards(JwtAuthGuard, RoomPermissionsGuard)
 export class WishlistController {
-  constructor(
-    private readonly wishlistService: WishlistService,
-    private readonly roomsService: RoomsService,
-    private readonly usersService: UsersService,
-  ) {}
+  constructor(private readonly wishlistService: WishlistService) {}
 
-  @ApiOperation({ summary: 'Set or replace the wishlist for a user in a room' })
-  @ApiParam({
-    name: 'roomCode',
-    required: true,
-    description: 'The code of the room',
+  @Put()
+  @RequirePermissions('wishlist:set')
+  @ApiOperation({
+    summary: "Set the current user's wishlist for a room",
+    description: 'Creates or replaces the authenticated user wishlist items.',
   })
   @ApiParam({
-    name: 'wishlist',
-    description: 'The wishlist data including userId and items',
-    type: UpdateWishlistDto,
+    name: 'roomId',
+    description: 'Room identifier that owns the wishlist',
+    example: '665f0c2ab7d13a5e8b1c4d9f',
   })
-  @Post()
-  async setWishlist(
-    @Param('roomCode') roomCode: string,
-    @Body() wishlist: UpdateWishlistDto,
-  ) {
-    const { userId, items } = wishlist;
-    const room = await this.roomsService.findByCode(roomCode);
-    if (!room) {
-      throw new NotFoundException(`Room with code ${roomCode} not found`);
-    }
-    const user = await this.usersService.findById(userId);
-    if (!user) {
-      throw new NotFoundException(`User with ID ${userId} not found`);
-    }
-    return this.wishlistService.set(
-      new Types.ObjectId(room.id),
-      new Types.ObjectId(user.id),
-      items,
-    );
+  @ApiBody({ type: UpdateWishlistDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Wishlist saved successfully',
+    type: WishlistResponseDto,
+  })
+  @ApiResponse({ status: 400, description: 'Validation failed' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Missing wishlist:set permission' })
+  @ApiResponse({ status: 404, description: 'Room not found' })
+  set(
+    @Param('roomId') roomId: string,
+    @CurrentUser('id') userId: string,
+    @Body() body: UpdateWishlistDto,
+  ): Promise<Wishlist> {
+    return this.wishlistService.set(roomId, userId, body.items);
   }
 
-  @ApiOperation({ summary: 'Update the wishlist items for a user in a room' })
-  @ApiParam({
-    name: 'roomCode',
-    required: true,
-    description: 'The code of the room',
+  @Get(':userId')
+  @RequirePermissions('room:view')
+  @ApiOperation({
+    summary: "Get a user's wishlist for a room",
+    description: 'Returns the wishlist items for the given user in the room.',
   })
-  @ApiParam({
-    name: 'userId',
-    required: true,
-    description: 'The ID of the user',
+  @ApiParam({ name: 'roomId', example: '665f0c2ab7d13a5e8b1c4d9f' })
+  @ApiParam({ name: 'userId', example: '665f0c2ab7d13a5e8b1c4d1a' })
+  @ApiResponse({
+    status: 200,
+    description: 'Wishlist returned successfully',
+    type: WishlistResponseDto,
   })
-  @ApiParam({
-    name: 'updates',
-    description: 'The list of wishlist items to update',
-    type: UpdateWishlistItemsDto,
-  })
-  @Patch('/:userId')
-  async updateWishlist(
-    @Param('roomCode') roomCode: string,
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Missing room:view permission' })
+  @ApiResponse({ status: 404, description: 'Room not found / not a participant' })
+  async findOne(
+    @Param('roomId') roomId: string,
     @Param('userId') userId: string,
-    @Body() updates: UpdateWishlistItemsDto,
-  ) {
-    const room = await this.roomsService.findByCode(roomCode);
-    if (!room) {
-      throw new NotFoundException(`Room with code ${roomCode} not found`);
-    }
-    const user = await this.usersService.findById(userId);
-    if (!user) {
-      throw new NotFoundException(`User with ID ${userId} not found`);
-    }
-    return this.wishlistService.set(
-      new Types.ObjectId(room.id),
-      new Types.ObjectId(user.id),
-      updates.items,
-    );
-  }
-
-  @ApiOperation({ summary: 'Delete the wishlist for a user in a room' })
-  @ApiParam({
-    name: 'roomCode',
-    required: true,
-    description: 'The code of the room',
-  })
-  @ApiParam({
-    name: 'userId',
-    required: true,
-    description: 'The ID of the user',
-  })
-  @Delete('/:userId')
-  async removeWishlist(
-    @Param('roomCode') roomCode: string,
-    @Param('userId') userId: string,
-  ) {
-    const room = await this.roomsService.findByCode(roomCode);
-    if (!room) {
-      throw new NotFoundException(`Room with code ${roomCode} not found`);
-    }
-    const user = await this.usersService.findById(userId);
-    if (!user) {
-      throw new NotFoundException(`User with ID ${userId} not found`);
-    }
-    const deleted = await this.wishlistService.delete(
-      new Types.ObjectId(room.id),
-      new Types.ObjectId(user.id),
-    );
-    if (!deleted) {
-      throw new NotFoundException(
-        `Wishlist for user ${userId} in room ${roomCode} not found`,
-      );
-    }
-    return { success: true };
-  }
-  @ApiOperation({ summary: 'Get the wishlist for a user in a room' })
-  @ApiParam({
-    name: 'roomCode',
-    required: true,
-    description: 'The code of the room',
-  })
-  @ApiParam({
-    name: 'userId',
-    required: true,
-    description: 'The ID of the user',
-  })
-  @Get('/:userId')
-  async getWishlist(
-    @Param('roomCode') roomCode: string,
-    @Param('userId') userId: string,
-  ) {
-    const room = await this.roomsService.findByCode(roomCode);
-    if (!room) {
-      throw new NotFoundException(`Room with code ${roomCode} not found`);
-    }
-    const user = await this.usersService.findById(userId);
-    if (!user) {
-      throw new NotFoundException(`User with ID ${userId} not found`);
-    }
-    return this.wishlistService.get(
-      new Types.ObjectId(room.id),
-      new Types.ObjectId(user.id),
-    );
+  ): Promise<Wishlist> {
+    // Returns an empty wishlist ({ items: [] }) if the user has none yet.
+    return this.wishlistService.get(roomId, userId);
   }
 }

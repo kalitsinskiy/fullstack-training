@@ -1,18 +1,25 @@
-import { Model, QueryFilter } from 'mongoose';
+import { Model } from 'mongoose';
 
 export interface PaginationQuery {
   page?: number;
   limit?: number;
 }
 
+export interface PaginationMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 export interface PaginatedResponse<T> {
   data: T[];
-  meta: { total: number; page: number; limit: number; totalPages: number };
+  meta: PaginationMeta;
 }
 
 export async function paginate<T>(
   model: Model<T>,
-  filter: QueryFilter<T>,
+  filter: Record<string, unknown>,
   query: PaginationQuery,
   sort: Record<string, 1 | -1> = { createdAt: -1 },
 ): Promise<PaginatedResponse<T>> {
@@ -31,7 +38,6 @@ export async function paginate<T>(
       total,
       page,
       limit,
-      // Keep totalPages >= 1 even when total = 0
       totalPages: Math.max(1, Math.ceil(total / limit)),
     },
   };

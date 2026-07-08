@@ -1,7 +1,7 @@
-import { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import fp from 'fastify-plugin';
+import { FastifyInstance } from 'fastify';
 
-interface AppConfig {
+export interface AppConfig {
   port: number;
   env: string;
 }
@@ -12,16 +12,11 @@ declare module 'fastify' {
   }
 }
 
-async function configPlugin(fastify: FastifyInstance, _opts: FastifyPluginOptions) {
-  const config: AppConfig = {
-    port: process.env.PORT ? parseInt(process.env.PORT) : 3002,
-    env: process.env.NODE_ENV ?? 'development',
-  };
+async function configPlugin(fastify: FastifyInstance) {
+  const port = Number(process.env.PORT ?? 3002);
+  const env = process.env.NODE_ENV ?? 'development';
 
-  fastify.decorate('config', config);
-  fastify.log.info({ config }, 'Config plugin loaded');
+  fastify.decorate('config', { port, env });
 }
 
-const configPluginWrapped = fp(configPlugin, { name: 'config-plugin' });
-
-export { AppConfig, configPluginWrapped as configPlugin };
+export default fp(configPlugin, { name: 'config' });

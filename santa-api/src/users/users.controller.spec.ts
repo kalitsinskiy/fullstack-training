@@ -1,15 +1,12 @@
 import { Test } from '@nestjs/testing';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
-import { NotFoundException } from '@nestjs/common';
 
 describe('UsersController', () => {
   let controller: UsersController;
   const mockUsersService = {
-    create: jest.fn(),
     findById: jest.fn(),
-    updateById: jest.fn(),
-    deleteById: jest.fn(),
+    updateCurrentUser: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -19,60 +16,35 @@ describe('UsersController', () => {
       controllers: [UsersController],
       providers: [{ provide: UsersService, useValue: mockUsersService }],
     }).compile();
+
     controller = module.get(UsersController);
   });
 
-  it('should call service.create with the dto', async () => {
-    const dto = { displayName: 'John', email: 'john@example.com' };
-    const fakeUser = { id: '64e000000000000000000001', ...dto };
-    mockUsersService.create.mockResolvedValue(fakeUser);
-
-    await expect(controller.create(dto)).resolves.toEqual(fakeUser);
-    expect(mockUsersService.create).toHaveBeenCalledWith(dto);
+  it('should be defined', () => {
+    expect(controller).toBeDefined();
   });
 
-  it('should call service.findById', async () => {
-    const fakeUser = {
-      id: '64e000000000000000000001',
-      displayName: 'John',
-      email: 'john@example.com',
-    };
-    mockUsersService.findById.mockResolvedValue(fakeUser);
+  describe('findCurrent', () => {
+    it('delegates to usersService.findById with the JWT user id', async () => {
+      const fakeUser = { id: 'user-id', email: 'a@b.com', displayName: 'Alice', role: 'user' };
+      mockUsersService.findById.mockResolvedValue(fakeUser);
 
-    await expect(controller.findById('1')).resolves.toEqual(fakeUser);
-    expect(mockUsersService.findById).toHaveBeenCalledWith('1');
+      const result = await controller.findCurrent('user-id');
+
+      expect(mockUsersService.findById).toHaveBeenCalledWith('user-id');
+      expect(result).toEqual(fakeUser);
+    });
   });
 
-  it('should throw NotFoundException when user not found', async () => {
-    mockUsersService.findById.mockResolvedValue(null);
+  describe('updateCurrent', () => {
+    it('delegates to usersService.updateCurrentUser', async () => {
+      const updated = { id: 'user-id', email: 'a@b.com', displayName: 'New Name', role: 'user' };
+      mockUsersService.updateCurrentUser.mockResolvedValue(updated);
 
-    await expect(controller.findById('non-existing-id')).rejects.toThrow(
-      NotFoundException,
-    );
-    expect(mockUsersService.findById).toHaveBeenCalledWith('non-existing-id');
-  });
+      const result = await controller.updateCurrent('user-id', { displayName: 'New Name' });
 
-  it('should call service.updateById when updating current user', async () => {
-    const id = '64e000000000000000000001';
-    const updates = { displayName: 'Jane Updated' };
-    const updatedUser = {
-      id: id,
-      email: 'jane@example.com',
-      displayName: 'Jane Updated',
-    };
-    mockUsersService.updateById.mockResolvedValue(updatedUser);
-
-    await expect(controller.updateMe(id, updates)).resolves.toEqual(
-      updatedUser,
-    );
-    expect(mockUsersService.updateById).toHaveBeenCalledWith(id, updates);
-  });
-
-  it('should call service.deleteById when deleting current user', async () => {
-    const id = '64e000000000000000000001';
-    mockUsersService.deleteById.mockResolvedValue(true);
-
-    await expect(controller.deleteMe(id)).resolves.toEqual({ success: true });
-    expect(mockUsersService.deleteById).toHaveBeenCalledWith(id);
+      expect(mockUsersService.updateCurrentUser).toHaveBeenCalledWith('user-id', { displayName: 'New Name' });
+      expect(result).toEqual(updated);
+    });
   });
 });
