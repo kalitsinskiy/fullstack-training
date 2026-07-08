@@ -409,6 +409,17 @@ export async function createSocketServer(httpServer: HttpServer) {
 
 ### Step 6: Create useSocket Hook in santa-app
 
+> ⚠️ **Two template specifics the snippets below get wrong:**
+> 1. **Token key.** This app stores the JWT via `tokenStore` (`src/lib/api.ts`)
+>    under `santa.accessToken`, **not** `localStorage.getItem('token')`. Use
+>    `tokenStore.get()` or the connection silently authenticates with `null`.
+> 2. **Same-origin by default.** Leave `VITE_WS_URL` **empty** and connect to the
+>    same origin (`io(import.meta.env.VITE_WS_URL || undefined, …)`) so Vite's
+>    `/socket.io` proxy forwards to `:3002` — matching the rest of the app. A
+>    hardcoded `http://localhost:3002` bypasses the proxy.
+> 3. **One shared socket.** Provide it via a context/provider (see the Gotchas),
+>    don't call `useSocket()` in multiple components — that opens duplicate sockets.
+
 Install the client library:
 
 ```bash
@@ -601,9 +612,9 @@ Test WebSocket connection:
 
 ```bash
 # Start all services
-docker-compose up -d
+docker compose up -d mongodb redis rabbitmq   # infra
 cd santa-api && npm run start:dev
-cd santa-notifications && npm run start:dev
+cd santa-notifications && npm run dev
 cd santa-app && npm run dev
 ```
 
