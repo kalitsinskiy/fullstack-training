@@ -40,6 +40,11 @@ export interface RoomSummary {
   participantCount: number;
 }
 
+export interface Paginated<T> {
+  data: T[];
+  meta: { total: number; page: number; limit: number; totalPages: number };
+}
+
 export type RoomMember = Pick<User, 'id' | 'displayName'> & { role: RoomRole };
 
 export interface RoomDetail {
@@ -51,11 +56,16 @@ export interface RoomDetail {
   participants: RoomMember[];
   participantCount: number;
   drawDate?: string;
-  /**
-   * The caller's effective permissions for this room — the single source for UI
-   * gating. Optional: the API populates it from Lesson 04 (authorization) onward.
-   */
+  budget?: number;
+  currency?: string;
+  exchangeDate?: string;
   viewerPermissions?: Permission[];
+}
+
+export interface CreateRoomInput {
+  name: string;
+  budget?: number;
+  currency?: string;
 }
 
 export interface Wishlist {

@@ -1,13 +1,20 @@
-import { useState, type FormEvent } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { LoginSchema, type LoginInput } from '@/schemas/auth';
 import { api, getApiErrorMessage } from '@/lib/api';
 import { useAuth } from '@/features/auth/useAuth';
+import { AuthResponse } from '@/types/api';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import type { AuthResponse } from '@/types/api';
+import { FormField } from '@/components/ui/form-field';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 
 /**
  * WORKED EXAMPLE — the one fully-built screen in the baseline.
@@ -20,25 +27,29 @@ import type { AuthResponse } from '@/types/api';
  * TODO(lesson fe-08): refactor to react-hook-form + zod with field-level errors.
  */
 export function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [submitting, setSubmitting] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const from = (location.state as { from?: { pathname: string } } | null)?.from?.pathname ?? '/rooms';
+  const from =
+    (location.state as { from?: { pathname: string } } | null)?.from
+      ?.pathname ?? '/rooms';
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setSubmitting(true);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginInput>({
+    resolver: zodResolver(LoginSchema),
+    mode: 'onBlur',
+  });
+
+  async function onSubmit(values: LoginInput) {
     try {
-      const { data } = await api.post<AuthResponse>('/api/auth/login', { email, password });
+      const { data } = await api.post<AuthResponse>('/api/auth/login', values);
       await login(data.accessToken);
       navigate(from, { replace: true });
-    } catch (error) {
-      toast.error(getApiErrorMessage(error, 'Invalid email or password'));
-    } finally {
-      setSubmitting(false);
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'Invalid email or password'));
     }
   }
 
@@ -50,39 +61,40 @@ export function LoginPage() {
             <img src="/decor/santa-hat.svg" alt="" className="size-10" />
           </span>
           <CardTitle>Welcome back</CardTitle>
-          <CardDescription>Sign in to your Secret Santa account</CardDescription>
+          <CardDescription>
+            Sign in to your Secret Santa account
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-            <Button type="submit" className="w-full" disabled={submitting}>
-              {submitting ? 'Signing in…' : 'Sign in'}
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            className="space-y-4"
+            noValidate
+          >
+            <FormField
+              label="Email"
+              type="email"
+              autoComplete="email"
+              {...register('email')}
+              error={errors.email?.message}
+            />
+            <FormField
+              label="Password"
+              type="password"
+              autoComplete="current-password"
+              {...register('password')}
+              error={errors.password?.message}
+            />
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? 'Signing in…' : 'Sign in'}
             </Button>
           </form>
           <p className="mt-4 text-center text-sm text-muted-foreground">
             No account?{' '}
-            <Link to="/register" className="font-medium text-primary hover:underline">
+            <Link
+              to="/register"
+              className="font-medium text-primary hover:underline"
+            >
               Create one
             </Link>
           </p>

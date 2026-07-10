@@ -1,4 +1,11 @@
-import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 import { api, tokenStore } from '@/lib/api';
 import type { User } from '@/types/api';
 
@@ -8,6 +15,7 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   login: (token: string) => Promise<void>;
   logout: () => void;
+  updateUser: (user: User) => void;
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
@@ -52,6 +60,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
+  const updateUser = useCallback((next: User) => setUser(next), []);
+
   const value = useMemo(
     () => ({
       user,
@@ -59,8 +69,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated: !!user,
       login,
       logout,
+      updateUser,
     }),
-    [user, isLoading, login, logout],
+    [user, isLoading, login, logout, updateUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

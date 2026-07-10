@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import { Gift, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/features/auth/useAuth';
 import { navItems } from './navItems';
@@ -37,9 +38,19 @@ export function Sidebar() {
       </nav>
 
       <div className="mt-auto border-t border-border pt-4">
-        <p className="truncate px-3 text-sm font-medium">{user?.displayName}</p>
-        <p className="truncate px-3 text-xs text-muted-foreground">{user?.email}</p>
-        <Button variant="ghost" size="sm" className="mt-2 w-full justify-start" onClick={logout}>
+        <div className="flex items-center justify-between px-3">
+          <p className="truncate text-sm font-medium">{user?.displayName}</p>
+          <ThemeToggle />
+        </div>
+        <p className="truncate px-3 text-xs text-muted-foreground">
+          {user?.email}
+        </p>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="mt-2 w-full justify-start"
+          onClick={logout}
+        >
           <LogOut className="size-4" /> Log out
         </Button>
       </div>
