@@ -22,6 +22,7 @@ import { UpdateRoomDto } from './dto/update-room.dto';
 import { AssignmentView, Room } from './room.types';
 import { Room as RoomModel, RoomDocument } from './schemas/room.schema';
 import { permissionsForRole } from './permissions';
+import { derange } from './derangement';
 
 @Injectable()
 export class RoomsService {
@@ -159,16 +160,97 @@ export class RoomsService {
   // Produce a derangement (Sattolo / Fisher–Yates with rejection — no self-assignment)
   // and persist ALL assignments in a single document write (atomic, no transaction).
   // Save `exchangeDate` (required) so every participant sees the gift-exchange day.
-  draw(id: string, requesterId: string, exchangeDate: string): Promise<Room> {
-    throw new NotImplementedException('RoomsService.draw is not implemented');
+  async draw(
+    id: string,
+    requesterId: string,
+    exchangeDate: string,
+  ): Promise<Room> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new NotFoundException('Room not found');
+    }
+
+    const room = await this.roomModel.findById(id).exec();
+
+    if (!room) {
+      throw new NotFoundException('Room not found');
+    }
+
+    // Guard is a passthrough until L04, so enforce creator-only here.
+    if (room.creatorId.toString() !== requesterId) {
+      throw new ForbiddenException('Only the room creator can run the draw');
+    }
+
+    if (room.status === 'drawn') {
+      throw new BadRequestException('The draw has already been performed');
+    }
+
+    if (room.participants.length < 3) {
+      throw new BadRequestException(
+        'At least 3 participants are required to run the draw',
+      );
+    }
+
+    const giverIds = room.participants.map((p) => p.userId.toString());
+    const receiversIds = derange(giverIds);
+    const assignments = giverIds.map((giverId, index) => ({
+      giverId: new Types.ObjectId(giverId),
+      receiverId: new Types.ObjectId(receiversIds[index]),
+    }));
+
+    const updated = await this.roomModel
+      .findByIdAndUpdate(
+        id,
+        {
+          status: 'drawn',
+          drawDate: new Date(),
+          exchangeDate: new Date(exchangeDate),
+          assignments,
+        },
+        { new: true },
+      )
+      .exec();
+
+    return this.toRoomResponse(updated as RoomDocument, requesterId);
   }
 
   // TODO (Lesson 03): return the giftee assigned to this user, plus their wishlist.
   // Only a participant of a drawn room may read it.
-  getAssignment(id: string, userId: string): Promise<AssignmentView> {
-    throw new NotImplementedException(
-      'RoomsService.getAssignment is not implemented',
+  async getAssignment(id: string, userId: string): Promise<AssignmentView> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new NotFoundException('Room not found');
+    }
+
+    const room = await this.roomModel
+      .findOne({ _id: id, 'participants.userId': userId })
+      .exec();
+
+    if (!room) {
+      throw new NotFoundException('Room not found');
+    }
+
+    if (room.status !== 'drawn') {
+      throw new BadRequestException('The draw has not been performed yet');
+    }
+
+    const assignment = room.assignments.find(
+      (a) => a.giverId.toString() === userId,
     );
+
+    if (!assignment) {
+      throw new NotFoundException('Assignment not found');
+    }
+
+    const receiverId = assignment.receiverId.toString();
+    const receiver = await this.usersService.findById(receiverId);
+    const wishlist = await this.wishlistService.get(id, receiverId);
+
+    return {
+      receiver: {
+        id: receiverId,
+        displayName: receiver.displayName,
+        wishlist: wishlist.items,
+      },
+    };
   }
 
   // TODO (Lesson 04): update the room's fields (e.g. name). Owner-only access is

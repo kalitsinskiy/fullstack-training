@@ -37,4 +37,83 @@ describe('RoomDetailPage', () => {
 
     expect(await screen.findByText(/room not found/i)).toBeInTheDocument();
   });
+
+  it('hides "Draw names" for a non-creator', async () => {
+    server.use(
+      http.get('/api/rooms/:id', () =>
+        HttpResponse.json({
+          id: 'r1',
+          name: 'Office Party',
+          inviteCode: 'ABC123',
+          creatorId: 'someone-else',
+          status: 'pending',
+          participantCount: 3,
+          participants: [{ id: 'u1', displayName: 'Alice', role: 'member' }],
+        }),
+      ),
+    );
+
+    setup();
+
+    await screen.findByText('Office Party');
+
+    expect(
+      screen.queryByRole('button', { name: /draw names/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('disables "Draw names" with fewer than 3 participants', async () => {
+    server.use(
+      http.get('/api/rooms/:id', () =>
+        HttpResponse.json({
+          id: 'r1',
+          name: 'Office Party',
+          inviteCode: 'ABC123',
+          creatorId: 'u1',
+          status: 'pending',
+          participantCount: 2,
+          participants: [{ id: 'u1', displayName: 'Alice', role: 'owner' }],
+        }),
+      ),
+    );
+
+    setup();
+
+    expect(
+      await screen.findByRole('button', { name: /draw names/i }),
+    ).toBeDisabled();
+  });
+
+  it('reveals the exchange date and your giftee once drawn', async () => {
+    server.use(
+      http.get('/api/rooms/:id', () =>
+        HttpResponse.json({
+          id: 'r1',
+          name: 'Office Party',
+          inviteCode: 'ABC123',
+          creatorId: 'u1',
+          status: 'drawn',
+          exchangeDate: '2026-12-24',
+          participantCount: 3,
+          participants: [{ id: 'u1', displayName: 'Alice', role: 'owner' }],
+        }),
+      ),
+      http.get('/api/rooms/:id/assignment', () =>
+        HttpResponse.json({
+          receiver: { id: 'u2', displayName: 'Bob', wishlist: ['Wool socks'] },
+        }),
+      ),
+    );
+
+    setup();
+
+    expect(await screen.findByText(/you're gifting:/i)).toHaveTextContent(
+      'Bob',
+    );
+    expect(screen.getByText('Wool socks')).toBeInTheDocument();
+    expect(screen.getByText(/gift exchange on/i)).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /draw names/i }),
+    ).not.toBeInTheDocument(); // hidden when drawn
+  });
 });

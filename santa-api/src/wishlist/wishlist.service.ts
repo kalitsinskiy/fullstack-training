@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Wishlist } from './wishlist.types';
 import {
   Wishlist as WishlistModel,
@@ -22,7 +22,10 @@ export class WishlistService {
   ): Promise<Wishlist> {
     const doc = await this.wishlistModel
       .findOneAndUpdate(
-        { roomId, userId },
+        {
+          roomId: new Types.ObjectId(roomId),
+          userId: new Types.ObjectId(userId),
+        },
         { $set: { items } },
         { upsert: true, new: true, setDefaultsOnInsert: true },
       )
@@ -34,7 +37,12 @@ export class WishlistService {
   // TODO (Lesson: Wishlist) — return the wishlist for {roomId, userId}. If the user
   // has none yet, return an EMPTY one ({ roomId, userId, items: [] }) — not a 404.
   async get(roomId: string, userId: string): Promise<Wishlist> {
-    const doc = await this.wishlistModel.findOne({ roomId, userId }).exec();
+    const doc = await this.wishlistModel
+      .findOne({
+        roomId: new Types.ObjectId(roomId),
+        userId: new Types.ObjectId(userId),
+      })
+      .exec();
 
     if (!doc) {
       return { roomId, userId, items: [] };

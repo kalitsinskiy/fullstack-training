@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import {
+import type {
   Wishlist,
-  type CreateRoomInput,
-  type Paginated,
-  type RoomDetail,
-  type RoomSummary,
+  Assignment,
+  CreateRoomInput,
+  Paginated,
+  RoomDetail,
+  RoomSummary,
 } from '@/types/api';
 import { cleanWishlistItems } from './helpers';
 
@@ -78,5 +79,33 @@ export function useSaveWishlist(roomId: string, userId: string) {
       ).data,
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: wishlistKey(roomId, userId) }),
+  });
+}
+
+export function useDraw(roomId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (exchangeDate: string) =>
+      (
+        await api.post<RoomDetail>(`/api/rooms/${roomId}/draw`, {
+          exchangeDate,
+        })
+      ).data,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: roomKey(roomId) });
+      queryClient.invalidateQueries({
+        queryKey: [...roomKey(roomId), 'assignment'],
+      });
+    },
+  });
+}
+
+export function useAssignment(roomId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: [...roomKey(roomId), 'assignment'],
+    queryFn: async () =>
+      (await api.get<Assignment>(`/api/rooms/${roomId}/assignment`)).data,
+    enabled,
   });
 }

@@ -17,7 +17,8 @@
     "test": "jest --config ./test/jest-e2e.json --runInBand",
     "test:watch": "jest --config ./test/jest-e2e.json --runInBand --watch",
     "test:e2e": "jest --config ./test/jest-e2e.json --runInBand",
-    "test:e2e:cov": "jest --config ./test/jest-e2e.json --runInBand --coverage"
+    "test:e2e:cov": "jest --config ./test/jest-e2e.json --runInBand --coverage",
+    "test:unit": "jest --config ./test/jest-unit.json"
   },
   "dependencies": {
     "@fastify/cors": "^11.2.0",

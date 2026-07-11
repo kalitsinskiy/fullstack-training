@@ -10,6 +10,7 @@ import { JwtService } from '@nestjs/jwt';
 import { User } from '../src/users/schemas/user.schema';
 import { userFixture, roomFixture } from './factories';
 import { Room } from '../src/rooms/schemas/room.schema';
+import { Wishlist } from '../src/wishlist/schemas/wishlist.schema';
 import { tokenFor } from './auth-token.helper';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/configure-app';
@@ -83,6 +84,25 @@ describe('Rooms (HTTP)', () => {
     const user = await userModel.create(userFixture(overrides));
 
     return { user, token: tokenFor(jwt, user) };
+  }
+
+  async function seedDrawableRoom() {
+    const owner = await seedUser({ displayName: 'Alice' });
+    const m1 = await seedUser({ displayName: 'Bob' });
+    const m2 = await seedUser({ displayName: 'Alex' });
+    const roomModel = app.get<Model<Room>>(getModelToken(Room.name));
+    const room = await roomModel.create(
+      roomFixture({
+        creatorId: owner.user.id,
+        participants: [
+          { userId: owner.user._id, role: 'owner' },
+          { userId: m1.user._id, role: 'member' },
+          { userId: m2.user._id, role: 'member' },
+        ],
+      }),
+    );
+
+    return { owner, m1, m2, room, roomModel };
   }
 
   // ✅ WORKED EXAMPLE — green against the skeleton: the JWT guard rejects the
@@ -251,13 +271,117 @@ describe('Rooms (HTTP)', () => {
       .expect(200)
       .expect((res) => expect(res.body.participantCount).toBe(1));
   });
-  it.todo(
-    'POST /api/rooms/:id/draw → creator-only; assigns everyone a giftee (nobody themselves)',
-  );
-  it.todo('POST /api/rooms/:id/draw → 403 for a non-creator');
-  it.todo(
-    'GET /api/rooms/:id/assignment → returns the giftee + wishlist after the draw',
-  );
+
+  it('POST /api/rooms/:id/draw → creator-only; assigns everyone a giftee (nobody themselves)', async () => {
+    const { owner, room, roomModel } = await seedDrawableRoom();
+
+    const res = await request(app.getHttpServer())
+      .post(`/api/rooms/${room._id.toString()}/draw`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ exchangeDate: '2026-12-24' })
+      .expect(200);
+
+    expect(res.body.status).toBe('drawn');
+    expect(res.body.exchangeDate).toBeDefined();
+
+    const stored = await roomModel.findById(room._id).lean();
+
+    expect(stored?.assignments).toHaveLength(3);
+
+    for (const a of stored!.assignments) {
+      expect(a.giverId.toString()).not.toBe(a.receiverId.toString());
+    }
+
+    const givers = new Set(
+      stored!.assignments.map((a) => a.giverId.toString()),
+    );
+    const receivers = new Set(
+      stored!.assignments.map((a) => a.receiverId.toString()),
+    );
+
+    expect(givers.size).toBe(3);
+    expect(receivers.size).toBe(3);
+  });
+
+  it('POST /api/rooms/:id/draw → 403 for a non-creator', async () => {
+    const { m1, room } = await seedDrawableRoom();
+
+    await request(app.getHttpServer())
+      .post(`/api/rooms/${room._id.toString()}/draw`)
+      .set('Authorization', `Bearer ${m1.token}`)
+      .send({ exchangeDate: '2026-12-24' })
+      .expect(403);
+  });
+
+  it('POST /api/rooms/:id/draw → 400 with fewer than 3 participants', async () => {
+    const owner = await seedUser();
+    const roomModel = app.get<Model<Room>>(getModelToken(Room.name));
+    const room = await roomModel.create(
+      roomFixture({
+        creatorId: owner.user._id,
+        participants: [{ userId: owner.user._id, role: 'owner' }],
+      }),
+    );
+
+    await request(app.getHttpServer())
+      .post(`/api/rooms/${room._id.toString()}/draw`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ exchangeDate: '2026-12-24' })
+      .expect(400);
+  });
+
+  it('POST /api/rooms/:id/draw → 400 when already drawn', async () => {
+    const { owner, room } = await seedDrawableRoom();
+    const url = `/api/rooms/${room._id.toString()}/draw`;
+    const auth = `Bearer ${owner.token}`;
+
+    await request(app.getHttpServer())
+      .post(url)
+      .set('Authorization', auth)
+      .send({ exchangeDate: '2026-12-24' })
+      .expect(200);
+    await request(app.getHttpServer())
+      .post(url)
+      .set('Authorization', auth)
+      .send({ exchangeDate: '2026-12-24' })
+      .expect(400);
+  });
+
+  it('GET /api/rooms/:id/assignment → returns the giftee + wishlist after the draw', async () => {
+    const { owner, m1, m2, room } = await seedDrawableRoom();
+    const wishlistModel = app.get<Model<Wishlist>>(
+      getModelToken(Wishlist.name),
+    );
+
+    await wishlistModel.create({
+      roomId: room._id,
+      userId: m1.user._id,
+      items: ['Wool socks'],
+    });
+    await wishlistModel.create({
+      roomId: room._id,
+      userId: m2.user._id,
+      items: ['A book'],
+    });
+
+    await request(app.getHttpServer())
+      .post(`/api/rooms/${room._id.toString()}/draw`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ exchangeDate: '2026-12-24' })
+      .expect(200);
+
+    const res = await request(app.getHttpServer())
+      .get(`/api/rooms/${room._id.toString()}/assignment`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .expect(200);
+
+    const memberIds = [m1.user._id.toString(), m2.user._id.toString()];
+
+    expect(memberIds).toContain(res.body.receiver.id);
+    expect(res.body.receiver.id).not.toBe(owner.user._id.toString());
+    expect(Array.isArray(res.body.receiver.wishlist)).toBe(true);
+    expect(res.body.receiver.wishlist.length).toBe(1);
+  });
 
   // 👇 Lesson 04 — Authorization: roles & permissions.
   // Gate by PERMISSION, never by role. A missing permission → 403; a non-member → 404.

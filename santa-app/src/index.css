@@ -74,6 +74,26 @@
     --input: 22 18% 24%;
     --ring: 17 88% 52%;
   }
+
+  .santa-calendar {
+    --rdp-accent-color: hsl(var(--primary));
+    --rdp-accent-background-color: hsl(var(--primary-soft));
+    --rdp-today-color: hsl(var(--primary));
+    font-family: inherit;
+    margin: 0;
+  }
+
+  .santa-calendar .rdp-day button {
+    border-radius: 0.25rem;
+  }
+
+  .santa-calendar .rdp-today button {
+    border-color: hsl(var(--primary-soft));
+  }
+
+  .santa-calendar .rdp-selected button {
+    border-color: hsl(var(--primary));
+  }
 }
 
 @layer base {
