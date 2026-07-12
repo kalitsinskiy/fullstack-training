@@ -223,7 +223,7 @@ export class RoomsController {
     @Param('id') id: string,
     @CurrentUser('id') userId: string,
   ): Promise<void> {
-    return this.roomsService.deleteRoom(id, userId);
+    return this.roomsService.deleteRoom(id);
   }
 
   @Delete(':id/members/:userId')
@@ -242,7 +242,7 @@ export class RoomsController {
     @Param('userId') targetUserId: string,
     @CurrentUser('id') userId: string,
   ): Promise<void> {
-    return this.roomsService.kickMember(id, targetUserId, userId);
+    return this.roomsService.kickMember(id, targetUserId);
   }
 
   @Post(':id/invite-code/regenerate')

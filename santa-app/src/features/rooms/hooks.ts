@@ -7,6 +7,7 @@ import type {
   Paginated,
   RoomDetail,
   RoomSummary,
+  UpdateRoomInput,
 } from '@/types/api';
 import { cleanWishlistItems } from './helpers';
 
@@ -21,7 +22,7 @@ export function useRooms(page = 1, limit = 20) {
     queryFn: async () =>
       (
         await api.get<Paginated<RoomSummary>>(
-          `/api/rooms?page=${page}$limit=${limit}`,
+          `/api/rooms?page=${page}&limit=${limit}`,
         )
       ).data,
   });
@@ -107,5 +108,57 @@ export function useAssignment(roomId: string, enabled: boolean) {
     queryFn: async () =>
       (await api.get<Assignment>(`/api/rooms/${roomId}/assignment`)).data,
     enabled,
+  });
+}
+
+export function useEditRoom(roomId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: UpdateRoomInput) =>
+      (await api.patch<RoomDetail>(`/api/rooms/${roomId}`, input)).data,
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: roomKey(roomId) }),
+  });
+}
+
+export function useDeleteRoom(roomId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      await api.delete(`/api/rooms/${roomId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: roomsKey });
+      queryClient.invalidateQueries({ queryKey: roomKey(roomId) });
+    },
+  });
+}
+
+export function useKickMember(roomId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      await api.delete(`/api/rooms/${roomId}/members/${userId}`);
+    },
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: roomKey(roomId) }),
+  });
+}
+
+export function useRegenerateInvite(roomId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () =>
+      (
+        await api.post<RoomDetail>(
+          `/api/rooms/${roomId}/invite-code/regenerate`,
+        )
+      ).data,
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: roomKey(roomId) }),
   });
 }

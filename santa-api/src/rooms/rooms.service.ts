@@ -255,33 +255,107 @@ export class RoomsService {
 
   // TODO (Lesson 04): update the room's fields (e.g. name). Owner-only access is
   // already enforced by RoomPermissionsGuard via @RequirePermissions('room:edit').
-  editRoom(id: string, dto: UpdateRoomDto, userId: string): Promise<Room> {
-    throw new NotImplementedException(
-      'RoomsService.editRoom is not implemented',
-    );
+  async editRoom(
+    id: string,
+    dto: UpdateRoomDto,
+    userId: string,
+  ): Promise<Room> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new NotFoundException('Room not found');
+    }
+
+    const update: Record<string, unknown> = {};
+
+    if (dto.name !== undefined) update.name = dto.name.trim();
+    if (dto.budget !== undefined) update.budget = dto.budget;
+    if (dto.currency !== undefined) update.currency = dto.currency;
+    if (dto.exchangeDate !== undefined)
+      update.exchangeDate = new Date(dto.exchangeDate);
+
+    let room: RoomDocument | null;
+
+    try {
+      room = await this.roomModel
+        .findByIdAndUpdate(id, update, { new: true })
+        .populate('participants.userId', 'displayName')
+        .exec();
+    } catch (err) {
+      if (err instanceof MongoServerError && err.code === 11000) {
+        throw new ConflictException('You already have a room with this name');
+      }
+
+      throw err;
+    }
+
+    if (!room) {
+      throw new NotFoundException('Room not found');
+    }
+
+    return this.toRoomResponse(room, userId);
   }
 
   // TODO (Lesson 04): delete the room. Owner-only access is enforced by the guard.
-  deleteRoom(id: string, userId: string): Promise<void> {
-    throw new NotImplementedException(
-      'RoomsService.deleteRoom is not implemented',
-    );
+  async deleteRoom(id: string): Promise<void> {
+    if (!Types.ObjectId.isValid) {
+      throw new NotFoundException('Room not found');
+    }
+
+    const deleted = await this.roomModel.findByIdAndDelete(id).exec();
+
+    if (!deleted) {
+      throw new NotFoundException('Room not found');
+    }
   }
 
   // TODO (Lesson 04): remove a participant from the room. The owner can never be
   // removed (respond 400). Owner-only access is enforced by the guard.
-  kickMember(id: string, targetUserId: string, userId: string): Promise<void> {
-    throw new NotImplementedException(
-      'RoomsService.kickMember is not implemented',
+  async kickMember(id: string, targetUserId: string): Promise<void> {
+    if (!Types.ObjectId.isValid(id) || !Types.ObjectId.isValid(targetUserId)) {
+      throw new NotFoundException('Room or member not found');
+    }
+
+    const room = await this.roomModel.findById(id).exec();
+
+    if (!room) {
+      throw new NotFoundException('Room not found');
+    }
+
+    const target = room.participants.find(
+      (p) => p.userId.toString() === targetUserId,
     );
+
+    if (!target) {
+      throw new NotFoundException('Member not found');
+    }
+
+    if (target.role === 'owner') {
+      throw new BadRequestException('The owner cannot be removed');
+    }
+
+    room.participants = room.participants.filter(
+      (p) => p.userId.toString() !== targetUserId,
+    );
+    await room.save();
   }
 
   // TODO (Lesson 04): generate a fresh unique invite code and persist it.
   // Owner-only access is enforced by the guard.
-  regenerateInviteCode(id: string, userId: string): Promise<Room> {
-    throw new NotImplementedException(
-      'RoomsService.regenerateInviteCode is not implemented',
-    );
+  async regenerateInviteCode(id: string, userId: string): Promise<Room> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new NotFoundException('Room not found');
+    }
+
+    const room = await this.roomModel.findById(id).exec();
+
+    if (!room) {
+      throw new NotFoundException('Room not found');
+    }
+
+    room.inviteCode = await this.generateUniqueInviteCode();
+    await room.save();
+    await room.populate('participants.userId', 'displayName');
+
+    return this.toRoomResponse(room, userId);
   }
 
   private generateInviteCode(len = 6): string {

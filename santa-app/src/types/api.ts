@@ -3,6 +3,8 @@
  * Keep these in sync with the backend contract.
  */
 
+import type { Currency } from '@/schemas/rooms';
+
 export interface User {
   id: string;
   email: string;
@@ -57,7 +59,7 @@ export interface RoomDetail {
   participantCount: number;
   drawDate?: string;
   budget?: number;
-  currency?: string;
+  currency?: Currency;
   exchangeDate?: string;
   viewerPermissions?: Permission[];
 }
@@ -65,7 +67,14 @@ export interface RoomDetail {
 export interface CreateRoomInput {
   name: string;
   budget?: number;
-  currency?: string;
+  currency?: Currency;
+}
+
+export interface UpdateRoomInput {
+  name?: string;
+  budget?: number;
+  currency?: Currency;
+  exchangeDate?: string;
 }
 
 export interface Wishlist {

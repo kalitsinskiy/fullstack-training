@@ -19,6 +19,7 @@ export function usePermissions(
   room: Pick<RoomDetail, 'viewerPermissions'> | null | undefined,
 ): { can: (permission: Permission) => boolean } {
   // TODO: derive from room?.viewerPermissions. Replace this deny-all stub.
-  void room;
-  return { can: () => false };
+  const permissions = room?.viewerPermissions ?? [];
+
+  return { can: (permission) => permissions.includes(permission) };
 }

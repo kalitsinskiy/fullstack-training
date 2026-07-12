@@ -1,9 +1,23 @@
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { Users, CalendarDays, Gift } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
+import {
+  Users,
+  CalendarDays,
+  Gift,
+  Pencil,
+  Trash2,
+  RefreshCw,
+  X,
+} from 'lucide-react';
 import { format } from 'date-fns';
 import { useAuth } from '@/features/auth/useAuth';
-import { useRoom, useAssignment } from '@/features/rooms/hooks';
+import {
+  useRoom,
+  useAssignment,
+  useDeleteRoom,
+  useKickMember,
+  useRegenerateInvite,
+} from '@/features/rooms/hooks';
 import { PageHeader } from '@/components/PageHeader';
 import { EmptyState } from '@/components/EmptyState';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -12,6 +26,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { WishlistEditor } from '@/features/rooms/WishlistEditor';
 import { DrawDialog } from '@/features/rooms/DrawDialog';
+import { usePermissions } from '@/features/rooms/usePermissions';
+import { toast } from 'sonner';
+import { getApiErrorMessage } from '@/lib/api';
+import { EditRoomDialog } from '@/features/rooms/EditRoomDialog';
 
 /**
  * Room detail — participants, your wishlist, the draw, and your assignment.
@@ -35,6 +53,12 @@ export function RoomDetailPage() {
   const { user } = useAuth();
   const { data: room, isLoading, isError } = useRoom(id);
   const [drawOpen, setDrawOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const navigate = useNavigate();
+  const { can } = usePermissions(room);
+  const del = useDeleteRoom(id ?? '');
+  const kick = useKickMember(id ?? '');
+  const regen = useRegenerateInvite(id ?? '');
   const isDraw = room?.status === 'drawn';
   const assignment = useAssignment(id ?? '', !!id && isDraw);
 
@@ -51,9 +75,43 @@ export function RoomDetailPage() {
     );
   }
 
-  const isCreator = user?.id === room.creatorId;
-  const canDraw = isCreator && room.status === 'pending';
+  const canDraw = can('room:draw') && room.status === 'pending';
   const notEnough = room.participantCount < 3;
+
+  async function handleDelete() {
+    if (!can('room:delete')) return;
+    if (!window.confirm('Delete this room? This cannot be undone.')) return;
+
+    try {
+      await del.mutateAsync();
+      toast.success('Room deleted');
+      navigate('/rooms');
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'Could not delete the room'));
+    }
+  }
+
+  async function handleKick(userId: string) {
+    if (!can('room:kick')) return;
+
+    try {
+      await kick.mutateAsync(userId);
+      toast.success('Member removed');
+    } catch (e) {
+      toast.error(getApiErrorMessage(e, 'Could not remove the member'));
+    }
+  }
+
+  async function handleRegenerate() {
+    if (!can('room:invite')) return;
+
+    try {
+      await regen.mutateAsync();
+      toast.success('New invite code generated');
+    } catch (e) {
+      toast.error(getApiErrorMessage(e, 'Could not regenerate the code'));
+    }
+  }
 
   return (
     <>
@@ -78,6 +136,20 @@ export function RoomDetailPage() {
                 Draw names
               </Button>
             )}
+            {can('room:edit') && (
+              <Button variant="outline" onClick={() => setEditOpen(true)}>
+                <Pencil className="size-4" /> Edit
+              </Button>
+            )}
+            {can('room:delete') && (
+              <Button
+                variant="outline"
+                onClick={handleDelete}
+                disabled={del.isPending}
+              >
+                <Trash2 className="size-4" /> Delete
+              </Button>
+            )}
           </div>
         }
       />
@@ -96,9 +168,22 @@ export function RoomDetailPage() {
               <p className="text-xs uppercase tracking-wide text-muted-foreground">
                 Invite code
               </p>
-              <p className="font-mono text-lg tracking-widest">
-                {room.inviteCode}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="font-mono text-lg tracking-widest">
+                  {room.inviteCode}
+                </p>
+                {can('room:invite') && (
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    aria-label="Regenerate invite code"
+                    onClick={handleRegenerate}
+                    disabled={regen.isPending}
+                  >
+                    <RefreshCw className="size-4" />
+                  </Button>
+                )}
+              </div>
             </div>
             <ul className="space-y-2">
               {room.participants.map((p) => (
@@ -112,6 +197,16 @@ export function RoomDetailPage() {
                   <Badge variant={p.role === 'owner' ? 'owner' : 'member'}>
                     {p.role}
                   </Badge>
+                  {can('room:kick') && p.role !== 'owner' && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      aria-label={`Remove ${p.displayName}`}
+                      onClick={() => handleKick(p.id)}
+                    >
+                      <X className="size-4" />
+                    </Button>
+                  )}
                 </li>
               ))}
             </ul>
@@ -120,10 +215,10 @@ export function RoomDetailPage() {
 
         {isDraw && (
           <Card>
-            <CardHeader className="flex items-center">
+            <CardHeader className="flex flex-row items-center gap-2">
               The Draw is Done <Gift className="size-4" />
             </CardHeader>
-            <CardContent className="space-x-3">
+            <CardContent className="px-6">
               {room.exchangeDate && (
                 <p className="flex items-center gap-2 text-sm">
                   <CalendarDays className="size-4 text-primary" />
@@ -132,7 +227,7 @@ export function RoomDetailPage() {
                 </p>
               )}
               {assignment.data && (
-                <div>
+                <div className="my-3">
                   <p className="text-sm">
                     You're gifting:{' '}
                     <span className="font-semibold">
@@ -171,6 +266,14 @@ export function RoomDetailPage() {
           roomId={room.id}
           open={drawOpen}
           onOpenChange={setDrawOpen}
+        />
+      )}
+
+      {can('room:edit') && (
+        <EditRoomDialog
+          room={room}
+          open={editOpen}
+          onOpenChange={setEditOpen}
         />
       )}
     </>

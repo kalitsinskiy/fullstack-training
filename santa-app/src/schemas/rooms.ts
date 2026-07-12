@@ -2,6 +2,8 @@ import { z } from 'zod';
 
 export const CURRENCIES = ['$', '€', '£', '₴', 'zł'] as const;
 
+export type Currency = (typeof CURRENCIES)[number];
+
 export const createRoomSchema = z.object({
   name: z
     .string()

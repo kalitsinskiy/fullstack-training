@@ -105,6 +105,23 @@ describe('Rooms (HTTP)', () => {
     return { owner, m1, m2, room, roomModel };
   }
 
+  async function seedOwnerAndMember() {
+    const owner = await seedUser({ displayName: 'Owner' });
+    const member = await seedUser({ displayName: 'Member' });
+    const roomModel = app.get<Model<Room>>(getModelToken(Room.name));
+    const room = await roomModel.create(
+      roomFixture({
+        creatorId: owner.user._id,
+        participants: [
+          { userId: owner.user._id, role: 'owner' },
+          { userId: member.user._id, role: 'member' },
+        ],
+      }),
+    );
+
+    return { owner, member, room, roomModel };
+  }
+
   // ✅ WORKED EXAMPLE — green against the skeleton: the JWT guard rejects the
   // request before RoomsService runs. Implement the service, then fill in below.
   it('POST /api/rooms → 401 without a token', async () => {
@@ -385,28 +402,189 @@ describe('Rooms (HTTP)', () => {
 
   // 👇 Lesson 04 — Authorization: roles & permissions.
   // Gate by PERMISSION, never by role. A missing permission → 403; a non-member → 404.
-  it.todo('room response includes viewerPermissions for the caller');
-  it.todo('owner can run the draw (POST /api/rooms/:id/draw → 200)');
-  it.todo(
-    'member running the draw is rejected (POST /api/rooms/:id/draw → 403)',
-  );
-  it.todo('owner can edit the room (PATCH /api/rooms/:id → 200)');
-  it.todo('member editing the room is rejected (PATCH /api/rooms/:id → 403)');
-  it.todo('owner can delete the room (DELETE /api/rooms/:id → 204)');
-  it.todo('member deleting the room is rejected (DELETE /api/rooms/:id → 403)');
-  it.todo(
-    'owner can kick a member (DELETE /api/rooms/:id/members/:userId → 204)',
-  );
-  it.todo(
-    'member cannot kick anyone (DELETE /api/rooms/:id/members/:userId → 403)',
-  );
-  it.todo(
-    'kicking the owner is rejected (DELETE /api/rooms/:id/members/:ownerId → 400)',
-  );
-  it.todo(
-    'owner can regenerate the invite code (POST /api/rooms/:id/invite-code/regenerate → 200)',
-  );
-  it.todo('member cannot regenerate the invite code (→ 403)');
-  it.todo('a non-member gets 404 on any guarded room route');
-  it.todo('a member can still GET /api/rooms/:id and PUT the wishlist');
+  it('room response includes viewerPermissions for the caller', async () => {
+    const { owner, member, room } = await seedOwnerAndMember();
+    const id = room._id.toString();
+
+    const ownerRes = await request(app.getHttpServer())
+      .get(`/api/rooms/${id}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .expect(200);
+
+    expect(ownerRes.body.viewerPermissions).toEqual(
+      expect.arrayContaining([
+        'room:draw',
+        'room:edit',
+        'room:delete',
+        'room:kick',
+        'room:invite',
+      ]),
+    );
+
+    const memberRes = await request(app.getHttpServer())
+      .get(`/api/rooms/${id}`)
+      .set('Authorization', `Bearer ${member.token}`)
+      .expect(200);
+
+    expect([...memberRes.body.viewerPermissions].sort()).toEqual([
+      'room:view',
+      'wishlist:set',
+    ]);
+  });
+
+  it('owner can run the draw (POST /api/rooms/:id/draw → 200)', async () => {
+    const { owner, room } = await seedDrawableRoom();
+
+    await request(app.getHttpServer())
+      .post(`/api/rooms/${room._id.toString()}/draw`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ exchangeDate: '2026-12-24' })
+      .expect(200);
+  });
+
+  it('member running the draw is rejected (POST /api/rooms/:id/draw → 403)', async () => {
+    const { member, room } = await seedOwnerAndMember();
+
+    await request(app.getHttpServer())
+      .post(`/api/rooms/${room._id.toString()}/draw`)
+      .set('Authorization', `Bearer ${member.token}`)
+      .send({ exchangeDate: '2026-12-24' })
+      .expect(403);
+  });
+
+  it('owner can edit the room (PATCH /api/rooms/:id → 200)', async () => {
+    const { owner, room } = await seedOwnerAndMember();
+    const res = await request(app.getHttpServer())
+      .patch(`/api/rooms/${room._id.toString()}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ name: 'Renamed room' })
+      .expect(200);
+
+    expect(res.body.name).toBe('Renamed room');
+  });
+
+  it('member editing the room is rejected (PATCH /api/rooms/:id → 403)', async () => {
+    const { member, room } = await seedOwnerAndMember();
+
+    await request(app.getHttpServer())
+      .patch(`/api/rooms/${room._id.toString()}`)
+      .set('Authorization', `Bearer ${member.token}`)
+      .send({ name: 'Renamed room' })
+      .expect(403);
+  });
+
+  it('owner can delete the room (DELETE /api/rooms/:id → 204)', async () => {
+    const { owner, room } = await seedOwnerAndMember();
+    const id = room._id.toString();
+
+    await request(app.getHttpServer())
+      .delete(`/api/rooms/${id}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .expect(204);
+
+    await request(app.getHttpServer())
+      .get(`/api/rooms/${id}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .expect(404);
+  });
+
+  it('member deleting the room is rejected (DELETE /api/rooms/:id → 403)', async () => {
+    const { member, room } = await seedOwnerAndMember();
+
+    await request(app.getHttpServer())
+      .delete(`/api/rooms/${room._id.toString()}`)
+      .set('Authorization', `Bearer ${member.token}`)
+      .expect(403);
+  });
+
+  it('owner can kick a member (DELETE /api/rooms/:id/members/:userId → 204)', async () => {
+    const { owner, member, room, roomModel } = await seedOwnerAndMember();
+
+    await request(app.getHttpServer())
+      .delete(
+        `/api/rooms/${room._id.toString()}/members/${member.user._id.toString()}`,
+      )
+      .set('Authorization', `Bearer  ${owner.token}`)
+      .expect(204);
+
+    const stored = await roomModel.findById(room._id).lean();
+
+    expect(stored?.participants).toHaveLength(1);
+  });
+
+  it('member cannot kick anyone (DELETE /api/rooms/:id/members/:userId → 403)', async () => {
+    const { owner, member, room } = await seedOwnerAndMember();
+
+    await request(app.getHttpServer())
+      .delete(
+        `/api/rooms/${room._id.toString()}/members/${owner.user._id.toString()}`,
+      )
+      .set('Authorization', `Bearer ${member.token}`)
+      .expect(403);
+
+    await request(app.getHttpServer())
+      .delete(
+        `/api/rooms/${room._id.toString()}/members/${member.user._id.toString()}`,
+      )
+      .set('Authorization', `Bearer ${member.token}`)
+      .expect(403);
+  });
+
+  it('kicking the owner is rejected (DELETE /api/rooms/:id/members/:ownerId → 400)', async () => {
+    const { owner, room } = await seedOwnerAndMember();
+
+    await request(app.getHttpServer())
+      .delete(
+        `/api/rooms/${room._id.toString()}/members/${owner.user._id.toString()}`,
+      )
+      .set('Authorization', `Bearer ${owner.token}`)
+      .expect(400);
+  });
+
+  it('owner can regenerate the invite code (POST /api/rooms/:id/invite-code/regenerate → 200)', async () => {
+    const { owner, room } = await seedOwnerAndMember();
+    const before = room.inviteCode;
+    const res = await request(app.getHttpServer())
+      .post(`/api/rooms/${room._id.toString()}/invite-code/regenerate`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .expect(200);
+
+    expect(res.body.inviteCode).not.toBe(before);
+    expect(res.body.inviteCode).toMatch(/^[A-Z0-9]{6}$/);
+  });
+
+  it('member cannot regenerate the invite code (→ 403)', async () => {
+    const { member, room } = await seedOwnerAndMember();
+
+    await request(app.getHttpServer())
+      .post(`/api/rooms/${room._id.toString()}/invite-code/regenerate`)
+      .set('Authorization', `Bearer ${member.token}`)
+      .expect(403);
+  });
+
+  it('a non-member gets 404 on any guarded room route', async () => {
+    const { room } = await seedOwnerAndMember();
+    const stranger = await seedUser();
+
+    await request(app.getHttpServer())
+      .get(`/api/rooms/${room._id.toString()}`)
+      .set('Authorization', `Bearer ${stranger.token}`)
+      .expect(404);
+  });
+
+  it('a member can still GET /api/rooms/:id and PUT the wishlist', async () => {
+    const { member, room } = await seedOwnerAndMember();
+    const id = room._id.toString();
+
+    await request(app.getHttpServer())
+      .get(`/api/rooms/${id}`)
+      .set('Authorization', `Bearer ${member.token}`)
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .put(`/api/rooms/${id}/wishlist`)
+      .set('Authorization', `Bearer ${member.token}`)
+      .send({ items: ['Wool socks'] })
+      .expect(200);
+  });
 });
