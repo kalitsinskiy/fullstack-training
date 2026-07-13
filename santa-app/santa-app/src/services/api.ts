@@ -38,6 +38,7 @@ class ApiClient {
   async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
     const hasBody = options.body !== undefined;
+    const hadToken = !!localStorage.getItem('token');
     let merged: RequestInit = {
       ...options,
       headers: {
@@ -53,7 +54,11 @@ class ApiClient {
 
     const response = await fetch(url, merged);
 
-    if (response.status === 401) {
+    // A 401 only means "your session died" if this request was actually
+    // authenticated. A 401 on an unauthenticated call (e.g. a login attempt)
+    // means the credentials were rejected — fall through and surface the
+    // server's real message instead of a misleading "session expired".
+    if (response.status === 401 && hadToken) {
       localStorage.removeItem('token');
       this.unauthorizedHandler?.();
       throw new ApiError(401, 'Session expired. Please log in again.');
