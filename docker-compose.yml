@@ -126,6 +126,21 @@ services:
       rabbitmq:
         condition: service_healthy
 
+  # --- Frontend (optional) ---
+  # Remove or comment out this service to use Vite dev server instead.
+  santa-app:
+    build:
+      context: ./santa-app
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://localhost:3001
+    container_name: santa-app
+    ports:
+      - "5173:80"
+    depends_on:
+      santa-api:
+        condition: service_healthy
+
 volumes:
   mongodb_data:
   redis_data:
