@@ -11,7 +11,7 @@ your own `santa-api` / `santa-notifications` / `santa-app` when you pull updates
 |--------|-------|--------------|
 | `santa-api/` | NestJS + MongoDB | **Skeleton**: controllers, DTOs, Mongoose schemas, modules, the API contract, Dockerfile, a component-test harness (worked example + `it.todo`s). Service logic is stubbed — you implement it (Kickoff §4). |
 | `santa-notifications/` | Fastify + MongoDB | **Skeleton**: app + routes + scripts (`dev`/`start`/`build`/`test`), Dockerfile, Jest test harness, `.env.example` |
-| `santa-app/` | React + Vite + Tailwind + shadcn | Worked-example `LoginPage` + page stubs, RTL+MSW test setup, `docs/design-system.md`, `docs/design-tokens.json`, `docs/mockups/`, `public/decor/` |
+| `santa-app/` | React + Vite + Tailwind + shadcn | Worked-example `LoginPage` + page stubs, RTL+MSW test setup, `public/decor/` (design system + mockups live in `santa-app/design/`) |
 | `docker-compose.yml` | mongo:8 · redis:8 · rabbitmq:4 + both backends | Full local stack (`name: santa`) |
 
 ## How to use it
@@ -37,6 +37,10 @@ cp -R src/06-fullstack/lessons/00-kickoff/template/santa-app/. santa-app/
 
 **Option C — keep your own.** Ignore the template entirely and keep building on
 your Block-04 work. Use this as a reference to compare against.
+
+> **Regardless of the option**, take the template's `docker-compose.yml` into the
+> repo root (`cp "$T/docker-compose.yml" docker-compose.yml`) — the older root
+> compose has both backends commented out and stale image versions.
 
 > The trailing `/.` overlays *contents* onto your existing folders (so your
 > Block-04 `examples/`/`exercises/` stay). Don't copy `template/`'s own

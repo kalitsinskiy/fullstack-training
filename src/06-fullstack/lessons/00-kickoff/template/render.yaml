@@ -1,0 +1,109 @@
+# Render Blueprint (Infrastructure as Code) for the whole Secret Santa stack.
+# https://render.com/docs/blueprint-spec
+#
+# One file describes all three services. Render reads it when you create a
+# Blueprint from this repo (Dashboard → New → Blueprint), provisions the
+# services, and keeps them in sync with this file on every Blueprint sync.
+#
+# SECRETS ARE NOT IN THIS FILE. Anything that is `sync: false` must be filled in
+# from the Render dashboard (or `render env set`) with values from YOUR managed
+# services — see lessons/11 for the MongoDB Atlas / Redis Cloud / CloudAMQP
+# runbook. `generateValue: true` lets Render create a strong random value once
+# and share it across both backends (so the JWT secret + service key always match).
+#
+# Deploys are MANUAL here (`autoDeploy: false`): push your code, then trigger a
+# deploy from the dashboard ("Manual Deploy") or with `render deploys create`.
+
+envVarGroups:
+  # Shared between santa-api and santa-notifications: the JWT secret must match
+  # (notifications verifies tokens santa-api issued) and so must the service key
+  # (notifications calls santa-api's /internal/* endpoints with it).
+  - name: santa-shared
+    envVars:
+      - key: JWT_SECRET
+        generateValue: true
+      - key: SERVICE_API_KEY
+        generateValue: true
+
+services:
+  # ---------------------------------------------------------------- santa-api
+  - type: web
+    name: santa-api
+    runtime: docker
+    # Paths are relative to the repo root; dockerContext = the app dir so the
+    # Dockerfile's `COPY . .` picks up santa-api's source.
+    dockerfilePath: ./santa-api/Dockerfile
+    dockerContext: ./santa-api
+    plan: free
+    # Same region as your MongoDB Atlas / Redis / RabbitMQ (Frankfurt) so the
+    # app↔DB latency is ~1-2ms instead of crossing the ocean. Default is Oregon!
+    region: frankfurt
+    autoDeploy: false
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: JWT_EXPIRATION
+        value: 7d
+      - fromGroup: santa-shared
+      - key: MONGO_URL # MongoDB Atlas connection string (…/santa)
+        sync: false
+      - key: REDIS_URL # Redis Cloud connection string
+        sync: false
+      - key: RABBITMQ_URL # CloudAMQP amqps:// URL
+        sync: false
+      - key: CORS_ORIGIN # the deployed santa-app URL
+        sync: false
+
+  # ------------------------------------------------------- santa-notifications
+  - type: web
+    name: santa-notifications
+    runtime: docker
+    dockerfilePath: ./santa-notifications/Dockerfile
+    dockerContext: ./santa-notifications
+    plan: free
+    region: frankfurt
+    autoDeploy: false
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3002
+      - key: LOG_LEVEL
+        value: info
+      - fromGroup: santa-shared
+      - key: MONGO_URL # Atlas connection string (…/santa-notifications)
+        sync: false
+      - key: REDIS_URL # same Redis Cloud instance as santa-api
+        sync: false
+      - key: RABBITMQ_URL # same CloudAMQP instance as santa-api
+        sync: false
+      - key: SANTA_API_URL # the deployed santa-api URL (https://santa-api-XXXX.onrender.com)
+        sync: false
+      - key: CORS_ORIGIN # the deployed santa-app URL
+        sync: false
+
+  # ---------------------------------------------------------------- santa-app
+  # Static SPA (Vite build → nginx-less static hosting). VITE_* are baked into
+  # the bundle at BUILD time, so they must point at the deployed backends.
+  - type: web
+    name: santa-app
+    runtime: static
+    rootDir: santa-app
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    autoDeploy: false
+    envVars:
+      - key: VITE_API_URL # the deployed santa-api URL
+        sync: false
+      - key: VITE_WS_URL # the deployed santa-notifications URL
+        sync: false
+    routes:
+      # SPA fallback: every unknown path serves index.html so client-side
+      # routing (React Router) works on refresh / deep links.
+      - type: rewrite
+        source: /*
+        destination: /index.html

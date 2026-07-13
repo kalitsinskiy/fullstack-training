@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import type { Permission } from '../permissions';
 
 export class RoomResponseDto {
   @ApiProperty({
@@ -26,11 +27,13 @@ export class RoomResponseDto {
   inviteCode!: string;
 
   @ApiProperty({
-    description: 'Room participants, populated to { id, displayName }',
-    example: [{ id: '665f0c2ab7d13a5e8b1c4d1a', displayName: 'Mariia' }],
+    description: 'Room participants, populated to { id, displayName, role }',
+    example: [
+      { id: '665f0c2ab7d13a5e8b1c4d1a', displayName: 'Mariia', role: 'owner' },
+    ],
     isArray: true,
   })
-  participants!: { id: string; displayName: string }[];
+  participants!: { id: string; displayName: string; role: 'owner' | 'member' }[];
 
   @ApiProperty({
     description: 'Number of participants in the room',
@@ -46,8 +49,34 @@ export class RoomResponseDto {
   status!: 'pending' | 'drawn';
 
   @ApiPropertyOptional({
-    description: 'ISO date when the draw was completed',
+    description: 'ISO date when the draw was completed (omitted until drawn)',
     example: '2025-12-20T00:00:00.000Z',
   })
   drawDate?: string;
+
+  @ApiPropertyOptional({
+    description: 'Suggested per-gift budget amount (omitted when not set)',
+    example: 500,
+  })
+  budget?: number;
+
+  @ApiPropertyOptional({
+    description: 'Currency symbol for the budget',
+    example: '₴',
+  })
+  currency?: string;
+
+  @ApiPropertyOptional({
+    description: 'Gift-exchange day, ISO date (omitted until the draw sets it)',
+    example: '2026-12-24T00:00:00.000Z',
+  })
+  exchangeDate?: string;
+
+  @ApiPropertyOptional({
+    description:
+      "The caller's effective permissions for this room (from Lesson 04 onward)",
+    example: ['room:view', 'wishlist:set'],
+    isArray: true,
+  })
+  viewerPermissions?: Permission[];
 }

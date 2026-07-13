@@ -23,14 +23,34 @@ export class Room {
   @Prop({ required: true, unique: true })
   inviteCode!: string;
 
-  @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
-  participants!: Types.ObjectId[];
+  @Prop({
+    type: [
+      {
+        userId: { type: Types.ObjectId, ref: 'User', required: true },
+        role: { type: String, enum: ['owner', 'member'], required: true },
+      },
+    ],
+    default: [],
+  })
+  participants!: { userId: Types.ObjectId; role: 'owner' | 'member' }[];
 
   @Prop({ enum: ['pending', 'drawn'], default: 'pending' })
   status!: 'pending' | 'drawn';
 
   @Prop()
   drawDate?: Date;
+
+  // Suggested per-gift budget (optional): amount + currency symbol.
+  @Prop()
+  budget?: number;
+
+  @Prop()
+  currency?: string;
+
+  // The day participants exchange gifts — set when the owner runs the draw,
+  // editable afterwards.
+  @Prop()
+  exchangeDate?: Date;
 
   @Prop({
     type: [

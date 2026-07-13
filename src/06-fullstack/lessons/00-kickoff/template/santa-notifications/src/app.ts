@@ -1,4 +1,5 @@
 import Fastify, { FastifyError } from 'fastify';
+import cors from '@fastify/cors';
 import ajvFormats from 'ajv-formats';
 
 import configPlugin from './plugins/config';
@@ -10,9 +11,12 @@ import notificationRoutes from './routes/notifications';
 export function buildApp() {
   const app = Fastify({
     logger: {
-      level: process.env.LOG_LEVEL ?? 'info',
+      level:
+        process.env.LOG_LEVEL ??
+        (process.env.NODE_ENV === 'test' ? 'silent' : 'info'),
       transport:
-        process.env.NODE_ENV !== 'production'
+        process.env.NODE_ENV !== 'production' &&
+        process.env.NODE_ENV !== 'test'
           ? {
               target: 'pino-pretty',
               options: {
@@ -28,6 +32,13 @@ export function buildApp() {
     },
   });
 
+  // CORS so the browser SPA (Vite :5173) can read notifications directly.
+  app.register(cors, {
+    origin: process.env.CORS_ORIGIN
+      ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
+      : ['http://localhost:5173'],
+    methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+  });
   app.register(configPlugin);
   app.register(timingPlugin);
   app.register(healthRoutes);

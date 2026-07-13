@@ -274,10 +274,14 @@ The code stays the same. Only the environment variables change.
 
 2. Update `AppModule` to import `ConfigModule.forRoot()` with a Joi validation schema. Validate these variables:
    - `PORT` (number, default 3001)
-   - `NODE_ENV` (string, one of: development / staging / production)
+   - `NODE_ENV` (string, one of: development / staging / production / **test**)
    - `MONGO_URL` (string, required)
    - `JWT_SECRET` (string, required)
    - `JWT_EXPIRATION` (string, default "7d")
+
+   > Include `test` in the `NODE_ENV` enum. Jest sets `NODE_ENV=test`, so a schema
+   > that only allows dev/staging/production will fail validation and break every
+   > test the moment you add `ConfigModule`.
 
 3. Make `ConfigModule` global (`isGlobal: true`) so `ConfigService` is available everywhere without extra imports.
 
@@ -293,8 +297,19 @@ and decorates `fastify.config`. **Extend** it (don't recreate it) to:
 2. Validate that required variables (`MONGO_URL`) are present; throw a clear error
    listing all missing variables if any are absent (so the service fails fast).
 3. Keep it registered before the DB connection (it already is, in `app.ts`).
-4. Update `src/db.ts` to read the URI from `fastify.config.MONGO_URL` instead of
-   `process.env.MONGO_URL ?? '…'`.
+4. Update `src/db.ts` to read the URI from `fastify.config.mongoUrl` instead of
+   `process.env.MONGO_URL ?? '…'`. Since `buildApp()` now needs config before it's
+   ready, in `server.ts` call `await app.ready()` **before** `connectDb(app.config.mongoUrl)`.
+
+> `.env` loading: `server.ts` already does `import 'dotenv/config'` (same as
+> santa-api's `main.ts`), so once you `cp .env.example .env` the service reads
+> `MONGO_URL` from it. Tests use the in-memory URI (set in `test/helpers/db.ts`),
+> not `.env`.
+
+> ⚠️ Once the plugin requires `MONGO_URL`, your component test breaks: it calls
+> `buildApp(); await app.ready()` without that env var, so the plugin throws. Fix
+> the test setup (`test/helpers/db.ts`) to export the in-memory URI before the app
+> builds: `process.env.MONGO_URL = mongo.getUri()` inside `setupTestDb()`.
 
 ### Step 3: Create .env.example files
 
@@ -325,13 +340,17 @@ Create actual `.env` files (copy from examples) with your local values. Make sur
 > `import.meta.env.VITE_API_URL`. **Verify** these match below rather than
 > recreating them; just `cp .env.example .env`.
 
-1. Confirm `santa-app/.env.example` contains:
+1. Confirm `santa-app/.env.example` leaves both **empty** — the local default uses
+   Vite's same-origin proxy (`vite.config.ts`), so the client calls `/api` and
+   `/socket.io` on its own origin (works on localhost and across the LAN, no CORS):
    ```
-   VITE_API_URL=http://localhost:3001
-   VITE_WS_URL=http://localhost:3002
+   VITE_API_URL=
+   VITE_WS_URL=
    ```
+   Set absolute URLs (`http://localhost:3001` / `http://localhost:3002`) **only** to
+   target a remote/separate backend — that bypasses the proxy and needs CORS.
 
-2. Create `santa-app/.env` with the same values for local development.
+2. Create `santa-app/.env` (`cp .env.example .env`) — empty values are fine for local dev.
 
 3. Add TypeScript type declarations in `santa-app/src/vite-env.d.ts`:
    ```typescript
@@ -413,7 +432,10 @@ docker-compose exec santa-api printenv | grep MONGO_URL
 # 5. Vite env vars work
 cd santa-app && npm run dev
 # In browser console: console.log(import.meta.env.VITE_API_URL)
-# Expected: "http://localhost:3001"
+# Default (proxy) setup → "" (empty): the client calls /api on its OWN origin
+# (localhost:5173) and Vite proxies it to santa-api :3001 — so the browser never
+# hits :3001 directly. Check the Network tab: requests go to localhost:5173/api/...
+# Only if you set an absolute VITE_API_URL would this log "http://localhost:3001".
 
 # 6. .env files are not tracked by git
 git status
