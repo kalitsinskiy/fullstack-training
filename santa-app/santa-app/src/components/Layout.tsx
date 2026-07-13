@@ -1,11 +1,16 @@
-import { Link, NavLink, Outlet, useNavigate } from "react-router";
+import { Suspense } from "react";
+import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
+import { ErrorBoundary } from "react-error-boundary";
 import { useAuth } from "../hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { CreateRoomDialog } from "./CreateRoomDialog";
+import { ErrorFallback } from "./ErrorFallback";
+import { PageSpinner } from "./PageSpinner";
 
 export function Layout() {
   const auth = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = () => {
     auth.logout();
@@ -37,7 +42,11 @@ export function Layout() {
         </div>
       </header>
       <main className="p-6">
-        <Outlet />
+        <ErrorBoundary FallbackComponent={ErrorFallback} resetKeys={[location.pathname]}>
+          <Suspense fallback={<PageSpinner />}>
+            <Outlet />
+          </Suspense>
+        </ErrorBoundary>
       </main>
     </>
   );

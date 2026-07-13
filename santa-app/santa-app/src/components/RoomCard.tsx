@@ -47,7 +47,13 @@ export function RoomCard(props: RoomCardProps) {
   }
 
   return (
-    <Card className="transition hover:-translate-y-0.5 hover:shadow-lg">
+    <Card
+      className="transition hover:-translate-y-0.5 hover:shadow-lg"
+      onMouseEnter={() => {
+        // Preload the room detail chunk before the click resolves the navigation
+        import("@/pages/RoomDetailPage");
+      }}
+    >
       <CardHeader>
         <CardTitle>{name}</CardTitle>
         <CardAction>

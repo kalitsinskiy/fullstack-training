@@ -2,8 +2,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "../hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { FormField } from "@/components/FormField";
 import { RegisterSchema, type RegisterInput } from "@/schemas/auth";
 
 export function RegisterForm({ onSuccess }: { onSuccess?: () => void }) {
@@ -47,87 +46,37 @@ export function RegisterForm({ onSuccess }: { onSuccess?: () => void }) {
           Account details
         </legend>
 
-        <Label htmlFor="register-name">Full Name</Label>
-        <Input
-          id="register-name"
+        <FormField
+          label="Full Name"
           type="text"
           placeholder="John Doe"
-          aria-invalid={!!errors.displayName}
-          aria-describedby={
-            errors.displayName ? "register-name-error" : undefined
-          }
+          error={errors.displayName?.message}
           {...register("displayName")}
         />
-        {errors.displayName && (
-          <p
-            id="register-name-error"
-            role="alert"
-            className="text-danger text-sm"
-          >
-            {errors.displayName.message}
-          </p>
-        )}
 
-        <Label htmlFor="register-email">Email Address</Label>
-        <Input
-          id="register-email"
+        <FormField
+          label="Email Address"
           type="email"
           placeholder="you@example.com"
-          aria-invalid={!!errors.email}
-          aria-describedby={errors.email ? "register-email-error" : undefined}
+          error={errors.email?.message}
           {...register("email")}
         />
-        {errors.email && (
-          <p
-            id="register-email-error"
-            role="alert"
-            className="text-danger text-sm"
-          >
-            {errors.email.message}
-          </p>
-        )}
 
-        <Label htmlFor="register-password">Password</Label>
-        <Input
-          id="register-password"
+        <FormField
+          label="Password"
           type="password"
           placeholder="At least 8 characters"
-          aria-invalid={!!errors.password}
-          aria-describedby={
-            errors.password ? "register-password-error" : undefined
-          }
+          error={errors.password?.message}
           {...register("password")}
         />
-        {errors.password && (
-          <p
-            id="register-password-error"
-            role="alert"
-            className="text-danger text-sm"
-          >
-            {errors.password.message}
-          </p>
-        )}
 
-        <Label htmlFor="register-confirm">Confirm Password</Label>
-        <Input
-          id="register-confirm"
+        <FormField
+          label="Confirm Password"
           type="password"
           placeholder="Repeat your password"
-          aria-invalid={!!errors.confirm}
-          aria-describedby={
-            errors.confirm ? "register-confirm-error" : undefined
-          }
+          error={errors.confirm?.message}
           {...register("confirm")}
         />
-        {errors.confirm && (
-          <p
-            id="register-confirm-error"
-            role="alert"
-            className="text-danger text-sm"
-          >
-            {errors.confirm.message}
-          </p>
-        )}
       </fieldset>
 
       <Button type="submit" disabled={isSubmitting} className="mt-4 w-full">

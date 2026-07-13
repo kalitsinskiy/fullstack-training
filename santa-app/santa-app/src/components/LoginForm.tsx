@@ -2,8 +2,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "../hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { FormField } from "@/components/FormField";
 import { LoginSchema, type LoginInput } from "@/schemas/auth";
 
 export function LoginForm({ onSuccess }: { onSuccess?: () => void }) {
@@ -45,45 +44,21 @@ export function LoginForm({ onSuccess }: { onSuccess?: () => void }) {
       <fieldset className="flex flex-col gap-3 rounded-md border border-gray-200 p-4">
         <legend className="text-brand px-2 font-semibold">Sign in</legend>
 
-        <Label htmlFor="login-email">Email Address</Label>
-        <Input
-          id="login-email"
+        <FormField
+          label="Email Address"
           type="email"
           placeholder="you@example.com"
-          aria-invalid={!!errors.email}
-          aria-describedby={errors.email ? "login-email-error" : undefined}
+          error={errors.email?.message}
           {...register("email")}
         />
-        {errors.email && (
-          <p
-            id="login-email-error"
-            role="alert"
-            className="text-danger text-sm"
-          >
-            {errors.email.message}
-          </p>
-        )}
 
-        <Label htmlFor="login-password">Password</Label>
-        <Input
-          id="login-password"
+        <FormField
+          label="Password"
           type="password"
           placeholder="Your password"
-          aria-invalid={!!errors.password}
-          aria-describedby={
-            errors.password ? "login-password-error" : undefined
-          }
+          error={errors.password?.message}
           {...register("password")}
         />
-        {errors.password && (
-          <p
-            id="login-password-error"
-            role="alert"
-            className="text-danger text-sm"
-          >
-            {errors.password.message}
-          </p>
-        )}
       </fieldset>
 
       <Button type="submit" disabled={isSubmitting} className="mt-4 w-full">

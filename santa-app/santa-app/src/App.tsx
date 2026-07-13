@@ -1,12 +1,18 @@
+import { lazy } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 import { Layout } from "./components/Layout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { LoginPage } from "./pages/LoginPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { RegisterPage } from "./pages/RegisterPage";
-import { RoomDetailPage } from "./pages/RoomDetailPage";
-import { RoomsPage } from "./pages/RoomsPage";
-import { WishlistPage } from "./pages/WishlistPage";
+
+const RoomsPage = lazy(() => import("./pages/RoomsPage").then((m) => ({ default: m.RoomsPage })));
+const RoomDetailPage = lazy(() =>
+  import("./pages/RoomDetailPage").then((m) => ({ default: m.RoomDetailPage })),
+);
+const WishlistPage = lazy(() =>
+  import("./pages/WishlistPage").then((m) => ({ default: m.WishlistPage })),
+);
 
 function App() {
   return (

@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { ErrorBoundary } from 'react-error-boundary';
 import { api, ApiError, getErrorMessage } from '@/services/api';
 import { useAuth } from '@/hooks/useAuth';
 import { NotFoundPage } from './NotFoundPage';
@@ -7,6 +8,7 @@ import { WishlistEditor } from '@/components/WishlistEditor';
 import { MyAssignment } from '@/components/MyAssignment';
 import { AssigneeWishlist } from '@/components/AssigneeWishlist';
 import { Button } from '@/components/ui/button';
+import { ErrorFallback } from '@/components/ErrorFallback';
 
 interface ApiRoom {
   _id: string;
@@ -100,7 +102,9 @@ export function RoomDetailPage() {
       <div className="flex flex-col gap-8">
         <section>
           <h3 className="mb-3 text-lg font-semibold">My Wishlist</h3>
-          <WishlistEditor roomId={roomId} />
+          <ErrorBoundary FallbackComponent={ErrorFallback} resetKeys={[roomId]}>
+            <WishlistEditor roomId={roomId} />
+          </ErrorBoundary>
         </section>
 
         <section>
