@@ -5,6 +5,7 @@ import { RefreshCw, UserMinus, Wallet, CalendarDays, Trash2, Gift, MessageCircle
 import { toast } from 'sonner';
 import { api, getApiErrorMessage } from '@/lib/api';
 import { useAuth } from '@/features/auth/useAuth';
+import { usePermissions } from '@/features/rooms/usePermissions';
 import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -106,10 +107,11 @@ export function RoomDetailPage() {
   if (isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>;
   if (!room) return <p className="text-sm text-muted-foreground">Room not found.</p>;
 
-  const isOwner = room.creatorId === user?.id;
-  const canKick = room.viewerPermissions?.includes('room:kick') ?? isOwner;
-  const canInvite = room.viewerPermissions?.includes('room:invite') ?? isOwner;
-  const canDelete = room.viewerPermissions?.includes('room:delete') ?? isOwner;
+  const { can } = usePermissions(room);
+  const canDraw = can('room:draw');
+  const canKick = can('room:kick');
+  const canInvite = can('room:invite');
+  const canDelete = can('room:delete');
 
   return (
     <>
@@ -189,7 +191,7 @@ export function RoomDetailPage() {
               </p>
             </div>
 
-            {isOwner && room.status === 'pending' && (
+            {canDraw && room.status === 'pending' && (
               <DrawDialog
                 open={drawDialogOpen}
                 onOpenChange={setDrawDialogOpen}

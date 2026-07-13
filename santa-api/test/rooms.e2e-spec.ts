@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { getConnectionToken } from '@nestjs/mongoose';
+import { getConnectionToken, getModelToken } from '@nestjs/mongoose';
 import { Connection } from 'mongoose';
+import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
 import {
   FastifyAdapter,
@@ -8,11 +9,15 @@ import {
 } from '@nestjs/platform-fastify';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/configure-app';
+import { User } from '../src/users/schemas/user.schema';
+import { Room } from '../src/rooms/schemas/room.schema';
 import {
   clearAllCollections,
   startInMemoryMongo,
   stopInMemoryMongo,
 } from './setup-mongo';
+import { userFixture, roomFixture } from './factories';
+import { tokenFor } from './auth-token.helper';
 
 /**
  * COMPONENT TEST (HTTP slice) for Rooms. Same approach as auth.e2e-spec.ts.
@@ -103,26 +108,338 @@ describe('Rooms (HTTP)', () => {
 
   // 👇 Lesson 04 — Authorization: roles & permissions.
   // Gate by PERMISSION, never by role. A missing permission → 403; a non-member → 404.
-  it.todo('room response includes viewerPermissions for the caller');
-  it.todo('owner can run the draw (POST /api/rooms/:id/draw → 200)');
-  it.todo('member running the draw is rejected (POST /api/rooms/:id/draw → 403)');
-  it.todo('owner can edit the room (PATCH /api/rooms/:id → 200)');
-  it.todo('member editing the room is rejected (PATCH /api/rooms/:id → 403)');
-  it.todo('owner can delete the room (DELETE /api/rooms/:id → 204)');
-  it.todo('member deleting the room is rejected (DELETE /api/rooms/:id → 403)');
-  it.todo(
-    'owner can kick a member (DELETE /api/rooms/:id/members/:userId → 204)',
-  );
-  it.todo(
-    'member cannot kick anyone (DELETE /api/rooms/:id/members/:userId → 403)',
-  );
-  it.todo(
-    'kicking the owner is rejected (DELETE /api/rooms/:id/members/:ownerId → 400)',
-  );
-  it.todo(
-    'owner can regenerate the invite code (POST /api/rooms/:id/invite-code/regenerate → 200)',
-  );
-  it.todo('member cannot regenerate the invite code (→ 403)');
-  it.todo('a non-member gets 404 on any guarded room route');
-  it.todo('a member can still GET /api/rooms/:id and PUT the wishlist');
+  it('room response includes viewerPermissions for the caller', async () => {
+    const userModel = app.get(getModelToken(User.name));
+    const roomModel = app.get(getModelToken(Room.name));
+    const jwt = app.get(JwtService);
+
+    const owner = await userModel.create(userFixture());
+    const room = await roomModel.create(
+      roomFixture({
+        creatorId: owner._id,
+        participants: [{ userId: owner._id, role: 'owner' }],
+      }),
+    );
+    const token = tokenFor(jwt, owner);
+
+    const res = await request(app.getHttpServer())
+      .get(`/api/rooms/${room._id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(res.body.viewerPermissions).toContain('room:draw');
+    expect(res.body.viewerPermissions).toContain('room:delete');
+  });
+
+  it('owner can run the draw (POST /api/rooms/:id/draw → 200)', async () => {
+    const userModel = app.get(getModelToken(User.name));
+    const roomModel = app.get(getModelToken(Room.name));
+    const jwt = app.get(JwtService);
+
+    const owner = await userModel.create(userFixture());
+    const member1 = await userModel.create(userFixture());
+    const member2 = await userModel.create(userFixture());
+    const room = await roomModel.create(
+      roomFixture({
+        creatorId: owner._id,
+        participants: [
+          { userId: owner._id, role: 'owner' },
+          { userId: member1._id, role: 'member' },
+          { userId: member2._id, role: 'member' },
+        ],
+      }),
+    );
+    const token = tokenFor(jwt, owner);
+
+    await request(app.getHttpServer())
+      .post(`/api/rooms/${room._id}/draw`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ exchangeDate: '2026-12-24' })
+      .expect(200);
+  });
+
+  it('member running the draw is rejected (POST /api/rooms/:id/draw → 403)', async () => {
+    const userModel = app.get(getModelToken(User.name));
+    const roomModel = app.get(getModelToken(Room.name));
+    const jwt = app.get(JwtService);
+
+    const owner = await userModel.create(userFixture());
+    const member = await userModel.create(userFixture());
+    const room = await roomModel.create(
+      roomFixture({
+        creatorId: owner._id,
+        participants: [
+          { userId: owner._id, role: 'owner' },
+          { userId: member._id, role: 'member' },
+        ],
+      }),
+    );
+    const memberToken = tokenFor(jwt, member);
+
+    await request(app.getHttpServer())
+      .post(`/api/rooms/${room._id}/draw`)
+      .set('Authorization', `Bearer ${memberToken}`)
+      .send({ exchangeDate: '2026-12-24' })
+      .expect(403);
+  });
+
+  it('owner can edit the room (PATCH /api/rooms/:id → 200)', async () => {
+    const userModel = app.get(getModelToken(User.name));
+    const roomModel = app.get(getModelToken(Room.name));
+    const jwt = app.get(JwtService);
+
+    const owner = await userModel.create(userFixture());
+    const room = await roomModel.create(
+      roomFixture({
+        creatorId: owner._id,
+        participants: [{ userId: owner._id, role: 'owner' }],
+      }),
+    );
+    const token = tokenFor(jwt, owner);
+
+    await request(app.getHttpServer())
+      .patch(`/api/rooms/${room._id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Updated Room' })
+      .expect(200);
+  });
+
+  it('member editing the room is rejected (PATCH /api/rooms/:id → 403)', async () => {
+    const userModel = app.get(getModelToken(User.name));
+    const roomModel = app.get(getModelToken(Room.name));
+    const jwt = app.get(JwtService);
+
+    const owner = await userModel.create(userFixture());
+    const member = await userModel.create(userFixture());
+    const room = await roomModel.create(
+      roomFixture({
+        creatorId: owner._id,
+        participants: [
+          { userId: owner._id, role: 'owner' },
+          { userId: member._id, role: 'member' },
+        ],
+      }),
+    );
+    const memberToken = tokenFor(jwt, member);
+
+    await request(app.getHttpServer())
+      .patch(`/api/rooms/${room._id}`)
+      .set('Authorization', `Bearer ${memberToken}`)
+      .send({ name: 'Updated Room' })
+      .expect(403);
+  });
+
+  it('owner can delete the room (DELETE /api/rooms/:id → 204)', async () => {
+    const userModel = app.get(getModelToken(User.name));
+    const roomModel = app.get(getModelToken(Room.name));
+    const jwt = app.get(JwtService);
+
+    const owner = await userModel.create(userFixture());
+    const room = await roomModel.create(
+      roomFixture({
+        creatorId: owner._id,
+        participants: [{ userId: owner._id, role: 'owner' }],
+      }),
+    );
+    const token = tokenFor(jwt, owner);
+
+    await request(app.getHttpServer())
+      .delete(`/api/rooms/${room._id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(204);
+  });
+
+  it('member deleting the room is rejected (DELETE /api/rooms/:id → 403)', async () => {
+    const userModel = app.get(getModelToken(User.name));
+    const roomModel = app.get(getModelToken(Room.name));
+    const jwt = app.get(JwtService);
+
+    const owner = await userModel.create(userFixture());
+    const member = await userModel.create(userFixture());
+    const room = await roomModel.create(
+      roomFixture({
+        creatorId: owner._id,
+        participants: [
+          { userId: owner._id, role: 'owner' },
+          { userId: member._id, role: 'member' },
+        ],
+      }),
+    );
+    const memberToken = tokenFor(jwt, member);
+
+    await request(app.getHttpServer())
+      .delete(`/api/rooms/${room._id}`)
+      .set('Authorization', `Bearer ${memberToken}`)
+      .expect(403);
+  });
+
+  it('owner can kick a member (DELETE /api/rooms/:id/members/:userId → 204)', async () => {
+    const userModel = app.get(getModelToken(User.name));
+    const roomModel = app.get(getModelToken(Room.name));
+    const jwt = app.get(JwtService);
+
+    const owner = await userModel.create(userFixture());
+    const member = await userModel.create(userFixture());
+    const room = await roomModel.create(
+      roomFixture({
+        creatorId: owner._id,
+        participants: [
+          { userId: owner._id, role: 'owner' },
+          { userId: member._id, role: 'member' },
+        ],
+      }),
+    );
+    const token = tokenFor(jwt, owner);
+
+    await request(app.getHttpServer())
+      .delete(`/api/rooms/${room._id}/members/${member._id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(204);
+  });
+
+  it('member cannot kick anyone (DELETE /api/rooms/:id/members/:userId → 403)', async () => {
+    const userModel = app.get(getModelToken(User.name));
+    const roomModel = app.get(getModelToken(Room.name));
+    const jwt = app.get(JwtService);
+
+    const owner = await userModel.create(userFixture());
+    const member1 = await userModel.create(userFixture());
+    const member2 = await userModel.create(userFixture());
+    const room = await roomModel.create(
+      roomFixture({
+        creatorId: owner._id,
+        participants: [
+          { userId: owner._id, role: 'owner' },
+          { userId: member1._id, role: 'member' },
+          { userId: member2._id, role: 'member' },
+        ],
+      }),
+    );
+    const member1Token = tokenFor(jwt, member1);
+
+    await request(app.getHttpServer())
+      .delete(`/api/rooms/${room._id}/members/${member2._id}`)
+      .set('Authorization', `Bearer ${member1Token}`)
+      .expect(403);
+  });
+
+  it('kicking the owner is rejected (DELETE /api/rooms/:id/members/:ownerId → 400)', async () => {
+    const userModel = app.get(getModelToken(User.name));
+    const roomModel = app.get(getModelToken(Room.name));
+    const jwt = app.get(JwtService);
+
+    const owner = await userModel.create(userFixture());
+    const room = await roomModel.create(
+      roomFixture({
+        creatorId: owner._id,
+        participants: [{ userId: owner._id, role: 'owner' }],
+      }),
+    );
+    const token = tokenFor(jwt, owner);
+
+    await request(app.getHttpServer())
+      .delete(`/api/rooms/${room._id}/members/${owner._id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(400);
+  });
+
+  it('owner can regenerate the invite code (POST /api/rooms/:id/invite-code/regenerate → 200)', async () => {
+    const userModel = app.get(getModelToken(User.name));
+    const roomModel = app.get(getModelToken(Room.name));
+    const jwt = app.get(JwtService);
+
+    const owner = await userModel.create(userFixture());
+    const oldCode = 'ABC123';
+    const room = await roomModel.create(
+      roomFixture({
+        creatorId: owner._id,
+        inviteCode: oldCode,
+        participants: [{ userId: owner._id, role: 'owner' }],
+      }),
+    );
+    const token = tokenFor(jwt, owner);
+
+    const res = await request(app.getHttpServer())
+      .post(`/api/rooms/${room._id}/invite-code/regenerate`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(res.body.inviteCode).not.toBe(oldCode);
+  });
+
+  it('member cannot regenerate the invite code (→ 403)', async () => {
+    const userModel = app.get(getModelToken(User.name));
+    const roomModel = app.get(getModelToken(Room.name));
+    const jwt = app.get(JwtService);
+
+    const owner = await userModel.create(userFixture());
+    const member = await userModel.create(userFixture());
+    const room = await roomModel.create(
+      roomFixture({
+        creatorId: owner._id,
+        participants: [
+          { userId: owner._id, role: 'owner' },
+          { userId: member._id, role: 'member' },
+        ],
+      }),
+    );
+    const memberToken = tokenFor(jwt, member);
+
+    await request(app.getHttpServer())
+      .post(`/api/rooms/${room._id}/invite-code/regenerate`)
+      .set('Authorization', `Bearer ${memberToken}`)
+      .expect(403);
+  });
+
+  it('a non-member gets 404 on any guarded room route', async () => {
+    const userModel = app.get(getModelToken(User.name));
+    const roomModel = app.get(getModelToken(Room.name));
+    const jwt = app.get(JwtService);
+
+    const owner = await userModel.create(userFixture());
+    const stranger = await userModel.create(userFixture());
+    const room = await roomModel.create(
+      roomFixture({
+        creatorId: owner._id,
+        participants: [{ userId: owner._id, role: 'owner' }],
+      }),
+    );
+    const strangerToken = tokenFor(jwt, stranger);
+
+    await request(app.getHttpServer())
+      .post(`/api/rooms/${room._id}/draw`)
+      .set('Authorization', `Bearer ${strangerToken}`)
+      .send({ exchangeDate: '2026-12-24' })
+      .expect(404);
+  });
+
+  it('a member can still GET /api/rooms/:id and PUT the wishlist', async () => {
+    const userModel = app.get(getModelToken(User.name));
+    const roomModel = app.get(getModelToken(Room.name));
+    const jwt = app.get(JwtService);
+
+    const owner = await userModel.create(userFixture());
+    const member = await userModel.create(userFixture());
+    const room = await roomModel.create(
+      roomFixture({
+        creatorId: owner._id,
+        participants: [
+          { userId: owner._id, role: 'owner' },
+          { userId: member._id, role: 'member' },
+        ],
+      }),
+    );
+    const memberToken = tokenFor(jwt, member);
+
+    await request(app.getHttpServer())
+      .get(`/api/rooms/${room._id}`)
+      .set('Authorization', `Bearer ${memberToken}`)
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .put(`/api/rooms/${room._id}/wishlist`)
+      .set('Authorization', `Bearer ${memberToken}`)
+      .send({ items: ['item1', 'item2'] })
+      .expect(200);
+  });
 });
