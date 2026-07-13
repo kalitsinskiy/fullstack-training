@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { DrawDialog } from '@/components/DrawDialog';
 import type { RoomDetail, Assignment, Wishlist } from '@/types/api';
 
 export function RoomDetailPage() {
@@ -36,6 +37,7 @@ export function RoomDetailPage() {
   });
 
   const [wishlistText, setWishlistText] = useState('');
+  const [drawDialogOpen, setDrawDialogOpen] = useState(false);
   useEffect(() => {
     if (myWishlist) setWishlistText(myWishlist.items.join('\n'));
   }, [myWishlist]);
@@ -78,6 +80,18 @@ export function RoomDetailPage() {
       window.location.assign('/rooms');
     },
     onError: (err) => toast.error(getApiErrorMessage(err, 'Failed to delete room')),
+  });
+
+  const draw = useMutation({
+    mutationFn: (exchangeDate: string) =>
+      api.post<RoomDetail>(`/api/rooms/${id}/draw`, { exchangeDate }).then((r) => r.data),
+    onSuccess: () => {
+      setDrawDialogOpen(false);
+      qc.invalidateQueries({ queryKey: ['rooms', id] });
+      qc.invalidateQueries({ queryKey: ['rooms', id, 'assignment'] });
+      toast.success('Draw completed!');
+    },
+    onError: (err) => toast.error(getApiErrorMessage(err, 'Failed to run draw')),
   });
 
   function handleSaveWishlist(e: FormEvent) {
@@ -174,6 +188,16 @@ export function RoomDetailPage() {
                 Share this room's <strong>ID</strong> ({room.id}) and code so others can join.
               </p>
             </div>
+
+            {isOwner && room.status === 'pending' && (
+              <DrawDialog
+                open={drawDialogOpen}
+                onOpenChange={setDrawDialogOpen}
+                onDraw={draw.mutate}
+                isLoading={draw.isPending}
+                participantCount={room.participantCount}
+              />
+            )}
 
             {room.exchangeDate && (
               <div>

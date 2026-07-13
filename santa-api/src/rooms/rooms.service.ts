@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -18,6 +19,7 @@ import { UpdateRoomDto } from './dto/update-room.dto';
 import { AssignmentView, Room } from './room.types';
 import { Room as RoomModel, RoomDocument } from './schemas/room.schema';
 import { permissionsForRole } from './permissions';
+import { sattoloCycle } from '../utils/derangement';
 
 @Injectable()
 export class RoomsService {
@@ -149,8 +151,61 @@ export class RoomsService {
     return this.toRoom(doc, userId, displayNames);
   }
 
-  draw(id: string, requesterId: string, exchangeDate: string): Promise<Room> {
-    throw new Error('RoomsService.draw is not implemented — see Lesson 03');
+  async draw(
+    id: string,
+    requesterId: string,
+    exchangeDate: string,
+  ): Promise<Room> {
+    if (!isValidObjectId(id)) {
+      throw new NotFoundException('Room not found');
+    }
+
+    const doc = await this.roomModel.findById(id).exec();
+    if (!doc) {
+      throw new NotFoundException('Room not found');
+    }
+
+    if (doc.creatorId.toString() !== requesterId) {
+      throw new ForbiddenException(
+        'Only the room creator can trigger the draw',
+      );
+    }
+
+    if (doc.status === 'drawn') {
+      throw new BadRequestException('Draw has already been performed');
+    }
+
+    if (doc.participants.length < 3) {
+      throw new BadRequestException('Need at least 3 participants to draw');
+    }
+
+    const participantIds = doc.participants.map((p) => p.userId);
+    const shuffled = sattoloCycle(participantIds);
+
+    const assignments = participantIds.map((giverId, index) => ({
+      giverId,
+      receiverId: shuffled[index],
+    }));
+
+    const updatedDoc = await this.roomModel
+      .findByIdAndUpdate(
+        id,
+        {
+          status: 'drawn',
+          drawDate: new Date(),
+          exchangeDate: new Date(exchangeDate),
+          assignments,
+        },
+        { new: true },
+      )
+      .exec();
+
+    if (!updatedDoc) {
+      throw new NotFoundException('Room not found');
+    }
+
+    const displayNames = await this.resolveDisplayNames(updatedDoc);
+    return this.toRoom(updatedDoc, requesterId, displayNames);
   }
 
   async getAssignment(id: string, userId: string): Promise<AssignmentView> {
