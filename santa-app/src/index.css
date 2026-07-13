@@ -64,3 +64,25 @@
     @apply font-display;
   }
 }
+
+/* react-day-picker theming — scoped so it doesn't leak */
+.santa-cal .rdp-root {
+  --rdp-accent-color: hsl(var(--primary));
+  --rdp-accent-background-color: hsl(var(--primary));
+  --rdp-day_button-width: 2.25rem;
+  --rdp-day_button-height: 2.25rem;
+  font-family: inherit;
+  color: hsl(var(--foreground));
+}
+.santa-cal .rdp-selected .rdp-day_button {
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-radius: 0.5rem;
+}
+.santa-cal .rdp-today:not(.rdp-selected) .rdp-day_button {
+  color: hsl(var(--primary));
+  font-weight: 600;
+}
+.santa-cal .rdp-chevron {
+  fill: hsl(var(--primary));
+}

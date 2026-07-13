@@ -1,19 +1,34 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
-  NotImplementedException,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { UsersService } from '../users/users.service';
 import { WishlistService } from '../wishlist/wishlist.service';
-import { paginate, PaginatedResponse, PaginationQuery } from '../common/pagination';
+import {
+  paginate,
+  PaginatedResponse,
+  PaginationQuery,
+} from '../common/pagination';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
 import { AssignmentView, Room, RoomParticipant } from './room.types';
 import { Room as RoomModel, RoomDocument } from './schemas/room.schema';
 import { permissionsForRole } from './permissions';
+
+function sattoloCycle<T>(arr: T[]): T[] {
+  const result = [...arr];
+  let i = result.length;
+  while (i > 1) {
+    i--;
+    const j = Math.floor(Math.random() * i);
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
 
 @Injectable()
 export class RoomsService {
@@ -27,7 +42,9 @@ export class RoomsService {
   private async toRoomView(doc: RoomDocument, viewerId: string): Promise<Room> {
     const participants: RoomParticipant[] = await Promise.all(
       doc.participants.map(async (p) => {
-        const user = await this.usersService.findById(p.userId.toString()).catch(() => null);
+        const user = await this.usersService
+          .findById(p.userId.toString())
+          .catch(() => null);
         return {
           id: p.userId.toString(),
           displayName: user?.displayName ?? 'Unknown',
@@ -36,11 +53,15 @@ export class RoomsService {
       }),
     );
 
-    const viewerEntry = doc.participants.find(p => p.userId.toString() === viewerId);
-    const viewerPermissions = viewerEntry ? permissionsForRole(viewerEntry.role) : [];
+    const viewerEntry = doc.participants.find(
+      (p) => p.userId.toString() === viewerId,
+    );
+    const viewerPermissions = viewerEntry
+      ? permissionsForRole(viewerEntry.role)
+      : [];
 
     return {
-      id: doc.id as string,
+      id: doc.id,
       name: doc.name,
       creatorId: doc.creatorId.toString(),
       inviteCode: doc.inviteCode,
@@ -56,7 +77,7 @@ export class RoomsService {
   }
 
   async create(dto: CreateRoomDto, creatorId: string): Promise<Room> {
-    const code = Math.random().toString(36).slice(2, 8).toUpperCase();
+    const code = this.generateCode();
     const doc = await this.roomModel.create({
       name: dto.name,
       creatorId: new Types.ObjectId(creatorId),
@@ -66,67 +87,238 @@ export class RoomsService {
       ...(dto.budget !== undefined && { budget: dto.budget }),
       ...(dto.currency && { currency: dto.currency }),
     });
-    return this.toRoomView(doc as unknown as RoomDocument, creatorId);
+    return this.toRoomView(doc, creatorId);
   }
 
-  async findByUser(userId: string, query: PaginationQuery): Promise<PaginatedResponse<Room>> {
+  async findByUser(
+    userId: string,
+    query: PaginationQuery,
+  ): Promise<PaginatedResponse<Room>> {
     const filter = { 'participants.userId': new Types.ObjectId(userId) };
     const result = await paginate(this.roomModel, filter, query);
     const data = await Promise.all(
-      result.data.map(doc => this.toRoomView(doc as unknown as RoomDocument, userId)),
+      result.data.map((doc) =>
+        this.toRoomView(doc as unknown as RoomDocument, userId),
+      ),
     );
     return { data, meta: result.meta };
   }
 
   async findByIdForUser(id: string, userId: string): Promise<Room> {
-    if (!Types.ObjectId.isValid(id)) throw new NotFoundException('Room not found');
-    const doc = await this.roomModel.findOne({
-      _id: id,
-      'participants.userId': new Types.ObjectId(userId),
-    }).exec();
+    if (!Types.ObjectId.isValid(id))
+      throw new NotFoundException('Room not found');
+    const doc = await this.roomModel
+      .findOne({
+        _id: id,
+        'participants.userId': new Types.ObjectId(userId),
+      })
+      .exec();
     if (!doc) throw new NotFoundException('Room not found');
-    return this.toRoomView(doc as unknown as RoomDocument, userId);
+    return this.toRoomView(doc, userId);
   }
 
   async join(id: string, inviteCode: string, userId: string): Promise<Room> {
-    if (!Types.ObjectId.isValid(id)) throw new NotFoundException('Room not found');
+    if (!Types.ObjectId.isValid(id))
+      throw new NotFoundException('Room not found');
     const doc = await this.roomModel.findById(id).exec();
     if (!doc) throw new NotFoundException('Room not found');
-    if (doc.inviteCode !== inviteCode) throw new BadRequestException('Invalid invite code');
-    if (doc.status === 'drawn') throw new BadRequestException('Draw already completed');
-    const alreadyMember = doc.participants.some(p => p.userId.toString() === userId);
+    if (doc.inviteCode !== inviteCode)
+      throw new BadRequestException('Invalid invite code');
+    if (doc.status === 'drawn')
+      throw new BadRequestException('Draw already completed');
+    const alreadyMember = doc.participants.some(
+      (p) => p.userId.toString() === userId,
+    );
     if (!alreadyMember) {
-      doc.participants.push({ userId: new Types.ObjectId(userId), role: 'member' });
+      doc.participants.push({
+        userId: new Types.ObjectId(userId),
+        role: 'member',
+      });
       await doc.save();
     }
-    return this.toRoomView(doc as unknown as RoomDocument, userId);
+    return this.toRoomView(doc, userId);
   }
 
-  joinByCode(inviteCode: string, userId: string): Promise<Room> {
-    throw new NotImplementedException('RoomsService.joinByCode is not implemented');
+  async joinByCode(inviteCode: string, userId: string): Promise<Room> {
+    const doc = await this.roomModel.findOne({ inviteCode }).exec();
+    if (!doc) throw new NotFoundException('Room not found');
+    if (doc.status === 'drawn')
+      throw new BadRequestException('Draw already completed');
+    const alreadyMember = doc.participants.some(
+      (p) => p.userId.toString() === userId,
+    );
+    if (!alreadyMember) {
+      doc.participants.push({
+        userId: new Types.ObjectId(userId),
+        role: 'member',
+      });
+      await doc.save();
+    }
+    return this.toRoomView(doc, userId);
   }
 
-  draw(id: string, requesterId: string, exchangeDate: string): Promise<Room> {
-    throw new NotImplementedException('RoomsService.draw is not implemented');
+  async draw(
+    id: string,
+    requesterId: string,
+    exchangeDate: string,
+  ): Promise<Room> {
+    if (!Types.ObjectId.isValid(id))
+      throw new NotFoundException('Room not found');
+    const doc = await this.roomModel.findById(id).exec();
+    if (!doc) throw new NotFoundException('Room not found');
+
+    if (doc.creatorId.toString() !== requesterId) {
+      throw new ForbiddenException(
+        'Only the room creator can trigger the draw',
+      );
+    }
+    if (doc.status === 'drawn') {
+      throw new BadRequestException('Draw has already been performed');
+    }
+    if (doc.participants.length < 3) {
+      throw new BadRequestException('Need at least 3 participants to draw');
+    }
+
+    const participantIds = doc.participants.map((p) => p.userId.toString());
+    const shuffled = sattoloCycle(participantIds);
+    const assignments = participantIds.map((giverId, i) => ({
+      giverId: new Types.ObjectId(giverId),
+      receiverId: new Types.ObjectId(shuffled[i]),
+    }));
+
+    const updated = await this.roomModel
+      .findByIdAndUpdate(
+        id,
+        {
+          status: 'drawn',
+          drawDate: new Date(),
+          exchangeDate: new Date(exchangeDate),
+          assignments,
+        },
+        { new: true },
+      )
+      .exec();
+
+    return this.toRoomView(updated as unknown as RoomDocument, requesterId);
   }
 
-  getAssignment(id: string, userId: string): Promise<AssignmentView> {
-    throw new NotImplementedException('RoomsService.getAssignment is not implemented');
+  async getAssignment(id: string, userId: string): Promise<AssignmentView> {
+    if (!Types.ObjectId.isValid(id))
+      throw new NotFoundException('Room not found');
+    const doc = await this.roomModel.findById(id).exec();
+    if (!doc) throw new NotFoundException('Room not found');
+
+    if (doc.status !== 'drawn') {
+      throw new BadRequestException('Draw has not been performed yet');
+    }
+
+    const isMember = doc.participants.some(
+      (p) => p.userId.toString() === userId,
+    );
+    if (!isMember) throw new ForbiddenException('Not a room participant');
+
+    const assignment = doc.assignments.find(
+      (a) => a.giverId.toString() === userId,
+    );
+    if (!assignment) throw new NotFoundException('Assignment not found');
+
+    const receiver = await this.usersService.findById(
+      assignment.receiverId.toString(),
+    );
+    const wishlist = await this.wishlistService.get(
+      id,
+      assignment.receiverId.toString(),
+    );
+
+    return {
+      receiver: {
+        id: receiver.id,
+        displayName: receiver.displayName,
+        wishlist: wishlist.items,
+      },
+    };
   }
 
-  editRoom(id: string, dto: UpdateRoomDto, userId: string): Promise<Room> {
-    throw new NotImplementedException('RoomsService.editRoom is not implemented');
+  async editRoom(
+    id: string,
+    dto: UpdateRoomDto,
+    userId: string,
+  ): Promise<Room> {
+    if (!Types.ObjectId.isValid(id))
+      throw new NotFoundException('Room not found');
+    const doc = await this.roomModel.findById(id).exec();
+    if (!doc) throw new NotFoundException('Room not found');
+    if (doc.creatorId.toString() !== userId) {
+      throw new ForbiddenException('Only the room creator can edit the room');
+    }
+
+    const update: Record<string, unknown> = {};
+    if (dto.name !== undefined) update.name = dto.name;
+    if (dto.budget !== undefined) update.budget = dto.budget;
+    if (dto.currency !== undefined) update.currency = dto.currency;
+    if (dto.exchangeDate !== undefined)
+      update.exchangeDate = new Date(dto.exchangeDate);
+
+    const updated = await this.roomModel
+      .findByIdAndUpdate(id, update, { new: true })
+      .exec();
+    return this.toRoomView(updated as unknown as RoomDocument, userId);
   }
 
-  deleteRoom(id: string, userId: string): Promise<void> {
-    throw new NotImplementedException('RoomsService.deleteRoom is not implemented');
+  async deleteRoom(id: string, userId: string): Promise<void> {
+    if (!Types.ObjectId.isValid(id))
+      throw new NotFoundException('Room not found');
+    const doc = await this.roomModel.findById(id).exec();
+    if (!doc) throw new NotFoundException('Room not found');
+    if (doc.creatorId.toString() !== userId) {
+      throw new ForbiddenException('Only the room creator can delete the room');
+    }
+    await this.roomModel.findByIdAndDelete(id).exec();
   }
 
-  kickMember(id: string, targetUserId: string, userId: string): Promise<void> {
-    throw new NotImplementedException('RoomsService.kickMember is not implemented');
+  async kickMember(
+    id: string,
+    targetUserId: string,
+    userId: string,
+  ): Promise<void> {
+    if (!Types.ObjectId.isValid(id))
+      throw new NotFoundException('Room not found');
+    const doc = await this.roomModel.findById(id).exec();
+    if (!doc) throw new NotFoundException('Room not found');
+    if (doc.creatorId.toString() !== userId) {
+      throw new ForbiddenException('Only the room creator can remove members');
+    }
+    if (targetUserId === userId) {
+      throw new BadRequestException('Cannot remove the owner');
+    }
+    const memberExists = doc.participants.some(
+      (p) => p.userId.toString() === targetUserId,
+    );
+    if (!memberExists) throw new NotFoundException('Member not found');
+    doc.participants = doc.participants.filter(
+      (p) => p.userId.toString() !== targetUserId,
+    );
+    await doc.save();
   }
 
-  regenerateInviteCode(id: string, userId: string): Promise<Room> {
-    throw new NotImplementedException('RoomsService.regenerateInviteCode is not implemented');
+  async regenerateInviteCode(id: string, userId: string): Promise<Room> {
+    if (!Types.ObjectId.isValid(id))
+      throw new NotFoundException('Room not found');
+    const doc = await this.roomModel.findById(id).exec();
+    if (!doc) throw new NotFoundException('Room not found');
+    if (doc.creatorId.toString() !== userId) {
+      throw new ForbiddenException(
+        'Only the room creator can regenerate the invite code',
+      );
+    }
+    const code = this.generateCode();
+    const updated = await this.roomModel
+      .findByIdAndUpdate(id, { inviteCode: code }, { new: true })
+      .exec();
+    return this.toRoomView(updated as unknown as RoomDocument, userId);
+  }
+
+  private generateCode(): string {
+    return Math.random().toString(36).slice(2, 8).toUpperCase();
   }
 }
