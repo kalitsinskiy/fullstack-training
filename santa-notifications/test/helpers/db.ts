@@ -7,6 +7,7 @@ let mongo: MongoMemoryServer | undefined;
 export async function setupTestDb(): Promise<void> {
   // Pin the binary version so it's shared with santa-api's test cache.
   mongo = await MongoMemoryServer.create({ binary: { version: '7.0.34' } });
+  process.env.MONGO_URL = mongo.getUri();
   mongoose.set('strictQuery', true);
   await mongoose.connect(mongo.getUri());
 }
