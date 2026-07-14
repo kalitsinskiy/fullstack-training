@@ -212,13 +212,131 @@ describe('Rooms (HTTP)', () => {
       .expect(400);
   });
 
-  it.todo(
-    'POST /api/rooms/:id/draw → creator-only; assigns everyone a giftee (nobody themselves)',
-  );
-  it.todo('POST /api/rooms/:id/draw → 403 for a non-creator');
-  it.todo(
-    'GET /api/rooms/:id/assignment → returns the giftee + wishlist after the draw',
-  );
+  // Create a room owned by `ownerToken` and have `memberTokens` join it.
+  async function seedRoomWithMembers(count: number) {
+    const { user: owner, token: ownerToken } = await seedUserWithToken({
+      displayName: 'Owner',
+    });
+
+    const created = await request(app.getHttpServer())
+      .post('/api/rooms')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ name: 'Draw Room' })
+      .expect(201);
+
+    const members: { id: string; token: string }[] = [];
+    for (let i = 0; i < count; i += 1) {
+      const { user, token } = await seedUserWithToken({
+        displayName: `Member ${i + 1}`,
+      });
+      await request(app.getHttpServer())
+        .post(`/api/rooms/${created.body.id}/join`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ inviteCode: created.body.inviteCode })
+        .expect(201);
+      members.push({ id: user._id.toString(), token });
+    }
+
+    return {
+      roomId: created.body.id as string,
+      owner: { id: owner._id.toString(), token: ownerToken },
+      members,
+    };
+  }
+
+  it('POST /api/rooms/:id/draw → creator-only; assigns everyone a giftee (nobody themselves)', async () => {
+    const { roomId, owner, members } = await seedRoomWithMembers(2);
+    const everyone = [owner, ...members];
+
+    const drawn = await request(app.getHttpServer())
+      .post(`/api/rooms/${roomId}/draw`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ exchangeDate: '2026-12-24' })
+      .expect(200);
+
+    expect(drawn.body.status).toBe('drawn');
+    expect(drawn.body.exchangeDate).toContain('2026-12-24');
+
+    // Every participant has exactly one giftee, nobody draws themselves, and no
+    // two people share the same giftee.
+    const receivers = new Set<string>();
+    for (const person of everyone) {
+      const res = await request(app.getHttpServer())
+        .get(`/api/rooms/${roomId}/assignment`)
+        .set('Authorization', `Bearer ${person.token}`)
+        .expect(200);
+      expect(res.body.receiver.id).not.toBe(person.id);
+      receivers.add(res.body.receiver.id);
+    }
+    expect(receivers.size).toBe(everyone.length);
+
+    // Idempotency: a second draw is rejected.
+    await request(app.getHttpServer())
+      .post(`/api/rooms/${roomId}/draw`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ exchangeDate: '2026-12-24' })
+      .expect(400);
+  });
+
+  it('POST /api/rooms/:id/draw → 403 for a non-creator', async () => {
+    const { roomId, members } = await seedRoomWithMembers(2);
+
+    await request(app.getHttpServer())
+      .post(`/api/rooms/${roomId}/draw`)
+      .set('Authorization', `Bearer ${members[0].token}`)
+      .send({ exchangeDate: '2026-12-24' })
+      .expect(403);
+  });
+
+  it('POST /api/rooms/:id/draw → 400 with fewer than 3 participants', async () => {
+    const { roomId, owner } = await seedRoomWithMembers(1);
+
+    await request(app.getHttpServer())
+      .post(`/api/rooms/${roomId}/draw`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ exchangeDate: '2026-12-24' })
+      .expect(400);
+  });
+
+  it('GET /api/rooms/:id/assignment → returns the giftee + wishlist after the draw', async () => {
+    const { roomId, owner, members } = await seedRoomWithMembers(2);
+
+    // Everyone sets a wishlist so whoever the owner draws has items to show.
+    for (const person of [owner, ...members]) {
+      await request(app.getHttpServer())
+        .put(`/api/rooms/${roomId}/wishlist`)
+        .set('Authorization', `Bearer ${person.token}`)
+        .send({ items: ['Wool socks', 'A good book'] })
+        .expect(200);
+    }
+
+    await request(app.getHttpServer())
+      .post(`/api/rooms/${roomId}/draw`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ exchangeDate: '2026-12-24' })
+      .expect(200);
+
+    const res = await request(app.getHttpServer())
+      .get(`/api/rooms/${roomId}/assignment`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .expect(200);
+
+    expect(res.body.receiver).toEqual({
+      id: expect.any(String),
+      displayName: expect.any(String),
+      wishlist: ['Wool socks', 'A good book'],
+    });
+    expect(res.body.receiver.id).not.toBe(owner.id);
+  });
+
+  it('GET /api/rooms/:id/assignment → 400 before the draw', async () => {
+    const { roomId, owner } = await seedRoomWithMembers(2);
+
+    await request(app.getHttpServer())
+      .get(`/api/rooms/${roomId}/assignment`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .expect(400);
+  });
 
   // 👇 Lesson 04 — Authorization: roles & permissions.
   // Gate by PERMISSION, never by role. A missing permission → 403; a non-member → 404.

@@ -16,6 +16,9 @@ import { UpdateRoomDto } from './dto/update-room.dto';
 import { permissionsForRole, RoomRole } from './permissions';
 import { AssignmentView, Room } from './room.types';
 import { Room as RoomModel } from './schemas/room.schema';
+import { generateAssignments } from '../utils/derangement';
+
+const MIN_PARTICIPANTS_TO_DRAW = 3;
 
 const INVITE_CODE_ALPHABET = 'ABCDEFGHIJKLMNPQRSTUVWXYZ0123456789';
 const INVITE_CODE_LENGTH = 6;
@@ -146,28 +149,148 @@ export class RoomsService {
     );
   }
 
-  // TODO (Lesson 03): only the creator may draw, and only once, with >= 3 participants.
-  // Produce a derangement (Sattolo / Fisher–Yates with rejection — no self-assignment)
-  // and persist ALL assignments in a single document write (atomic, no transaction).
-  // Save `exchangeDate` (required) so every participant sees the gift-exchange day.
-  draw(id: string, requesterId: string, exchangeDate: string): Promise<Room> {
-    throw new NotImplementedException('RoomsService.draw is not implemented');
+  async draw(
+    id: string,
+    requesterId: string,
+    exchangeDate: string,
+  ): Promise<Room> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new NotFoundException('Room not found');
+    }
+
+    const room = await this.roomModel.findById(id).exec();
+    if (!room) {
+      throw new NotFoundException('Room not found');
+    }
+
+    if (room.creatorId.toString() !== requesterId) {
+      throw new ForbiddenException(
+        'Only the room creator can trigger the draw',
+      );
+    }
+    if (room.status === 'drawn') {
+      throw new BadRequestException('Draw has already been performed');
+    }
+    if (room.participants.length < MIN_PARTICIPANTS_TO_DRAW) {
+      throw new BadRequestException(
+        `Need at least ${MIN_PARTICIPANTS_TO_DRAW} participants to draw`,
+      );
+    }
+
+    const parsedExchangeDate = new Date(exchangeDate);
+    if (Number.isNaN(parsedExchangeDate.getTime())) {
+      throw new BadRequestException('exchangeDate must be a valid date');
+    }
+
+    const participantIds = room.participants.map((participant) =>
+      participant.userId.toString(),
+    );
+    const assignments = generateAssignments(participantIds).map(
+      (assignment) => ({
+        giverId: new Types.ObjectId(assignment.giverId),
+        receiverId: new Types.ObjectId(assignment.receiverId),
+      }),
+    );
+
+    // Single atomic write: everything flips together or not at all.
+    const updated = await this.roomModel
+      .findByIdAndUpdate(
+        id,
+        {
+          status: 'drawn',
+          drawDate: new Date(),
+          exchangeDate: parsedExchangeDate,
+          assignments,
+        },
+        { new: true },
+      )
+      .exec();
+
+    if (!updated) {
+      throw new NotFoundException('Room not found');
+    }
+
+    return this.toRoomResponse(updated._id, requesterId);
   }
 
-  // TODO (Lesson 03): return the giftee assigned to this user, plus their wishlist.
-  // Only a participant of a drawn room may read it.
-  getAssignment(id: string, userId: string): Promise<AssignmentView> {
-    throw new NotImplementedException(
-      'RoomsService.getAssignment is not implemented',
+  async getAssignment(id: string, userId: string): Promise<AssignmentView> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new NotFoundException('Room not found');
+    }
+
+    const room = await this.roomModel.findById(id).exec();
+    if (!room) {
+      throw new NotFoundException('Room not found');
+    }
+
+    const isParticipant = room.participants.some(
+      (participant) => participant.userId.toString() === userId,
     );
+    if (!isParticipant) {
+      throw new ForbiddenException('You are not a participant of this room');
+    }
+
+    if (room.status !== 'drawn') {
+      throw new BadRequestException('The draw has not been performed yet');
+    }
+
+    const assignment = room.assignments.find(
+      (entry) => entry.giverId.toString() === userId,
+    );
+    if (!assignment) {
+      throw new NotFoundException('No assignment found for this user');
+    }
+
+    const receiverId = assignment.receiverId.toString();
+    const receiver = await this.usersService.findById(receiverId);
+    const wishlist = await this.wishlistService.get(id, receiverId);
+
+    return {
+      receiver: {
+        id: receiverId,
+        displayName: receiver.displayName,
+        wishlist: wishlist.items,
+      },
+    };
   }
 
-  // TODO (Lesson 04): update the room's fields (e.g. name). Owner-only access is
-  // already enforced by RoomPermissionsGuard via @RequirePermissions('room:edit').
-  editRoom(id: string, dto: UpdateRoomDto, userId: string): Promise<Room> {
-    throw new NotImplementedException(
-      'RoomsService.editRoom is not implemented',
-    );
+  async editRoom(
+    id: string,
+    dto: UpdateRoomDto,
+    userId: string,
+  ): Promise<Room> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new NotFoundException('Room not found');
+    }
+
+    const room = await this.roomModel.findById(id).exec();
+    if (!room) {
+      throw new NotFoundException('Room not found');
+    }
+    if (room.creatorId.toString() !== userId) {
+      throw new ForbiddenException('Only the room creator can edit the room');
+    }
+
+    const update: Record<string, unknown> = {};
+    if (dto.name !== undefined) update.name = dto.name;
+    if (dto.budget !== undefined) update.budget = dto.budget;
+    if (dto.currency !== undefined) update.currency = dto.currency;
+    if (dto.exchangeDate !== undefined) {
+      const parsed = new Date(dto.exchangeDate);
+      if (Number.isNaN(parsed.getTime())) {
+        throw new BadRequestException('exchangeDate must be a valid date');
+      }
+      update.exchangeDate = parsed;
+    }
+
+    const updated = await this.roomModel
+      .findByIdAndUpdate(id, update, { new: true })
+      .exec();
+    if (!updated) {
+      throw new NotFoundException('Room not found');
+    }
+
+    return this.toRoomResponse(updated._id, userId);
   }
 
   // TODO (Lesson 04): delete the room. Owner-only access is enforced by the guard.
