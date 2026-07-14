@@ -7,16 +7,15 @@ import { AppError, ValidationError } from './errors';
 import timingPlugin from './plugins/timing';
 import healthRoutes from './routes/health';
 import notificationRoutes from './routes/notifications';
+import redisPlugin from './plugins/redis';
+import usersRoutes from './routes/users';
 
 export function buildApp() {
   const app = Fastify({
     logger: {
-      level:
-        process.env.LOG_LEVEL ??
-        (process.env.NODE_ENV === 'test' ? 'silent' : 'info'),
+      level: process.env.LOG_LEVEL ?? (process.env.NODE_ENV === 'test' ? 'silent' : 'info'),
       transport:
-        process.env.NODE_ENV !== 'production' &&
-        process.env.NODE_ENV !== 'test'
+        process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test'
           ? {
               target: 'pino-pretty',
               options: {
@@ -40,8 +39,10 @@ export function buildApp() {
     methods: ['GET', 'POST', 'PATCH', 'DELETE'],
   });
   app.register(configPlugin);
+  app.register(redisPlugin);
   app.register(timingPlugin);
   app.register(healthRoutes);
+  app.register(usersRoutes);
   app.register(notificationRoutes, { prefix: '/api/notifications' });
 
   app.setErrorHandler((error: FastifyError, request, reply) => {

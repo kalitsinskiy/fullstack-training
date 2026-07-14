@@ -20,6 +20,8 @@ import {
   stopInMemoryMongo,
 } from './setup-mongo';
 
+jest.mock('ioredis', () => require('ioredis-mock'));
+
 /**
  * COMPONENT TEST (HTTP slice) for Rooms. Same approach as auth.e2e-spec.ts.
  *
@@ -586,5 +588,140 @@ describe('Rooms (HTTP)', () => {
       .set('Authorization', `Bearer ${member.token}`)
       .send({ items: ['Wool socks'] })
       .expect(200);
+  });
+
+  it('chahes a room read - a later GET is from Redis, not the DB', async () => {
+    const { owner, room, roomModel } = await seedOwnerAndMember();
+    const id = room._id.toString();
+
+    await request(app.getHttpServer())
+      .get(`/api/rooms/${id}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .expect(200);
+
+    await roomModel.updateOne(
+      { _id: room._id },
+      { name: 'Changed deirectly in DB' },
+    );
+
+    const secondRes = await request(app.getHttpServer())
+      .get(`/api/rooms/${id}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .expect(200);
+
+    expect(secondRes.body.name).toBe(room.name);
+  });
+
+  it('invalidates the cahce when the room is updated via API', async () => {
+    const { owner, room } = await seedOwnerAndMember();
+    const id = room._id.toString();
+
+    await request(app.getHttpServer())
+      .get(`/api/rooms/${id}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .patch(`/api/rooms/${id}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ name: 'Changed via API' })
+      .expect(200);
+
+    const secondRes = await request(app.getHttpServer())
+      .get(`/api/rooms/${id}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .expect(200);
+
+    expect(secondRes.body.name).toBe('Changed via API');
+  });
+
+  it('serves shared cahed data but adds viewerPermissions per caller', async () => {
+    const { owner, member, room } = await seedOwnerAndMember();
+    const id = room._id.toString();
+
+    const ownerRes = await request(app.getHttpServer())
+      .get(`/api/rooms/${id}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .expect(200);
+
+    const memberRes = await request(app.getHttpServer())
+      .get(`/api/rooms/${id}`)
+      .set('Authorization', `Bearer ${member.token}`)
+      .expect(200);
+
+    expect(ownerRes.body.viewerPermissions).toContain('room:delete');
+    expect([...memberRes.body.viewerPermissions].sort()).toEqual([
+      'room:view',
+      'wishlist:set',
+    ]);
+  });
+
+  it('POST /api/rooms/join -> 201 joins using only the invite code (resolved via Redis)', async () => {
+    const owner = await seedUser();
+    const other = await seedUser({ displayName: 'John Doe' });
+
+    const created = await request(app.getHttpServer())
+      .post('/api/rooms')
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ name: 'Redis test room' })
+      .expect(201);
+
+    const code = created.body.inviteCode;
+
+    const res = await request(app.getHttpServer())
+      .post('/api/rooms/join')
+      .set('Authorization', `Bearer ${other.token}`)
+      .send({ inviteCode: code })
+      .expect(201);
+
+    expect(res.body.id).toBe(created.body.id);
+    expect(
+      res.body.participants.some(
+        (p: { id: string }) => p.id === other.user._id.toString(),
+      ),
+    ).toBe(true);
+  });
+
+  it('POST /api/room/join -> 400 for an unknown or expired code', async () => {
+    const { token } = await seedUser();
+
+    await request(app.getHttpServer())
+      .post('/api/rooms/join')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ inviteCode: 'ZZZZZZ' })
+      .expect(400);
+  });
+
+  it('regeneratino the code invalidates the old one for joining', async () => {
+    const owner = await seedUser();
+    const other = await seedUser();
+    const created = await request(app.getHttpServer())
+      .post('/api/rooms')
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ name: 'Test Regen Invite Code' })
+      .expect(201);
+
+    const oldCode = created.body.inviteCode;
+    const roomId = created.body.id;
+
+    const regen = await request(app.getHttpServer())
+      .post(`/api/rooms/${roomId}/invite-code/regenerate`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .expect(200);
+
+    const newCode = regen.body.inviteCode;
+    expect(newCode).not.toBe(oldCode);
+
+    await request(app.getHttpServer())
+      .post('/api/rooms/join')
+      .set('Authorization', `Bearer ${other.token}`)
+      .send({ inviteCode: oldCode })
+      .expect(400);
+
+    await request(app.getHttpServer())
+      .post('/api/rooms/join')
+      .set('Authorization', `Bearer ${other.token}`)
+      .send({ inviteCode: newCode })
+      .expect(201);
   });
 });

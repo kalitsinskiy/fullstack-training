@@ -1,10 +1,10 @@
 import {
   Injectable,
+  Logger,
   BadRequestException,
   ConflictException,
   ForbiddenException,
   NotFoundException,
-  NotImplementedException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -12,6 +12,8 @@ import { MongoServerError } from 'mongodb';
 import { randomBytes } from 'node:crypto';
 import { UsersService } from '../users/users.service';
 import { WishlistService } from '../wishlist/wishlist.service';
+import { RedisService } from '../redis/redis.service';
+import { withViewerPermissions } from './room-veiw';
 import {
   PaginatedResponse,
   PaginationQuery,
@@ -26,12 +28,18 @@ import { derange } from './derangement';
 
 @Injectable()
 export class RoomsService {
+  private readonly logger = new Logger(RoomsService.name);
+
   constructor(
     @InjectModel(RoomModel.name)
     private readonly roomModel: Model<RoomModel>,
     private readonly usersService: UsersService,
     private readonly wishlistService: WishlistService,
+    private readonly redis: RedisService,
   ) {}
+
+  private readonly ROOM_CACHE_TTL = 300; // 5 minutes
+  private readonly INVITE_TTL = 48 * 60 * 60; // 48h = 172800s
 
   // NOTE: every room response uses the shape in docs/api-contract.md — map
   // participants to populated { id, displayName, role }, include participantCount,
@@ -58,6 +66,11 @@ export class RoomsService {
       });
 
       await created.populate('participants.userId', 'displayName');
+      await this.redis.set(
+        `invite:${created.inviteCode}`,
+        created._id.toString(),
+        this.INVITE_TTL,
+      );
 
       return this.toRoomResponse(created, creatorId);
     } catch (err) {
@@ -97,16 +110,17 @@ export class RoomsService {
       throw new NotFoundException('Room not found');
     }
 
-    const room = await this.roomModel
-      .findOne({ _id: id, 'participants.userId': userId })
-      .populate('participants.userId', 'displayName')
-      .exec();
+    const room = await this.getSharedRoom(id);
 
     if (!room) {
       throw new NotFoundException('Room not found');
     }
 
-    return this.toRoomResponse(room, userId);
+    if (!room.participants.some((p) => p.id === userId)) {
+      throw new NotFoundException('Room not found');
+    }
+
+    return withViewerPermissions(room, userId);
   }
 
   // TODO (Kickoff): join a room by id, authorised by the invite code in the body.
@@ -139,6 +153,7 @@ export class RoomsService {
         role: 'member',
       });
       await room.save();
+      await this.invalidateRoom(id);
     }
 
     await room.populate('participants.userId', 'displayName');
@@ -150,10 +165,14 @@ export class RoomsService {
   // not the room id (and a non-member can't open the room to find it). Resolve
   // invite:{code} -> roomId from Redis (you store it in create()), then run the
   // same join logic. 400 if the code is missing/expired.
-  joinByCode(inviteCode: string, userId: string): Promise<Room> {
-    throw new NotImplementedException(
-      'RoomsService.joinByCode is not implemented',
-    );
+  async joinByCode(inviteCode: string, userId: string): Promise<Room> {
+    const roomId = await this.redis.get(`invite:${inviteCode}`);
+
+    if (!roomId) {
+      throw new BadRequestException('Invalid or expired invite code');
+    }
+
+    return this.join(roomId, inviteCode, userId);
   }
 
   // TODO (Lesson 03): only the creator may draw, and only once, with >= 3 participants.
@@ -209,6 +228,8 @@ export class RoomsService {
         { new: true },
       )
       .exec();
+
+    await this.invalidateRoom(id);
 
     return this.toRoomResponse(updated as RoomDocument, requesterId);
   }
@@ -279,6 +300,8 @@ export class RoomsService {
         .findByIdAndUpdate(id, update, { new: true })
         .populate('participants.userId', 'displayName')
         .exec();
+
+      await this.invalidateRoom(id);
     } catch (err) {
       if (err instanceof MongoServerError && err.code === 11000) {
         throw new ConflictException('You already have a room with this name');
@@ -305,6 +328,8 @@ export class RoomsService {
     if (!deleted) {
       throw new NotFoundException('Room not found');
     }
+
+    await this.invalidateRoom(id);
   }
 
   // TODO (Lesson 04): remove a participant from the room. The owner can never be
@@ -336,6 +361,7 @@ export class RoomsService {
       (p) => p.userId.toString() !== targetUserId,
     );
     await room.save();
+    await this.invalidateRoom(id);
   }
 
   // TODO (Lesson 04): generate a fresh unique invite code and persist it.
@@ -351,8 +377,13 @@ export class RoomsService {
       throw new NotFoundException('Room not found');
     }
 
+    const oldCode = room.inviteCode;
+
     room.inviteCode = await this.generateUniqueInviteCode();
     await room.save();
+    await this.redis.del(`invite:${oldCode}`);
+    await this.redis.set(`invite:${room.inviteCode}`, id, this.INVITE_TTL);
+    await this.invalidateRoom(id);
     await room.populate('participants.userId', 'displayName');
 
     return this.toRoomResponse(room, userId);
@@ -410,5 +441,35 @@ export class RoomsService {
     }
 
     return room;
+  }
+
+  private async getSharedRoom(id: string): Promise<Room | null> {
+    const cacheKey = `room:${id}`;
+    const cached = await this.redis.get(cacheKey);
+
+    if (cached) {
+      this.logger.debug(`Room cache HIT: ${cacheKey}`);
+
+      return JSON.parse(cached) as Room;
+    }
+
+    this.logger.debug(`Room cache MISS: ${cacheKey}`);
+
+    const doc = await this.roomModel
+      .findById(id)
+      .populate('participants.userId', 'displayName')
+      .exec();
+
+    if (!doc) return null;
+
+    const shared = this.toRoomResponse(doc);
+
+    await this.redis.set(cacheKey, JSON.stringify(shared), this.ROOM_CACHE_TTL);
+
+    return shared;
+  }
+
+  private async invalidateRoom(id: string): Promise<void> {
+    await this.redis.del(`room:${id}`);
   }
 }

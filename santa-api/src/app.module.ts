@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { buildThrottlerOptions } from './throttler.config';
 import { LoggerModule } from 'nestjs-pino';
 import Joi from 'joi';
 import { AppController } from './app.controller';
@@ -12,6 +13,7 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { RoomsModule } from './rooms/rooms.module';
 import { UsersModule } from './users/users.module';
 import { WishlistModule } from './wishlist/wishlist.module';
+import { RedisModule } from './redis/redis.module';
 
 @Module({
   imports: [
@@ -23,6 +25,7 @@ import { WishlistModule } from './wishlist/wishlist.module';
           .valid('development', 'staging', 'production', 'test')
           .default('development'),
         MONGO_URL: Joi.string().required(),
+        REDIS_URL: Joi.string().default('redis://localhost:6379'),
         JWT_SECRET: Joi.string().required(),
         JWT_EXPIRATION: Joi.string().default('7d'),
       }),
@@ -33,10 +36,13 @@ import { WishlistModule } from './wishlist/wishlist.module';
         uri: config.getOrThrow<string>('MONGO_URL'),
       }),
     }),
-    ThrottlerModule.forRoot({
-      throttlers: [{ ttl: 60_000, limit: 100 }],
-      // Disable rate limiting under test so multi-user e2e scenarios don't 429.
-      skipIf: () => process.env.NODE_ENV === 'test',
+    ThrottlerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) =>
+        buildThrottlerOptions(
+          config.getOrThrow<string>('REDIS_URL'),
+          config.get<string>('NODE_ENV', 'development'),
+        ),
     }),
     LoggerModule.forRoot({
       pinoHttp: {
@@ -64,6 +70,7 @@ import { WishlistModule } from './wishlist/wishlist.module';
     UsersModule,
     RoomsModule,
     WishlistModule,
+    RedisModule,
   ],
   controllers: [AppController],
   providers: [

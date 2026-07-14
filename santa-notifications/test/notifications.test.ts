@@ -1,3 +1,5 @@
+jest.mock('ioredis', () => require('ioredis-mock'));
+
 import { FastifyInstance } from 'fastify';
 import { buildApp } from '../src/app';
 import { setupTestDb, teardownTestDb, clearTestDb } from './helpers/db';
@@ -42,12 +44,8 @@ describe('santa-notifications (HTTP)', () => {
   });
 
   // 👇 Cover the notification routes the same way.
-  it.todo(
-    'GET /api/notifications?userId=… → returns that user\'s notifications, newest first',
-  );
-  it.todo(
-    'POST /api/notifications → 201 creates a notification; 400 on an invalid body',
-  );
+  it.todo("GET /api/notifications?userId=… → returns that user's notifications, newest first");
+  it.todo('POST /api/notifications → 201 creates a notification; 400 on an invalid body');
   it.todo('GET /api/notifications/:id → 404 when it does not exist');
   it.todo('PATCH /api/notifications/:id/read → marks the notification read');
   it.todo('DELETE /api/notifications/:id → 204, then 404 on a second delete');

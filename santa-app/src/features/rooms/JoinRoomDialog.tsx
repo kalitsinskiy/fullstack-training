@@ -49,15 +49,7 @@ export function JoinRoomDialog({ open, onOpenChange }: Props) {
       close(false);
       navigate(`/rooms/${room.id}`);
     } catch (error) {
-      if ((error as AxiosError)?.response?.status === 501) {
-        toast.error(
-          'TODO (Lesson 05): join using ONLY the invite code. Will be available soon.',
-        );
-      } else {
-        toast.error(
-          getApiErrorMessage(error, "Couldn't join — check the code"),
-        );
-      }
+      toast.error(getApiErrorMessage(error, "Couldn't join — check the code"));
     }
   }
 
