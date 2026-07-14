@@ -3,12 +3,14 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { isValidObjectId, Model, Types } from 'mongoose';
 import { UsersService } from '../users/users.service';
 import { WishlistService } from '../wishlist/wishlist.service';
+import { RedisService } from '../redis/redis.service';
 import {
   PaginatedResponse,
   PaginationQuery,
@@ -21,13 +23,19 @@ import { Room as RoomModel, RoomDocument } from './schemas/room.schema';
 import { permissionsForRole } from './permissions';
 import { sattoloCycle } from '../utils/derangement';
 
+const ROOM_CACHE_TTL = 300;
+const INVITE_CODE_TTL = 48 * 60 * 60;
+
 @Injectable()
 export class RoomsService {
+  private readonly logger = new Logger(RoomsService.name);
+
   constructor(
     @InjectModel(RoomModel.name)
     private readonly roomModel: Model<RoomModel>,
     private readonly usersService: UsersService,
     private readonly wishlistService: WishlistService,
+    private readonly redisService: RedisService,
   ) {}
 
   async create(dto: CreateRoomDto, creatorId: string): Promise<Room> {
@@ -45,6 +53,12 @@ export class RoomsService {
         budget: dto.budget,
         currency: dto.currency,
       });
+
+      await this.redisService.set(
+        `invite:${inviteCode}`,
+        doc._id.toString(),
+        INVITE_CODE_TTL,
+      );
 
       const displayNames = await this.resolveDisplayNames(doc);
       return this.toRoom(doc, creatorId, displayNames);
@@ -78,9 +92,26 @@ export class RoomsService {
   }
 
   async findByIdForUser(id: string, userId: string): Promise<Room> {
+    const cacheKey = `room:${id}`;
+    const cached = await this.redisService.get(cacheKey);
+
+    if (cached) {
+      this.logger.debug(`Room cache HIT: ${cacheKey}`);
+      const room = JSON.parse(cached) as Room;
+      const viewer = room.participants.find((p) => p.id === userId);
+      if (!viewer) throw new NotFoundException('Room not found');
+      return { ...room, viewerPermissions: [...permissionsForRole(viewer.role)] };
+    }
+
+    this.logger.debug(`Room cache MISS: ${cacheKey}`);
     const doc = await this.findRoomForParticipant(id, userId);
     const displayNames = await this.resolveDisplayNames(doc);
-    return this.toRoom(doc, userId, displayNames);
+    const room = this.toRoom(doc, userId, displayNames);
+
+    const { viewerPermissions: _, ...cacheable } = room;
+    await this.redisService.set(cacheKey, JSON.stringify(cacheable), ROOM_CACHE_TTL);
+
+    return room;
   }
 
   async join(id: string, inviteCode: string, userId: string): Promise<Room> {
@@ -116,13 +147,19 @@ export class RoomsService {
       role: 'member',
     });
     await doc.save();
+    await this.redisService.del(`room:${id}`);
 
     const displayNames = await this.resolveDisplayNames(doc);
     return this.toRoom(doc, userId, displayNames);
   }
 
   async joinByCode(inviteCode: string, userId: string): Promise<Room> {
-    const doc = await this.roomModel.findOne({ inviteCode }).exec();
+    const roomId = await this.redisService.get(`invite:${inviteCode}`);
+    if (!roomId) {
+      throw new BadRequestException('Invalid or expired invite code');
+    }
+
+    const doc = await this.roomModel.findById(roomId).exec();
     if (!doc) {
       throw new BadRequestException('Invalid or expired invite code');
     }
@@ -146,6 +183,7 @@ export class RoomsService {
       role: 'member',
     });
     await doc.save();
+    await this.redisService.del(`room:${roomId}`);
 
     const displayNames = await this.resolveDisplayNames(doc);
     return this.toRoom(doc, userId, displayNames);
@@ -204,6 +242,8 @@ export class RoomsService {
       throw new NotFoundException('Room not found');
     }
 
+    await this.redisService.del(`room:${id}`);
+
     const displayNames = await this.resolveDisplayNames(updatedDoc);
     return this.toRoom(updatedDoc, requesterId, displayNames);
   }
@@ -249,6 +289,7 @@ export class RoomsService {
       doc.exchangeDate = new Date(dto.exchangeDate);
 
     await doc.save();
+    await this.redisService.del(`room:${id}`);
     const displayNames = await this.resolveDisplayNames(doc);
     return this.toRoom(doc, userId, displayNames);
   }
@@ -256,6 +297,7 @@ export class RoomsService {
   async deleteRoom(id: string, userId: string): Promise<void> {
     const doc = await this.findRoomForParticipant(id, userId);
     await doc.deleteOne();
+    await this.redisService.del(`room:${id}`);
   }
 
   async kickMember(
@@ -279,12 +321,17 @@ export class RoomsService {
       (p) => p.userId.toString() !== targetUserId,
     );
     await doc.save();
+    await this.redisService.del(`room:${id}`);
   }
 
   async regenerateInviteCode(id: string, userId: string): Promise<Room> {
     const doc = await this.findRoomForParticipant(id, userId);
-    doc.inviteCode = this.generateInviteCode();
+    const newCode = this.generateInviteCode();
+    await this.redisService.del(`invite:${doc.inviteCode}`);
+    doc.inviteCode = newCode;
     await doc.save();
+    await this.redisService.set(`invite:${newCode}`, id, INVITE_CODE_TTL);
+    await this.redisService.del(`room:${id}`);
     const displayNames = await this.resolveDisplayNames(doc);
     return this.toRoom(doc, userId, displayNames);
   }

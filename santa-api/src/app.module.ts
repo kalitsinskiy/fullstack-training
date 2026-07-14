@@ -3,12 +3,14 @@ import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
 import { LoggerModule } from 'nestjs-pino';
 import * as Joi from 'joi';
 import { AppController } from './app.controller';
 import { AuthModule } from './auth/auth.module';
 import { AppService } from './app.service';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { RedisModule } from './redis/redis.module';
 import { RoomsModule } from './rooms/rooms.module';
 import { UsersModule } from './users/users.module';
 import { WishlistModule } from './wishlist/wishlist.module';
@@ -25,6 +27,7 @@ import { WishlistModule } from './wishlist/wishlist.module';
         MONGO_URL: Joi.string().required(),
         JWT_SECRET: Joi.string().required(),
         JWT_EXPIRATION: Joi.string().default('7d'),
+        REDIS_URL: Joi.string().default('redis://localhost:6379'),
       }),
     }),
     MongooseModule.forRootAsync({
@@ -33,10 +36,17 @@ import { WishlistModule } from './wishlist/wishlist.module';
         uri: config.get<string>('MONGO_URL'),
       }),
     }),
-    ThrottlerModule.forRoot({
-      throttlers: [{ ttl: 60_000, limit: 100 }],
-      // Disable rate limiting under test so multi-user e2e scenarios don't 429.
-      skipIf: () => process.env.NODE_ENV === 'test',
+    ThrottlerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        throttlers: [{ ttl: 60_000, limit: 100 }],
+        skipIf: () => process.env.NODE_ENV === 'test',
+        ...(process.env.NODE_ENV !== 'test' && {
+          storage: new ThrottlerStorageRedisService(
+            config.get<string>('REDIS_URL')!,
+          ),
+        }),
+      }),
     }),
     LoggerModule.forRoot({
       pinoHttp: {
@@ -60,6 +70,7 @@ import { WishlistModule } from './wishlist/wishlist.module';
             : undefined,
       },
     }),
+    RedisModule,
     AuthModule,
     UsersModule,
     RoomsModule,

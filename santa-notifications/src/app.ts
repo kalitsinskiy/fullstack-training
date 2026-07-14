@@ -3,10 +3,12 @@ import cors from '@fastify/cors';
 import ajvFormats from 'ajv-formats';
 
 import configPlugin from './plugins/config';
+import redisPlugin from './plugins/redis';
 import { AppError, ValidationError } from './errors';
 import timingPlugin from './plugins/timing';
 import healthRoutes from './routes/health';
 import notificationRoutes from './routes/notifications';
+import userRoutes from './routes/users';
 
 export function buildApp() {
   const app = Fastify({
@@ -40,9 +42,11 @@ export function buildApp() {
     methods: ['GET', 'POST', 'PATCH', 'DELETE'],
   });
   app.register(configPlugin);
+  app.register(redisPlugin);
   app.register(timingPlugin);
   app.register(healthRoutes);
   app.register(notificationRoutes, { prefix: '/api/notifications' });
+  app.register(userRoutes, { prefix: '/users' });
 
   app.setErrorHandler((error: FastifyError, request, reply) => {
     if (error instanceof AppError) {
