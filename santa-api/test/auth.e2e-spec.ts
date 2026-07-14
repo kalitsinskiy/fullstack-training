@@ -86,15 +86,83 @@ describe('Auth (HTTP)', () => {
     });
   });
 
-  // 👇 Implement AuthService, then turn each of these into a real test.
-  it.todo(
-    'POST /api/auth/register → 201 returns { id, email, displayName, accessToken }',
-  );
-  it.todo('POST /api/auth/register → 409 when the email is already registered');
-  it.todo(
-    'POST /api/auth/login → 200 returns an accessToken for valid credentials',
-  );
-  it.todo(
-    'POST /api/auth/login → 401 with the SAME generic message for a wrong password AND an unknown email',
-  );
+  it('POST /api/auth/register → 201 returns { id, email, displayName, accessToken }', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/auth/register')
+      .send({
+        email: 'alice@test.com',
+        password: 'secret123',
+        displayName: 'Alice',
+      })
+      .expect(201);
+
+    expect(response.body).toMatchObject({
+      email: 'alice@test.com',
+      displayName: 'Alice',
+    });
+    expect(typeof response.body.id).toBe('string');
+    expect(typeof response.body.accessToken).toBe('string');
+
+    expect(response.body).not.toHaveProperty('passwordHash');
+    expect(response.body).not.toHaveProperty('password');
+  });
+
+  it('POST /api/auth/register → 409 when the email is already registered', async () => {
+    const payload = {
+      email: 'dup@test.com',
+      password: 'secret123',
+      displayName: 'Dup',
+    };
+
+    await request(app.getHttpServer())
+      .post('/api/auth/register')
+      .send(payload)
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post('/api/auth/register')
+      .send({ ...payload, displayName: 'Other' })
+      .expect(409);
+  });
+
+  it('POST /api/auth/login → 200 returns an accessToken for valid credentials', async () => {
+    await request(app.getHttpServer())
+      .post('/api/auth/register')
+      .send({
+        email: 'bob@test.com',
+        password: 'secret123',
+        displayName: 'Bob',
+      })
+      .expect(201);
+
+    const response = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ email: 'bob@test.com', password: 'secret123' })
+      .expect(200);
+
+    expect(typeof response.body.accessToken).toBe('string');
+  });
+
+  it('POST /api/auth/login → 401 with the SAME generic message for a wrong password AND an unknown email', async () => {
+    await request(app.getHttpServer())
+      .post('/api/auth/register')
+      .send({
+        email: 'carol@test.com',
+        password: 'secret123',
+        displayName: 'Carol',
+      })
+      .expect(201);
+
+    const wrongPassword = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ email: 'carol@test.com', password: 'wrong-password' })
+      .expect(401);
+
+    const unknownEmail = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ email: 'nobody@test.com', password: 'secret123' })
+      .expect(401);
+
+    expect(wrongPassword.body.message).toBe(unknownEmail.body.message);
+  });
 });

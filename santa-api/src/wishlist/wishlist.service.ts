@@ -1,6 +1,6 @@
-import { Injectable, NotImplementedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Wishlist } from './wishlist.types';
 import { Wishlist as WishlistModel } from './schemas/wishlist.schema';
 
@@ -11,14 +11,41 @@ export class WishlistService {
     private readonly wishlistModel: Model<WishlistModel>,
   ) {}
 
-  // TODO (Lesson: Wishlist) — upsert the wishlist for {userId, roomId} with `items`.
-  set(roomId: string, userId: string, items: string[]): Promise<Wishlist> {
-    throw new NotImplementedException('WishlistService.set is not implemented');
+  async set(
+    roomId: string,
+    userId: string,
+    items: string[],
+  ): Promise<Wishlist> {
+    const wishlist = await this.wishlistModel
+      .findOneAndUpdate(
+        {
+          roomId: new Types.ObjectId(roomId),
+          userId: new Types.ObjectId(userId),
+        },
+        { $set: { items } },
+        { new: true, upsert: true, setDefaultsOnInsert: true },
+      )
+      .exec();
+
+    return {
+      roomId: wishlist.roomId.toString(),
+      userId: wishlist.userId.toString(),
+      items: wishlist.items,
+    };
   }
 
-  // TODO (Lesson: Wishlist) — return the wishlist for {roomId, userId}. If the user
-  // has none yet, return an EMPTY one ({ roomId, userId, items: [] }) — not a 404.
-  get(roomId: string, userId: string): Promise<Wishlist> {
-    throw new NotImplementedException('WishlistService.get is not implemented');
+  async get(roomId: string, userId: string): Promise<Wishlist> {
+    const wishlist = await this.wishlistModel
+      .findOne({
+        roomId: new Types.ObjectId(roomId),
+        userId: new Types.ObjectId(userId),
+      })
+      .exec();
+
+    return {
+      roomId,
+      userId,
+      items: wishlist?.items ?? [],
+    };
   }
 }
