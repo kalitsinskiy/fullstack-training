@@ -18,7 +18,6 @@ import type { Permission, RoomDetail } from '@/types/api';
 export function usePermissions(
   room: Pick<RoomDetail, 'viewerPermissions'> | null | undefined,
 ): { can: (permission: Permission) => boolean } {
-  // TODO: derive from room?.viewerPermissions. Replace this deny-all stub.
-  void room;
-  return { can: () => false };
+  const granted = room?.viewerPermissions ?? [];
+  return { can: (permission: Permission) => granted.includes(permission) };
 }

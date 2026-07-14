@@ -1,17 +1,29 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { format } from 'date-fns';
-import { CalendarDays, Gift, Sparkles, Wallet } from 'lucide-react';
+import {
+  CalendarDays,
+  Gift,
+  RefreshCw,
+  Sparkles,
+  Trash2,
+  UserMinus,
+  Wallet,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/features/auth/useAuth';
 import {
   useAssignment,
   useChangeExchangeDate,
+  useDeleteRoom,
   useDrawRoom,
+  useKickMember,
   useMyWishlist,
+  useRegenerateInvite,
   useRoom,
   useSaveWishlist,
 } from '@/features/rooms/api';
+import { usePermissions } from '@/features/rooms/usePermissions';
 import { getApiErrorMessage } from '@/lib/api';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -25,9 +37,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import type { RoomDetail } from '@/types/api';
+import type { Permission, RoomDetail } from '@/types/api';
 
 const MIN_PARTICIPANTS = 3;
+
+type Can = (permission: Permission) => boolean;
 
 export function RoomDetailPage() {
   const { id = '' } = useParams<{ id: string }>();
@@ -35,7 +49,7 @@ export function RoomDetailPage() {
   const roomQuery = useRoom(id);
   const room = roomQuery.data;
 
-  const isOwner = Boolean(user && room && room.creatorId === user.id);
+  const { can } = usePermissions(room);
   const isDrawn = room?.status === 'drawn';
 
   if (roomQuery.isLoading) {
@@ -56,7 +70,7 @@ export function RoomDetailPage() {
         title={room.name}
         description={`Status: ${room.status} · ${room.participantCount} participant${room.participantCount === 1 ? '' : 's'}`}
         action={
-          isOwner && !isDrawn ? (
+          can('room:draw') && !isDrawn ? (
             <DrawDialog
               roomId={id}
               disabled={room.participantCount < MIN_PARTICIPANTS}
@@ -76,8 +90,8 @@ export function RoomDetailPage() {
       )}
 
       <div className="grid gap-6 md:grid-cols-2">
-        <ParticipantsCard room={room} />
-        <InviteSettingsCard room={room} isOwner={isOwner} />
+        <ParticipantsCard room={room} can={can} />
+        <InviteSettingsCard room={room} can={can} />
         <WishlistCard roomId={id} userId={user?.id} />
         <GifteeCard roomId={id} enabled={isDrawn} />
       </div>
@@ -85,7 +99,19 @@ export function RoomDetailPage() {
   );
 }
 
-function ParticipantsCard({ room }: { room: RoomDetail }) {
+function ParticipantsCard({ room, can }: { room: RoomDetail; can: Can }) {
+  const kickMember = useKickMember(room.id);
+  const canKick = can('room:kick');
+
+  function handleKick(memberId: string) {
+    if (!canKick) return;
+    kickMember.mutate(memberId, {
+      onSuccess: () => toast.success('Member removed'),
+      onError: (error) =>
+        toast.error(getApiErrorMessage(error, 'Could not remove the member')),
+    });
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -101,6 +127,18 @@ function ParticipantsCard({ room }: { room: RoomDetail }) {
             <span className="rounded-full bg-primary-soft px-2.5 py-0.5 text-xs font-medium text-primary">
               {p.role}
             </span>
+            {/* Kick: owner-only, and never the owner themselves. */}
+            {canKick && p.role !== 'owner' && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="ml-auto"
+                disabled={kickMember.isPending}
+                onClick={() => handleKick(p.id)}
+              >
+                <UserMinus /> Kick
+              </Button>
+            )}
           </div>
         ))}
       </CardContent>
@@ -108,13 +146,36 @@ function ParticipantsCard({ room }: { room: RoomDetail }) {
   );
 }
 
-function InviteSettingsCard({
-  room,
-  isOwner,
-}: {
-  room: RoomDetail;
-  isOwner: boolean;
-}) {
+function InviteSettingsCard({ room, can }: { room: RoomDetail; can: Can }) {
+  const navigate = useNavigate();
+  const regenerate = useRegenerateInvite(room.id);
+  const deleteRoom = useDeleteRoom(room.id);
+
+  const canInvite = can('room:invite');
+  const canDelete = can('room:delete');
+
+  function handleRegenerate() {
+    if (!canInvite) return;
+    regenerate.mutate(undefined, {
+      onSuccess: () => toast.success('New invite code generated'),
+      onError: (error) =>
+        toast.error(getApiErrorMessage(error, 'Could not regenerate the code')),
+    });
+  }
+
+  function handleDelete() {
+    if (!canDelete) return;
+    if (!window.confirm('Delete this room? This cannot be undone.')) return;
+    deleteRoom.mutate(undefined, {
+      onSuccess: () => {
+        toast.success('Room deleted');
+        navigate('/rooms');
+      },
+      onError: (error) =>
+        toast.error(getApiErrorMessage(error, 'Could not delete the room')),
+    });
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -123,9 +184,21 @@ function InviteSettingsCard({
       <CardContent className="space-y-4">
         <div className="space-y-1">
           <p className="text-sm font-medium text-foreground">Invite code</p>
-          <code className="inline-block rounded-md bg-muted px-3 py-1.5 font-mono text-foreground">
-            {room.inviteCode}
-          </code>
+          <div className="flex items-center gap-2">
+            <code className="inline-block rounded-md bg-muted px-3 py-1.5 font-mono text-foreground">
+              {room.inviteCode}
+            </code>
+            {canInvite && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRegenerate}
+                disabled={regenerate.isPending}
+              >
+                <RefreshCw /> New
+              </Button>
+            )}
+          </div>
         </div>
 
         {room.exchangeDate && (
@@ -138,8 +211,19 @@ function InviteSettingsCard({
           </div>
         )}
 
-        {isOwner && room.status === 'drawn' && (
+        {can('room:edit') && room.status === 'drawn' && (
           <ChangeDateDialog roomId={room.id} current={room.exchangeDate} />
+        )}
+
+        {canDelete && (
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleDelete}
+            disabled={deleteRoom.isPending}
+          >
+            <Trash2 /> Delete room
+          </Button>
         )}
       </CardContent>
     </Card>

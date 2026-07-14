@@ -340,26 +340,151 @@ describe('Rooms (HTTP)', () => {
 
   // 👇 Lesson 04 — Authorization: roles & permissions.
   // Gate by PERMISSION, never by role. A missing permission → 403; a non-member → 404.
-  it.todo('room response includes viewerPermissions for the caller');
-  it.todo('owner can run the draw (POST /api/rooms/:id/draw → 200)');
-  it.todo('member running the draw is rejected (POST /api/rooms/:id/draw → 403)');
-  it.todo('owner can edit the room (PATCH /api/rooms/:id → 200)');
-  it.todo('member editing the room is rejected (PATCH /api/rooms/:id → 403)');
-  it.todo('owner can delete the room (DELETE /api/rooms/:id → 204)');
-  it.todo('member deleting the room is rejected (DELETE /api/rooms/:id → 403)');
-  it.todo(
-    'owner can kick a member (DELETE /api/rooms/:id/members/:userId → 204)',
-  );
-  it.todo(
-    'member cannot kick anyone (DELETE /api/rooms/:id/members/:userId → 403)',
-  );
-  it.todo(
-    'kicking the owner is rejected (DELETE /api/rooms/:id/members/:ownerId → 400)',
-  );
-  it.todo(
-    'owner can regenerate the invite code (POST /api/rooms/:id/invite-code/regenerate → 200)',
-  );
-  it.todo('member cannot regenerate the invite code (→ 403)');
-  it.todo('a non-member gets 404 on any guarded room route');
-  it.todo('a member can still GET /api/rooms/:id and PUT the wishlist');
+  it('room response includes viewerPermissions for the caller', async () => {
+    const { roomId, owner, members } = await seedRoomWithMembers(1);
+
+    const ownerView = await request(app.getHttpServer())
+      .get(`/api/rooms/${roomId}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .expect(200);
+    expect(ownerView.body.viewerPermissions).toEqual(
+      expect.arrayContaining(['room:draw', 'room:edit', 'room:delete', 'room:kick']),
+    );
+
+    const memberView = await request(app.getHttpServer())
+      .get(`/api/rooms/${roomId}`)
+      .set('Authorization', `Bearer ${members[0].token}`)
+      .expect(200);
+    expect(memberView.body.viewerPermissions).toEqual([
+      'room:view',
+      'wishlist:set',
+    ]);
+  });
+
+  it('owner can run the draw; a member is rejected with 403', async () => {
+    const { roomId, owner, members } = await seedRoomWithMembers(2);
+
+    await request(app.getHttpServer())
+      .post(`/api/rooms/${roomId}/draw`)
+      .set('Authorization', `Bearer ${members[0].token}`)
+      .send({ exchangeDate: '2026-12-24' })
+      .expect(403);
+
+    await request(app.getHttpServer())
+      .post(`/api/rooms/${roomId}/draw`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ exchangeDate: '2026-12-24' })
+      .expect(200);
+  });
+
+  it('owner can edit the room; a member is rejected with 403', async () => {
+    const { roomId, owner, members } = await seedRoomWithMembers(1);
+
+    await request(app.getHttpServer())
+      .patch(`/api/rooms/${roomId}`)
+      .set('Authorization', `Bearer ${members[0].token}`)
+      .send({ name: 'Hijacked' })
+      .expect(403);
+
+    const edited = await request(app.getHttpServer())
+      .patch(`/api/rooms/${roomId}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ name: 'Renamed Room' })
+      .expect(200);
+    expect(edited.body.name).toBe('Renamed Room');
+  });
+
+  it('owner can delete the room; a member is rejected with 403', async () => {
+    const { roomId, owner, members } = await seedRoomWithMembers(1);
+
+    await request(app.getHttpServer())
+      .delete(`/api/rooms/${roomId}`)
+      .set('Authorization', `Bearer ${members[0].token}`)
+      .expect(403);
+
+    await request(app.getHttpServer())
+      .delete(`/api/rooms/${roomId}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .expect(204);
+
+    await request(app.getHttpServer())
+      .get(`/api/rooms/${roomId}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .expect(404);
+  });
+
+  it('owner can kick a member; kicking the owner is 400; a member cannot kick', async () => {
+    const { roomId, owner, members } = await seedRoomWithMembers(2);
+
+    await request(app.getHttpServer())
+      .delete(`/api/rooms/${roomId}/members/${members[1].id}`)
+      .set('Authorization', `Bearer ${members[0].token}`)
+      .expect(403);
+
+    await request(app.getHttpServer())
+      .delete(`/api/rooms/${roomId}/members/${owner.id}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .expect(400);
+
+    await request(app.getHttpServer())
+      .delete(`/api/rooms/${roomId}/members/${members[0].id}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .expect(204);
+
+    const after = await request(app.getHttpServer())
+      .get(`/api/rooms/${roomId}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .expect(200);
+    expect(after.body.participantCount).toBe(2);
+    await request(app.getHttpServer())
+      .get(`/api/rooms/${roomId}`)
+      .set('Authorization', `Bearer ${members[0].token}`)
+      .expect(404);
+  });
+
+  it('owner can regenerate the invite code; a member is rejected with 403', async () => {
+    const { roomId, owner, members } = await seedRoomWithMembers(1);
+
+    const before = await request(app.getHttpServer())
+      .get(`/api/rooms/${roomId}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .post(`/api/rooms/${roomId}/invite-code/regenerate`)
+      .set('Authorization', `Bearer ${members[0].token}`)
+      .expect(403);
+
+    const regenerated = await request(app.getHttpServer())
+      .post(`/api/rooms/${roomId}/invite-code/regenerate`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .expect(200);
+    expect(regenerated.body.inviteCode).toMatch(/^[A-Z0-9]{6}$/);
+    expect(regenerated.body.inviteCode).not.toBe(before.body.inviteCode);
+  });
+
+  it('a non-member gets 404 on a guarded room route', async () => {
+    const { roomId } = await seedRoomWithMembers(1);
+    const { token: outsiderToken } = await seedUserWithToken();
+
+    await request(app.getHttpServer())
+      .get(`/api/rooms/${roomId}`)
+      .set('Authorization', `Bearer ${outsiderToken}`)
+      .expect(404);
+  });
+
+  it('a member can still GET the room and PUT their wishlist', async () => {
+    const { roomId, members } = await seedRoomWithMembers(1);
+
+    await request(app.getHttpServer())
+      .get(`/api/rooms/${roomId}`)
+      .set('Authorization', `Bearer ${members[0].token}`)
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .put(`/api/rooms/${roomId}/wishlist`)
+      .set('Authorization', `Bearer ${members[0].token}`)
+      .send({ items: ['Socks'] })
+      .expect(200);
+  });
 });

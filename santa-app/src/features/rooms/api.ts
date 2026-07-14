@@ -84,6 +84,45 @@ export function useDrawRoom(id: string) {
   });
 }
 
+export function useDeleteRoom(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      await api.delete(`/api/rooms/${id}`);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['rooms'] });
+    },
+  });
+}
+
+export function useKickMember(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (memberId: string) => {
+      await api.delete(`/api/rooms/${id}/members/${memberId}`);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: roomKeys.detail(id) });
+    },
+  });
+}
+
+export function useRegenerateInvite(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const { data } = await api.post<RoomDetail>(
+        `/api/rooms/${id}/invite-code/regenerate`,
+      );
+      return data;
+    },
+    onSuccess: (room) => {
+      queryClient.setQueryData(roomKeys.detail(id), room);
+    },
+  });
+}
+
 export function useChangeExchangeDate(id: string) {
   const queryClient = useQueryClient();
   return useMutation({
