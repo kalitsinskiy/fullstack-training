@@ -1,0 +1,40 @@
+# Secret Santa — DEV overlay (hot reload).
+#
+# Overlays docker-compose.yml: same infra (mongo/redis/rabbitmq), but the backend
+# services are rebuilt from their Dockerfile.dev (all deps + watch mode) and their
+# source is bind-mounted so edits on the host restart the in-container server.
+#
+# Run:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+#
+# After adding a dependency, the anonymous node_modules volume is stale — renew it:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build \
+#       --renew-anon-volumes santa-api
+#
+# The frontend is NOT overlaid here — run it natively for hot reload:
+#   cd santa-app && npm run dev   (http://localhost:5173)
+
+name: santa
+
+services:
+  santa-api:
+    build:
+      context: ./santa-api
+      dockerfile: Dockerfile.dev
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ./santa-api:/app
+      # Keep the container's Linux-built node_modules — don't let the host's
+      # bind-mount shadow it with OS-specific binaries.
+      - /app/node_modules
+
+  santa-notifications:
+    build:
+      context: ./santa-notifications
+      dockerfile: Dockerfile.dev
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ./santa-notifications:/app
+      - /app/node_modules

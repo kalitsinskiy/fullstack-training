@@ -126,6 +126,31 @@ services:
       rabbitmq:
         condition: service_healthy
 
+  # --- Frontend (optional) ---
+  # Static production build served by nginx. VITE_API_URL is baked at BUILD time
+  # (Vite inlines VITE_* into the bundle), so it's a build arg, not a runtime env.
+  # Published on host 5173 so it shares santa-api's allowed CORS origin
+  # (http://localhost:5173). NOTE: don't also run `npm run dev` — both want 5173.
+  santa-app:
+    build:
+      context: ./santa-app
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://localhost:3001
+    container_name: santa-app
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    depends_on:
+      santa-api:
+        condition: service_healthy
+
 volumes:
   mongodb_data:
   redis_data:
