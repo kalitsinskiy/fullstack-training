@@ -12,4 +12,16 @@ export const handlers = [
   http.post('/api/auth/login', () =>
     HttpResponse.json({ accessToken: 'test-token' }),
   ),
+
+  http.post('/api/auth/register', () =>
+    HttpResponse.json(
+      {
+        id: 'test-id',
+        email: 'new@test.com',
+        displayName: 'New User',
+        accessToken: 'test-token',
+      },
+      { status: 201 },
+    ),
+  ),
 ];
