@@ -3,11 +3,13 @@ import { Gift, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/features/auth/useAuth';
+import { useUnreadCount } from '@/hooks/useUnreadCount';
 import { navItems } from './navItems';
 
 /** Desktop navigation rail (hidden on mobile, where BottomNav takes over). */
 export function Sidebar() {
   const { user, logout } = useAuth();
+  const unreadCount = useUnreadCount();
 
   return (
     <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-card p-4 md:flex">
@@ -30,7 +32,14 @@ export function Sidebar() {
               )
             }
           >
-            <Icon className="size-4" />
+            <span className="relative">
+              <Icon className="size-4" />
+              {to === '/notifications' && unreadCount > 0 && (
+                <span className="absolute -right-1.5 -top-1.5 flex size-3.5 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </span>
             {label}
           </NavLink>
         ))}

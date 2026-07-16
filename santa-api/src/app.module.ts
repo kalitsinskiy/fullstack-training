@@ -15,6 +15,7 @@ import { RedisModule } from './redis/redis.module';
 import { RoomsModule } from './rooms/rooms.module';
 import { UsersModule } from './users/users.module';
 import { WishlistModule } from './wishlist/wishlist.module';
+import { InternalModule } from './internal/internal.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { WishlistModule } from './wishlist/wishlist.module';
         JWT_EXPIRATION: Joi.string().default('7d'),
         REDIS_URL: Joi.string().default('redis://localhost:6379'),
         RABBITMQ_URL: Joi.string().default('amqp://localhost:5672'),
+        SERVICE_API_KEY: Joi.string().required(),
       }),
     }),
     MongooseModule.forRootAsync({
@@ -78,6 +80,7 @@ import { WishlistModule } from './wishlist/wishlist.module';
     UsersModule,
     RoomsModule,
     WishlistModule,
+    InternalModule,
   ],
   controllers: [AppController],
   providers: [

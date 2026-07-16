@@ -1,18 +1,15 @@
 import { FastifyInstance } from 'fastify';
 import { NotFoundError } from '../errors';
-import { NotificationDocument, NotificationModel, NotificationType } from '../models/notification';
+import { NotificationDocument, NotificationModel } from '../models/notification';
 
-interface Notification {
+interface NotificationView {
   id: string;
-  userId: string;
   type: string;
   message: string;
-  payload?: unknown;
+  roomId?: string;
   read: boolean;
   createdAt: string;
 }
-
-const notificationTypeValues = ['room_invite', 'assignment', 'wishlist_update', 'system'] as const;
 
 const idParamsSchema = {
   type: 'object',
@@ -22,154 +19,90 @@ const idParamsSchema = {
   },
 };
 
-const objectIdSchema = { type: 'string', pattern: '^[a-fA-F0-9]{24}$' };
-
-function toNotification(notification: NotificationDocument): Notification {
+function toView(doc: NotificationDocument): NotificationView {
   return {
-    id: notification._id.toString(),
-    userId: notification.userId?.toString() ?? '',
-    type: notification.type,
-    message: notification.message,
-    payload: notification.payload,
-    read: notification.read,
-    createdAt: notification.createdAt.toISOString(),
+    id: doc._id.toString(),
+    type: doc.type,
+    message: doc.message,
+    roomId: doc.roomId,
+    read: doc.read,
+    createdAt: doc.createdAt.toISOString(),
   };
 }
 
-/**
- * ⚠️ SECURITY (intentional, until Lesson 07): these routes are NOT authenticated
- * and trust the `userId` from the query/body — a classic IDOR (anyone can read,
- * mark-read, or delete another user's notifications by id, or list them via
- * `?userId=`). This is deliberate kickoff scaffolding. Lesson 07 adds a JWT
- * `fastify.authenticate` preHandler and scopes every query to `request.user`,
- * which closes the IDOR. DO NOT deploy this service as-is (see Lesson 11).
- */
 export default async function notificationRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/',
     {
+      preHandler: [fastify.authenticate],
       schema: {
         querystring: {
           type: 'object',
           properties: {
-            userId: objectIdSchema,
+            page: { type: 'integer', minimum: 1, default: 1 },
+            limit: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
           },
         },
       },
     },
     async (request) => {
-      const { userId } = request.query as { userId?: string };
-      const query = userId ? { userId } : {};
-      const notifications = await NotificationModel.find(query).sort({ createdAt: -1 }).exec();
+      const userId = request.user.sub;
+      const { page = 1, limit = 20 } = request.query as { page?: number; limit?: number };
+      const skip = (Number(page) - 1) * Number(limit);
 
-      return notifications.map((notification) => toNotification(notification));
-    }
-  );
+      const [notifications, total, unreadCount] = await Promise.all([
+        NotificationModel.find({ userId })
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(Number(limit))
+          .lean()
+          .exec(),
+        NotificationModel.countDocuments({ userId }),
+        NotificationModel.countDocuments({ userId, read: false }),
+      ]);
 
-  fastify.get(
-    '/:id',
-    {
-      schema: {
-        params: idParamsSchema,
-      },
-    },
-    async (request) => {
-      const { id } = request.params as { id: string };
-      const notification = await NotificationModel.findById(id).exec();
-
-      if (!notification) {
-        throw new NotFoundError('Notification', id);
-      }
-
-      return toNotification(notification);
-    }
-  );
-
-  fastify.post(
-    '/',
-    {
-      schema: {
-        body: {
-          type: 'object',
-          required: ['type', 'message'],
-          properties: {
-            userId: objectIdSchema,
-            type: { type: 'string', enum: [...notificationTypeValues] },
-            payload: {},
-            message: { type: 'string', minLength: 1, maxLength: 500 },
-          },
-          additionalProperties: false,
-        },
-      },
-    },
-    async (request, reply) => {
-      const { userId, type, payload, message } = request.body as {
-        userId?: string;
-        type: NotificationType;
-        payload?: unknown;
-        message: string;
+      return {
+        data: notifications.map((n) => toView(n as unknown as NotificationDocument)),
+        total,
+        unreadCount,
+        page: Number(page),
+        limit: Number(limit),
       };
-
-      const createdNotification = await NotificationModel.create({
-        userId,
-        type,
-        payload,
-        message,
-      });
-
-      request.log.info(
-        { notificationId: createdNotification._id.toString(), userId, type },
-        'Notification created'
-      );
-      reply.code(201);
-      return toNotification(createdNotification);
-    }
+    },
   );
 
   fastify.patch(
     '/:id/read',
     {
-      schema: {
-        params: idParamsSchema,
-      },
+      preHandler: [fastify.authenticate],
+      schema: { params: idParamsSchema },
     },
-    async (request) => {
+    async (request, reply) => {
       const { id } = request.params as { id: string };
-      const notification = await NotificationModel.findByIdAndUpdate(
-        id,
+      const userId = request.user.sub;
+
+      const notification = await NotificationModel.findOneAndUpdate(
+        { _id: id, userId },
         { read: true },
-        { new: true }
+        { new: true },
       ).exec();
 
       if (!notification) {
         throw new NotFoundError('Notification', id);
       }
 
-      request.log.info(
-        { notificationId: notification._id.toString(), read: true },
-        'Notification marked as read'
-      );
-      return toNotification(notification);
-    }
+      request.log.info({ notificationId: id }, 'Notification marked as read');
+      return toView(notification);
+    },
   );
 
-  fastify.delete(
-    '/:id',
-    {
-      schema: {
-        params: idParamsSchema,
-      },
+  fastify.patch(
+    '/read-all',
+    { preHandler: [fastify.authenticate] },
+    async (request) => {
+      const userId = request.user.sub;
+      await NotificationModel.updateMany({ userId, read: false }, { read: true }).exec();
+      return { success: true };
     },
-    async (request, reply) => {
-      const { id } = request.params as { id: string };
-      const notification = await NotificationModel.findByIdAndDelete(id).exec();
-
-      if (!notification) {
-        throw new NotFoundError('Notification', id);
-      }
-
-      request.log.info({ notificationId: notification._id.toString() }, 'Notification deleted');
-      reply.code(204).send();
-    }
   );
 }

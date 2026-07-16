@@ -266,7 +266,7 @@ export class RoomsService {
 
     this.eventPublisher.publish('draw.completed', {
       roomId: id,
-      participantCount: updatedDoc.participants.length,
+      participants: updatedDoc.participants.map((p) => p.userId.toString()),
     });
 
     const displayNames = await this.resolveDisplayNames(updatedDoc);
@@ -359,6 +359,21 @@ export class RoomsService {
     await this.redisService.del(`room:${id}`);
     const displayNames = await this.resolveDisplayNames(doc);
     return this.toRoom(doc, userId, displayNames);
+  }
+
+  async findByIdInternal(id: string): Promise<{ id: string; name: string; memberIds: string[] }> {
+    if (!isValidObjectId(id)) {
+      throw new NotFoundException('Room not found');
+    }
+    const doc = await this.roomModel.findById(id).exec();
+    if (!doc) {
+      throw new NotFoundException('Room not found');
+    }
+    return {
+      id: doc._id.toString(),
+      name: doc.name,
+      memberIds: doc.participants.map((p) => p.userId.toString()),
+    };
   }
 
   // ── helpers ──────────────────────────────────────────────────────────────

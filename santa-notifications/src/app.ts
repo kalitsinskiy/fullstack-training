@@ -3,6 +3,7 @@ import cors from '@fastify/cors';
 import ajvFormats from 'ajv-formats';
 
 import configPlugin from './plugins/config';
+import authPlugin from './plugins/auth';
 import redisPlugin from './plugins/redis';
 import { AppError, ValidationError } from './errors';
 import timingPlugin from './plugins/timing';
@@ -42,6 +43,7 @@ export function buildApp() {
     methods: ['GET', 'POST', 'PATCH', 'DELETE'],
   });
   app.register(configPlugin);
+  app.register(authPlugin);
   app.register(redisPlugin);
   app.register(timingPlugin);
   app.register(healthRoutes);
