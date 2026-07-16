@@ -27,7 +27,7 @@ const objectIdSchema = { type: 'string', pattern: '^[a-fA-F0-9]{24}$' };
 function toNotification(notification: NotificationDocument): Notification {
   return {
     id: notification._id.toString(),
-    userId: notification.userId.toString(),
+    userId: notification.userId?.toString() ?? '',
     type: notification.type,
     message: notification.message,
     payload: notification.payload,
@@ -91,7 +91,7 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
       schema: {
         body: {
           type: 'object',
-          required: ['userId', 'type', 'message'],
+          required: ['type', 'message'],
           properties: {
             userId: objectIdSchema,
             type: { type: 'string', enum: [...notificationTypeValues] },
@@ -104,7 +104,7 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       const { userId, type, payload, message } = request.body as {
-        userId: string;
+        userId?: string;
         type: NotificationType;
         payload?: unknown;
         message: string;

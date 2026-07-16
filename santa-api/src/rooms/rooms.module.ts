@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { EventsModule } from '../events/events.module';
 import { UsersModule } from '../users/users.module';
 import { WishlistModule } from '../wishlist/wishlist.module';
 import { RedisModule } from '../redis/redis.module';
@@ -10,6 +11,7 @@ import { RoomPermissionsGuard } from './guards/room-permissions.guard';
 
 @Module({
   imports: [
+    EventsModule,
     UsersModule,
     WishlistModule,
     RedisModule,

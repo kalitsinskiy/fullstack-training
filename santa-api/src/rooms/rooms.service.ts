@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { isValidObjectId, Model, Types } from 'mongoose';
+import { EventPublisherService } from '../events/event-publisher.service';
 import { UsersService } from '../users/users.service';
 import { WishlistService } from '../wishlist/wishlist.service';
 import { RedisService } from '../redis/redis.service';
@@ -36,6 +37,7 @@ export class RoomsService {
     private readonly usersService: UsersService,
     private readonly wishlistService: WishlistService,
     private readonly redisService: RedisService,
+    private readonly eventPublisher: EventPublisherService,
   ) {}
 
   async create(dto: CreateRoomDto, creatorId: string): Promise<Room> {
@@ -59,6 +61,12 @@ export class RoomsService {
         doc._id.toString(),
         INVITE_CODE_TTL,
       );
+
+      this.eventPublisher.publish('room.created', {
+        roomId: doc._id.toString(),
+        roomName: doc.name,
+        createdBy: creatorId,
+      });
 
       const displayNames = await this.resolveDisplayNames(doc);
       return this.toRoom(doc, creatorId, displayNames);
@@ -150,6 +158,12 @@ export class RoomsService {
     await this.redisService.del(`room:${id}`);
 
     const displayNames = await this.resolveDisplayNames(doc);
+    this.eventPublisher.publish('user.joined', {
+      roomId: id,
+      userId,
+      userName: displayNames[userId] ?? userId,
+    });
+
     return this.toRoom(doc, userId, displayNames);
   }
 
@@ -186,6 +200,12 @@ export class RoomsService {
     await this.redisService.del(`room:${roomId}`);
 
     const displayNames = await this.resolveDisplayNames(doc);
+    this.eventPublisher.publish('user.joined', {
+      roomId,
+      userId,
+      userName: displayNames[userId] ?? userId,
+    });
+
     return this.toRoom(doc, userId, displayNames);
   }
 
@@ -243,6 +263,11 @@ export class RoomsService {
     }
 
     await this.redisService.del(`room:${id}`);
+
+    this.eventPublisher.publish('draw.completed', {
+      roomId: id,
+      participantCount: updatedDoc.participants.length,
+    });
 
     const displayNames = await this.resolveDisplayNames(updatedDoc);
     return this.toRoom(updatedDoc, requesterId, displayNames);

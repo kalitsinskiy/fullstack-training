@@ -10,6 +10,7 @@ import { AppController } from './app.controller';
 import { AuthModule } from './auth/auth.module';
 import { AppService } from './app.service';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { EventsModule } from './events/events.module';
 import { RedisModule } from './redis/redis.module';
 import { RoomsModule } from './rooms/rooms.module';
 import { UsersModule } from './users/users.module';
@@ -28,6 +29,7 @@ import { WishlistModule } from './wishlist/wishlist.module';
         JWT_SECRET: Joi.string().required(),
         JWT_EXPIRATION: Joi.string().default('7d'),
         REDIS_URL: Joi.string().default('redis://localhost:6379'),
+        RABBITMQ_URL: Joi.string().default('amqp://localhost:5672'),
       }),
     }),
     MongooseModule.forRootAsync({
@@ -70,6 +72,7 @@ import { WishlistModule } from './wishlist/wishlist.module';
             : undefined,
       },
     }),
+    EventsModule,
     RedisModule,
     AuthModule,
     UsersModule,

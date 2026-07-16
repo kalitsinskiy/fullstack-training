@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import { EventPublisherService } from '../events/event-publisher.service';
 import { Wishlist } from './wishlist.types';
 import { Wishlist as WishlistModel } from './schemas/wishlist.schema';
 
@@ -9,6 +10,7 @@ export class WishlistService {
   constructor(
     @InjectModel(WishlistModel.name)
     private readonly wishlistModel: Model<WishlistModel>,
+    private readonly eventPublisher: EventPublisherService,
   ) {}
 
   async set(roomId: string, userId: string, items: string[]): Promise<Wishlist> {
@@ -20,6 +22,8 @@ export class WishlistService {
       { items },
       { upsert: true, new: true },
     ).exec();
+
+    this.eventPublisher.publish('wishlist.updated', { roomId, userId });
 
     return { roomId: doc!.roomId.toString(), userId: doc!.userId.toString(), items: doc!.items };
   }
