@@ -2,7 +2,7 @@ import { describe, test, expect } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderApp } from '../test/renderApp'
-import RegisterPage from './RegisterPage'
+import { RegisterPage } from './RegisterPage'
 
 describe('RegisterPage', () => {
   test('renders the register form', () => {

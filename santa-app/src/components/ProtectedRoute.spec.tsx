@@ -5,7 +5,7 @@ import { MemoryRouter, Routes, Route } from 'react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider } from '../contexts/AuthContext'
 import { ProtectedRoute } from './ProtectedRoute'
-import LoginPage from '../pages/LoginPage'
+import { LoginPage } from '../pages/LoginPage'
 
 function renderWithAuth(initialRoute: string, isLoggedIn = false) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })

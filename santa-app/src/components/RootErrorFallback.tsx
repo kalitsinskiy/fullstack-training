@@ -1,5 +1,5 @@
 import type { FallbackProps } from "react-error-boundary";
-import Button from "@mui/material/Button";
+import { Button } from "./ui/button";
 
 export default function RootErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
   return (
@@ -8,7 +8,7 @@ export default function RootErrorFallback({ error, resetErrorBoundary }: Fallbac
       <p className="max-w-md text-center text-sm text-gray-600">
         {error instanceof Error ? error.message : "An unexpected error occurred."}
       </p>
-      <Button variant="contained" onClick={resetErrorBoundary}>
+      <Button variant="default" onClick={resetErrorBoundary}>
         Try again
       </Button>
     </div>

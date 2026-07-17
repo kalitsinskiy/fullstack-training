@@ -24,25 +24,42 @@ export default function RoomList({ rooms, onJoinRoom }: RoomListProps) {
         </div>
       ) : (
         <div className="grid [grid-template-columns:repeat(auto-fill,minmax(15rem,1fr))] gap-4">
-          {rooms.map((room) => (
-            <RoomCard
-              key={room.id}
-              name={room.name}
-              code={room.code}
-              memberCount={room.memberCount}
-              status={room.status}
-              onOpen={
-                room.status === "pending"
-                  ? () => onJoinRoom?.(room.id)
-                  : undefined
-              }
-              onView={
-                room.status === "drawn"
-                  ? () => onJoinRoom?.(room.id)
-                  : undefined
-              }
-            />
-          ))}
+          {rooms.map((room) => {
+            const handler = () => onJoinRoom?.(room.id);
+            if (room.status === 'pending') {
+              return (
+                <RoomCard
+                  key={room.id}
+                  status="pending"
+                  name={room.name}
+                  code={room.code}
+                  memberCount={room.memberCount}
+                  onOpen={handler}
+                />
+              );
+            }
+            if (room.status === 'drawn') {
+              return (
+                <RoomCard
+                  key={room.id}
+                  status="drawn"
+                  name={room.name}
+                  code={room.code}
+                  memberCount={room.memberCount}
+                  onView={handler}
+                />
+              );
+            }
+            return (
+              <RoomCard
+                key={room.id}
+                status="closed"
+                name={room.name}
+                code={room.code}
+                memberCount={room.memberCount}
+              />
+            );
+          })}
         </div>
       )}
     </section>

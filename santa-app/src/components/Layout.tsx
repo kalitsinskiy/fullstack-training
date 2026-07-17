@@ -1,23 +1,10 @@
 import { useState } from 'react'
-import { Link, NavLink, Outlet, useNavigate } from 'react-router'
-import {
-  AppBar,
-  Toolbar,
-  Button,
-  IconButton,
-  Typography,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Alert,
-} from '@mui/material'
-import AddIcon from '@mui/icons-material/Add'
-import LogoutIcon from '@mui/icons-material/Logout'
+import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../contexts/useAuth'
 import { api } from '../services/api'
+import { Button } from './ui/button'
+import { Input } from './ui/input'
 
 type DialogMode = 'create' | 'join'
 
@@ -64,8 +51,8 @@ export function Layout() {
   })
 
   const joinMutation = useMutation({
-    mutationFn: (inviteCode: string) =>
-      api.post<{ id: string }>(`/api/rooms/${inviteCode}/join`, {}),
+    mutationFn: (code: string) =>
+      api.post<{ id: string }>(`/api/rooms/${code}/join`, {}),
     onSuccess: (room) => {
       qc.invalidateQueries({ queryKey: ['rooms'] })
       qc.invalidateQueries({ queryKey: ['rooms', room.id] })
@@ -90,108 +77,96 @@ export function Layout() {
 
   return (
     <>
-      <AppBar position="static">
-        <Toolbar sx={{ gap: 2 }}>
-          <Typography
-            component={Link}
-            to="/rooms"
-            variant="h6"
-            sx={{ flexGrow: 0, color: 'inherit', textDecoration: 'none', mr: 2 }}
-          >
+      <header className="bg-primary text-primary-foreground">
+        <div className="flex items-center gap-4 px-6 py-3">
+          <Link to="/rooms" className="mr-4 text-lg font-semibold">
             Secret Santa
-          </Typography>
-
+          </Link>
           <NavLink
             to="/rooms"
             style={({ isActive }) => ({
-              color: 'inherit',
               textDecoration: isActive ? 'underline' : 'none',
               fontWeight: isActive ? 700 : 400,
             })}
           >
             Rooms
           </NavLink>
-
-          <IconButton
-            color="inherit"
-            onClick={openCreate}
-            aria-label="Create room"
-            sx={{ ml: 'auto' }}
-          >
-            <AddIcon />
-          </IconButton>
-
-          <Typography variant="body2" sx={{ color: 'inherit', opacity: 0.85 }}>
-            {auth.user?.displayName}
-          </Typography>
-
-          <Button
-            color="inherit"
-            startIcon={<LogoutIcon />}
-            onClick={handleLogout}
-          >
-            Logout
-          </Button>
-        </Toolbar>
-      </AppBar>
+          <div className="ml-auto flex items-center gap-3">
+            <Button size="sm" variant="secondary" onClick={openCreate} aria-label="Create room">
+              + Create
+            </Button>
+            <span className="text-sm opacity-85">{auth.user?.displayName}</span>
+            <Button size="sm" variant="ghost" onClick={handleLogout}>
+              Logout
+            </Button>
+          </div>
+        </div>
+      </header>
 
       <main className="min-h-screen bg-gray-100 p-6">
         <Outlet />
       </main>
 
-      <Dialog open={dialogOpen} onClose={handleClose} fullWidth maxWidth="xs">
-        <DialogTitle>{dialogMode === 'create' ? 'Create Room' : 'Join Room'}</DialogTitle>
-        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: '8px !important' }}>
-          {dialogError && <Alert severity="error">{dialogError}</Alert>}
-          <div style={{ display: 'flex', gap: 8 }}>
-            <Button
-              variant={dialogMode === 'create' ? 'contained' : 'outlined'}
-              size="small"
-              onClick={() => { setDialogMode('create'); setDialogError('') }}
-            >
-              Create
-            </Button>
-            <Button
-              variant={dialogMode === 'join' ? 'contained' : 'outlined'}
-              size="small"
-              onClick={() => { setDialogMode('join'); setDialogError('') }}
-            >
-              Join
-            </Button>
+      {dialogOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-xs rounded-xl bg-background p-6 shadow-xl">
+            <h2 className="mb-4 text-lg font-semibold">
+              {dialogMode === 'create' ? 'Create Room' : 'Join Room'}
+            </h2>
+
+            {dialogError && (
+              <p className="mb-3 rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {dialogError}
+              </p>
+            )}
+
+            <div className="mb-4 flex gap-2">
+              <Button
+                size="sm"
+                variant={dialogMode === 'create' ? 'default' : 'outline'}
+                onClick={() => { setDialogMode('create'); setDialogError('') }}
+              >
+                Create
+              </Button>
+              <Button
+                size="sm"
+                variant={dialogMode === 'join' ? 'default' : 'outline'}
+                onClick={() => { setDialogMode('join'); setDialogError('') }}
+              >
+                Join
+              </Button>
+            </div>
+
+            {dialogMode === 'create' ? (
+              <Input
+                autoFocus
+                placeholder="Room name"
+                value={roomName}
+                onChange={(e) => setRoomName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && roomName.trim() && handleSubmit()}
+              />
+            ) : (
+              <Input
+                autoFocus
+                placeholder="Invite code"
+                value={inviteCode}
+                onChange={(e) => setInviteCode(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && inviteCode.trim() && handleSubmit()}
+              />
+            )}
+
+            <div className="mt-4 flex justify-end gap-2">
+              <Button variant="outline" onClick={handleClose} disabled={isPending}>Cancel</Button>
+              <Button
+                onClick={handleSubmit}
+                disabled={isPending || (dialogMode === 'create' ? !roomName.trim() : !inviteCode.trim())}
+              >
+                {isPending ? '…' : dialogMode === 'create' ? 'Create' : 'Join'}
+              </Button>
+            </div>
           </div>
-          {dialogMode === 'create' ? (
-            <TextField
-              autoFocus
-              label="Room name"
-              fullWidth
-              required
-              value={roomName}
-              onChange={(e) => setRoomName(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && roomName.trim() && handleSubmit()}
-            />
-          ) : (
-            <TextField
-              autoFocus
-              label="Invite code"
-              fullWidth
-              required
-              value={inviteCode}
-              onChange={(e) => setInviteCode(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && inviteCode.trim() && handleSubmit()}
-            />
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose} disabled={isPending}>Cancel</Button>
-          <Button
-            variant="contained"
-            onClick={handleSubmit}
-            disabled={isPending || (dialogMode === 'create' ? !roomName.trim() : !inviteCode.trim())}
-          >
-            {isPending ? '…' : dialogMode === 'create' ? 'Create' : 'Join'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        </div>
+      )}
     </>
   )
 }

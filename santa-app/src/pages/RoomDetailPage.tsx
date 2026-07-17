@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { api, getApiErrorMessage } from '@/lib/api';
 import { useAuth } from '@/features/auth/useAuth';
 import { usePermissions } from '@/features/rooms/usePermissions';
+import { useSocket } from '@/contexts/SocketContext';
 import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -42,6 +43,26 @@ export function RoomDetailPage() {
   useEffect(() => {
     if (myWishlist) setWishlistText(myWishlist.items.join('\n'));
   }, [myWishlist]);
+
+  const { socket, joinRoom, leaveRoom } = useSocket();
+  useEffect(() => {
+    if (!socket || !id) return;
+    joinRoom(id);
+
+    const refetchRoom = () => {
+      qc.invalidateQueries({ queryKey: ['rooms', id] });
+      qc.invalidateQueries({ queryKey: ['rooms', id, 'assignment'] });
+    };
+
+    socket.on('room:member-joined', refetchRoom);
+    socket.on('room:draw-completed', refetchRoom);
+
+    return () => {
+      leaveRoom(id);
+      socket.off('room:member-joined', refetchRoom);
+      socket.off('room:draw-completed', refetchRoom);
+    };
+  }, [socket, id, joinRoom, leaveRoom, qc]);
 
   const saveWishlist = useMutation({
     mutationFn: (items: string[]) =>

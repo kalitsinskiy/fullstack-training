@@ -7,7 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
 import { server } from '../test/msw-server'
 import { AuthProvider } from '../contexts/AuthContext'
-import RoomDetailPage from './RoomDetailPage'
+import { RoomDetailPage } from './RoomDetailPage'
 
 function renderRoom(roomId: string) {
   localStorage.setItem('token', 'fake-token')

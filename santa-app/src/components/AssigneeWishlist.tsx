@@ -1,4 +1,4 @@
-import { useOptimistic, useTransition, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api, ApiError } from '../services/api'
 
@@ -18,6 +18,18 @@ interface Props {
 
 type BoughtState = Record<number, boolean>
 
+// React 18 compatible shim for useOptimistic (React 19 API)
+function useOptimistic<S, A>(
+  passthrough: S,
+  reducer: (state: S, action: A) => S,
+): [S, (action: A) => void] {
+  const [optimistic, setOptimistic] = useState<S>(passthrough)
+  useEffect(() => {
+    setOptimistic(passthrough)
+  }, [passthrough])
+  return [optimistic, (action: A) => setOptimistic((s) => reducer(s, action))]
+}
+
 export default function AssigneeWishlist({ roomId }: Props) {
   const { data, isLoading, error } = useQuery({
     queryKey: ['rooms', roomId, 'assignment', 'wishlist'],
@@ -35,13 +47,14 @@ export default function AssigneeWishlist({ roomId }: Props) {
     (state, idx) => ({ ...state, [idx]: !state[idx] }),
   )
 
-  const [isPending, startTransition] = useTransition()
+  const [isPending, setIsPending] = useState(false)
 
   const handleToggle = (idx: number) => {
-    startTransition(async () => {
-      setOptimistic(idx)
-      await new Promise<void>((r) => setTimeout(r, 400))
+    setOptimistic(idx)
+    setIsPending(true)
+    void new Promise<void>((r) => setTimeout(r, 400)).then(() => {
       setCommitted((s) => ({ ...s, [idx]: !s[idx] }))
+      setIsPending(false)
     })
   }
 
@@ -72,7 +85,7 @@ export default function AssigneeWishlist({ roomId }: Props) {
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-start gap-3">
               <form
-                action={() => handleToggle(idx)}
+                onSubmit={(e) => { e.preventDefault(); handleToggle(idx) }}
               >
                 <button
                   type="submit"

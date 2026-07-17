@@ -6,6 +6,8 @@ import { AuthProvider } from '@/features/auth/AuthContext';
 import { AuthGuard } from '@/features/auth/AuthGuard';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Toaster } from '@/components/ui/sonner';
+import { SocketProvider } from '@/contexts/SocketContext';
+import { SocketNotifications } from '@/components/SocketNotifications';
 import { LandingPage } from '@/pages/LandingPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { RegisterPage } from '@/pages/RegisterPage';
@@ -19,6 +21,7 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
+        <SocketProvider>
         <BrowserRouter>
           <Routes>
             {/* Public */}
@@ -40,8 +43,10 @@ export default function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
           <Toaster />
+          <SocketNotifications />
         </BrowserRouter>
         <ReactQueryDevtools initialIsOpen={false} />
+        </SocketProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

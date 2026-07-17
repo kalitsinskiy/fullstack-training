@@ -1,4 +1,5 @@
 import * as amqp from 'amqplib';
+import type { Server as SocketServer } from 'socket.io';
 import { NotificationModel, NotificationType } from './models/notification';
 import { getSantaApiClient } from './services/santa-api-client';
 
@@ -25,7 +26,11 @@ interface WishlistUpdatedEvent {
   userId: string;
 }
 
-async function handleUserJoined(data: UserJoinedEvent, messageId?: string): Promise<void> {
+async function handleUserJoined(
+  data: UserJoinedEvent,
+  io: SocketServer,
+  messageId?: string,
+): Promise<void> {
   const client = getSantaApiClient();
   const room = await client.getRoomById(data.roomId);
 
@@ -47,11 +52,28 @@ async function handleUserJoined(data: UserJoinedEvent, messageId?: string): Prom
       const exists = await NotificationModel.findOne({ messageId: key }).lean().exec();
       if (exists) continue;
     }
-    await NotificationModel.create(doc);
+    const notification = await NotificationModel.create(doc);
+
+    io.to(`user:${doc.userId}`).emit('notification', {
+      id: notification._id,
+      type: notification.type,
+      message: notification.message,
+      roomId: notification.roomId,
+      createdAt: notification.createdAt,
+    });
   }
+
+  io.to(`room:${data.roomId}`).emit('room:member-joined', {
+    roomId: data.roomId,
+    userId: data.userId,
+  });
 }
 
-async function handleDrawCompleted(data: DrawCompletedEvent, messageId?: string): Promise<void> {
+async function handleDrawCompleted(
+  data: DrawCompletedEvent,
+  io: SocketServer,
+  messageId?: string,
+): Promise<void> {
   const client = getSantaApiClient();
   const room = await client.getRoomById(data.roomId);
 
@@ -72,11 +94,27 @@ async function handleDrawCompleted(data: DrawCompletedEvent, messageId?: string)
       const exists = await NotificationModel.findOne({ messageId: key }).lean().exec();
       if (exists) continue;
     }
-    await NotificationModel.create(doc);
+    const notification = await NotificationModel.create(doc);
+
+    io.to(`user:${doc.userId}`).emit('notification', {
+      id: notification._id,
+      type: notification.type,
+      message: notification.message,
+      roomId: notification.roomId,
+      createdAt: notification.createdAt,
+    });
   }
+
+  io.to(`room:${data.roomId}`).emit('room:draw-completed', {
+    roomId: data.roomId,
+  });
 }
 
-async function handleWishlistUpdated(data: WishlistUpdatedEvent, messageId?: string): Promise<void> {
+async function handleWishlistUpdated(
+  data: WishlistUpdatedEvent,
+  io: SocketServer,
+  messageId?: string,
+): Promise<void> {
   const client = getSantaApiClient();
   const room = await client.getRoomById(data.roomId);
 
@@ -106,11 +144,23 @@ async function handleWishlistUpdated(data: WishlistUpdatedEvent, messageId?: str
       const exists = await NotificationModel.findOne({ messageId: key }).lean().exec();
       if (exists) continue;
     }
-    await NotificationModel.create(doc);
+    const notification = await NotificationModel.create(doc);
+
+    io.to(`user:${doc.userId}`).emit('notification', {
+      id: notification._id,
+      type: notification.type,
+      message: notification.message,
+      roomId: notification.roomId,
+      createdAt: notification.createdAt,
+    });
   }
 }
 
-export async function startConsumer(rabbitmqUrl: string, log: (msg: string) => void): Promise<void> {
+export async function startConsumer(
+  rabbitmqUrl: string,
+  io: SocketServer,
+  log: (msg: string) => void,
+): Promise<void> {
   const connection = await amqp.connect(rabbitmqUrl);
   const channel = await connection.createChannel();
 
@@ -135,13 +185,13 @@ export async function startConsumer(rabbitmqUrl: string, log: (msg: string) => v
 
       switch (routingKey) {
         case 'user.joined':
-          await handleUserJoined(data as unknown as UserJoinedEvent, messageId);
+          await handleUserJoined(data as unknown as UserJoinedEvent, io, messageId);
           break;
         case 'draw.completed':
-          await handleDrawCompleted(data as unknown as DrawCompletedEvent, messageId);
+          await handleDrawCompleted(data as unknown as DrawCompletedEvent, io, messageId);
           break;
         case 'wishlist.updated':
-          await handleWishlistUpdated(data as unknown as WishlistUpdatedEvent, messageId);
+          await handleWishlistUpdated(data as unknown as WishlistUpdatedEvent, io, messageId);
           break;
         default:
           log(`Unhandled routing key: ${routingKey}`);
