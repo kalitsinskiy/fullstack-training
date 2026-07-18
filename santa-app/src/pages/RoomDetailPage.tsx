@@ -1,5 +1,5 @@
 import { useState, useEffect, type FormEvent } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { RefreshCw, UserMinus, Wallet, CalendarDays, Trash2, Gift, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
@@ -16,6 +16,7 @@ import type { RoomDetail, Assignment, Wishlist } from '@/types/api';
 
 export function RoomDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const qc = useQueryClient();
 
@@ -302,8 +303,13 @@ export function RoomDetailPage() {
                       <p className="text-sm text-muted-foreground">No wishlist yet.</p>
                     )}
                   </div>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <MessageCircle className="size-4" /> Send an anonymous message
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => navigate(`/rooms/${id}/messages`)}
+                  >
+                    <MessageCircle className="size-4" /> Messages
                   </Button>
                 </>
               ) : (

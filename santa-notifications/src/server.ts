@@ -4,6 +4,8 @@ import { connectDb } from './db';
 import { startConsumer } from './consumer';
 import { initSantaApiClient } from './services/santa-api-client';
 import { createSocketServer } from './socket';
+import { setIO } from './realtime';
+import { initPublisher } from './services/publisher';
 
 const app = buildApp();
 
@@ -25,6 +27,8 @@ async function start() {
       jwtSecret: app.config.jwtSecret,
     });
 
+    setIO(io);
+    await initPublisher(app.config.rabbitmqUrl);
     await startConsumer(app.config.rabbitmqUrl, io, (msg) => app.log.info(msg));
   } catch (error) {
     app.log.error(error, 'Failed to start santa-notifications');

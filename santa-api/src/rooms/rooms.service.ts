@@ -361,6 +361,31 @@ export class RoomsService {
     return this.toRoom(doc, userId, displayNames);
   }
 
+  async getRelations(
+    roomId: string,
+    userId: string,
+  ): Promise<{ gifteeId: string | null; santaId: string | null }> {
+    if (!isValidObjectId(roomId)) {
+      throw new NotFoundException('Room not found');
+    }
+    const doc = await this.roomModel.findById(roomId).exec();
+    if (!doc || doc.status !== 'drawn') {
+      return { gifteeId: null, santaId: null };
+    }
+
+    const gifteeAssignment = doc.assignments.find(
+      (a) => a.giverId.toString() === userId,
+    );
+    const santaAssignment = doc.assignments.find(
+      (a) => a.receiverId.toString() === userId,
+    );
+
+    return {
+      gifteeId: gifteeAssignment?.receiverId.toString() ?? null,
+      santaId: santaAssignment?.giverId.toString() ?? null,
+    };
+  }
+
   async findByIdInternal(id: string): Promise<{ id: string; name: string; memberIds: string[] }> {
     if (!isValidObjectId(id)) {
       throw new NotFoundException('Room not found');

@@ -22,4 +22,12 @@ export class InternalController {
     const room = await this.roomsService.findByIdInternal(id);
     return { id: room.id, name: room.name, memberIds: room.memberIds };
   }
+
+  @Get('rooms/:roomId/relations/:userId')
+  async getRelations(
+    @Param('roomId') roomId: string,
+    @Param('userId') userId: string,
+  ) {
+    return this.roomsService.getRelations(roomId, userId);
+  }
 }
