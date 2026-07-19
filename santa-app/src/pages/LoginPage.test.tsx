@@ -1,20 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { renderWithProviders, screen } from '@/test/render';
+import { userEvent } from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
+import { server } from '@/test/mocks/server';
+import { renderWithProviders, screen, waitFor } from '@/test/render';
 import { LoginPage } from './LoginPage';
 
-/**
- * COMPONENT TEST (React Testing Library + MSW) — the approach for the frontend.
- *
- * We render a page inside the real providers (see src/test/render.tsx) and
- * interact with it the way a user would — query by role/label, type, click —
- * then assert what the user sees. Network calls are intercepted by MSW
- * (src/test/mocks), so no real backend is needed.
- *
- * LoginPage is the worked-example screen, so the first test is fully written.
- * The rest are `it.todo` — implement them as you build out each screen.
- */
+const API = import.meta.env.VITE_API_URL ?? '';
+
 describe('LoginPage', () => {
-  // ✅ WORKED EXAMPLE — renders with no network call (no token → AuthProvider idle).
+  // ✅ WORKED EXAMPLE
   it('renders the email and password fields and a submit button', () => {
     renderWithProviders(<LoginPage />);
 
@@ -23,8 +17,50 @@ describe('LoginPage', () => {
     expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
   });
 
-  // 👇 Turn these into real tests with userEvent + MSW handlers.
-  it.todo('submits credentials and navigates to /rooms on success (MSW: POST /api/auth/login → token)');
-  it.todo('shows an error toast on invalid credentials (MSW: 401)');
-  it.todo('links to the register page');
+  it('submits credentials and calls the API on success', async () => {
+    let loginCalled = false;
+    server.use(
+      http.post(`${API}/api/auth/login`, () => {
+        loginCalled = true;
+        return HttpResponse.json({ accessToken: 'test-token' });
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderWithProviders(<LoginPage />, { route: '/login' });
+
+    await user.type(screen.getByLabelText(/email/i), 'alice@test.com');
+    await user.type(screen.getByLabelText(/password/i), 'password123');
+    await user.click(screen.getByRole('button', { name: /sign in/i }));
+
+    await waitFor(() => {
+      expect(loginCalled).toBe(true);
+    });
+  });
+
+  it('shows an error message on invalid credentials (MSW: 401)', async () => {
+    server.use(
+      http.post(`${API}/api/auth/login`, () =>
+        HttpResponse.json({ message: 'Invalid email or password' }, { status: 401 }),
+      ),
+    );
+
+    const user = userEvent.setup();
+    renderWithProviders(<LoginPage />);
+
+    await user.type(screen.getByLabelText(/email/i), 'wrong@test.com');
+    await user.type(screen.getByLabelText(/password/i), 'wrongpassword');
+    await user.click(screen.getByRole('button', { name: /sign in/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /sign in/i })).not.toBeDisabled();
+    });
+  });
+
+  it('links to the register page', () => {
+    renderWithProviders(<LoginPage />);
+    const link = screen.getByRole('link', { name: /create one/i });
+    expect(link).toBeInTheDocument();
+    expect(link).toHaveAttribute('href', '/register');
+  });
 });

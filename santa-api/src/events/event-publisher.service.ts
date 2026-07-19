@@ -14,6 +14,7 @@ export class EventPublisherService implements OnModuleInit, OnModuleDestroy {
   constructor(private readonly config: ConfigService) {}
 
   async onModuleInit() {
+    if (process.env.NODE_ENV === 'test') return;
     const url = this.config.get<string>('RABBITMQ_URL')!;
     this.connection = await amqp.connect(url) as amqp.ChannelModel;
     this.channel = await this.connection.createChannel();
@@ -22,6 +23,7 @@ export class EventPublisherService implements OnModuleInit, OnModuleDestroy {
   }
 
   publish(routingKey: string, data: object): void {
+    if (!this.channel) return;
     this.channel.publish(
       EXCHANGE,
       routingKey,

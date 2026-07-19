@@ -126,10 +126,10 @@ export function RoomDetailPage() {
     saveWishlist.mutate(items);
   }
 
+  const { can } = usePermissions(room ?? null);
+
   if (isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>;
   if (!room) return <p className="text-sm text-muted-foreground">Room not found.</p>;
-
-  const { can } = usePermissions(room);
   const canDraw = can('room:draw');
   const canKick = can('room:kick');
   const canInvite = can('room:invite');

@@ -3,16 +3,21 @@ import mongoose from 'mongoose';
 
 let mongo: MongoMemoryServer | undefined;
 
-/** Start an in-memory MongoDB and connect mongoose to it. Call in beforeAll. */
+export function setupTestEnv(): void {
+  process.env.JWT_SECRET = process.env.JWT_SECRET ?? 'test-secret';
+  process.env.SERVICE_API_KEY = process.env.SERVICE_API_KEY ?? 'test-service-key';
+  process.env.RABBITMQ_URL = process.env.RABBITMQ_URL ?? 'amqp://santa:santa123@localhost:5672';
+  process.env.REDIS_URL = process.env.REDIS_URL ?? 'redis://localhost:6379';
+}
+
 export async function setupTestDb(): Promise<void> {
-  // Pin the binary version so it's shared with santa-api's test cache.
+  setupTestEnv();
   mongo = await MongoMemoryServer.create({ binary: { version: '7.0.34' } });
   process.env.MONGO_URL = mongo.getUri();
   mongoose.set('strictQuery', true);
   await mongoose.connect(mongo.getUri());
 }
 
-/** Disconnect and stop the in-memory MongoDB. Call in afterAll. */
 export async function teardownTestDb(): Promise<void> {
   await mongoose.disconnect();
   if (mongo) {
@@ -21,7 +26,6 @@ export async function teardownTestDb(): Promise<void> {
   }
 }
 
-/** Wipe every collection so each test starts clean. Call in beforeEach. */
 export async function clearTestDb(): Promise<void> {
   const { db } = mongoose.connection;
   if (!db) return;

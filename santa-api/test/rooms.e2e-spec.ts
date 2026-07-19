@@ -85,26 +85,234 @@ describe('Rooms (HTTP)', () => {
       .expect(401);
   });
 
-  // 👇 Implement RoomsService, then turn each of these into a real test.
-  it.todo('POST /api/rooms → 201 returns a room for an authenticated user');
-  it.todo(
-    'POST /api/rooms → 409 when the SAME creator reuses a room name (stretch); a different user may reuse it',
-  );
-  it.todo(
-    "GET /api/rooms?page=1&limit=2 → returns the caller's rooms, paginated",
-  );
-  it.todo('GET /api/rooms/:id → 404 for a user who is not a member');
-  it.todo(
-    'POST /api/rooms/:id/join → adds the caller when the invite code matches',
-  );
-  it.todo('POST /api/rooms/:id/join → 400 on a wrong invite code');
-  it.todo(
-    'POST /api/rooms/:id/draw → creator-only; assigns everyone a giftee (nobody themselves)',
-  );
-  it.todo('POST /api/rooms/:id/draw → 403 for a non-creator');
-  it.todo(
-    'GET /api/rooms/:id/assignment → returns the giftee + wishlist after the draw',
-  );
+  it('POST /api/rooms → 201 returns a room for an authenticated user', async () => {
+    const userModel = app.get(getModelToken(User.name));
+    const jwt = app.get(JwtService);
+
+    const owner = await userModel.create(userFixture());
+    const token = tokenFor(jwt, owner);
+
+    const res = await request(app.getHttpServer())
+      .post('/api/rooms')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Office Secret Santa' })
+      .expect(201);
+
+    expect(res.body).toMatchObject({
+      id: expect.any(String) as string,
+      name: 'Office Secret Santa',
+      inviteCode: expect.any(String) as string,
+      status: 'pending',
+    });
+    expect(res.body.inviteCode).toHaveLength(6);
+  });
+
+  it("GET /api/rooms?page=1&limit=2 → returns the caller's rooms, paginated", async () => {
+    const userModel = app.get(getModelToken(User.name));
+    const roomModel = app.get(getModelToken(Room.name));
+    const jwt = app.get(JwtService);
+
+    const owner = await userModel.create(userFixture());
+    const token = tokenFor(jwt, owner);
+
+    await roomModel.create(
+      roomFixture({
+        creatorId: owner._id,
+        participants: [{ userId: owner._id, role: 'owner' }],
+      }),
+    );
+    await roomModel.create(
+      roomFixture({
+        creatorId: owner._id,
+        participants: [{ userId: owner._id, role: 'owner' }],
+      }),
+    );
+    await roomModel.create(
+      roomFixture({
+        creatorId: owner._id,
+        participants: [{ userId: owner._id, role: 'owner' }],
+      }),
+    );
+
+    const res = await request(app.getHttpServer())
+      .get('/api/rooms?page=1&limit=2')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(Array.isArray(res.body.data)).toBe(true);
+    expect(res.body.data.length).toBe(2);
+    expect(res.body.meta.total).toBeGreaterThanOrEqual(3);
+  });
+
+  it('GET /api/rooms/:id → 404 for a user who is not a member', async () => {
+    const userModel = app.get(getModelToken(User.name));
+    const roomModel = app.get(getModelToken(Room.name));
+    const jwt = app.get(JwtService);
+
+    const owner = await userModel.create(userFixture());
+    const stranger = await userModel.create(userFixture());
+    const room = await roomModel.create(
+      roomFixture({
+        creatorId: owner._id,
+        participants: [{ userId: owner._id, role: 'owner' }],
+      }),
+    );
+
+    const strangerToken = tokenFor(jwt, stranger);
+
+    await request(app.getHttpServer())
+      .get(`/api/rooms/${room._id}`)
+      .set('Authorization', `Bearer ${strangerToken}`)
+      .expect(404);
+  });
+
+  it('POST /api/rooms/:id/join → adds the caller when the invite code matches', async () => {
+    const userModel = app.get(getModelToken(User.name));
+    const roomModel = app.get(getModelToken(Room.name));
+    const jwt = app.get(JwtService);
+
+    const owner = await userModel.create(userFixture());
+    const joiner = await userModel.create(userFixture());
+    const inviteCode = 'JOIN99';
+    const room = await roomModel.create(
+      roomFixture({
+        creatorId: owner._id,
+        inviteCode,
+        participants: [{ userId: owner._id, role: 'owner' }],
+      }),
+    );
+
+    const joinerToken = tokenFor(jwt, joiner);
+
+    const res = await request(app.getHttpServer())
+      .post(`/api/rooms/${room._id}/join`)
+      .set('Authorization', `Bearer ${joinerToken}`)
+      .send({ inviteCode })
+      .expect(201);
+
+    expect(res.body.participantCount).toBe(2);
+  });
+
+  it('POST /api/rooms/:id/join → 400 on a wrong invite code', async () => {
+    const userModel = app.get(getModelToken(User.name));
+    const roomModel = app.get(getModelToken(Room.name));
+    const jwt = app.get(JwtService);
+
+    const owner = await userModel.create(userFixture());
+    const joiner = await userModel.create(userFixture());
+    const room = await roomModel.create(
+      roomFixture({
+        creatorId: owner._id,
+        inviteCode: 'GOOD77',
+        participants: [{ userId: owner._id, role: 'owner' }],
+      }),
+    );
+
+    const joinerToken = tokenFor(jwt, joiner);
+
+    await request(app.getHttpServer())
+      .post(`/api/rooms/${room._id}/join`)
+      .set('Authorization', `Bearer ${joinerToken}`)
+      .send({ inviteCode: 'WRONG1' })
+      .expect(400);
+  });
+
+  it('POST /api/rooms/:id/draw → assigns everyone a giftee (nobody themselves)', async () => {
+    const userModel = app.get(getModelToken(User.name));
+    const roomModel = app.get(getModelToken(Room.name));
+    const jwt = app.get(JwtService);
+
+    const owner = await userModel.create(userFixture());
+    const m1 = await userModel.create(userFixture());
+    const m2 = await userModel.create(userFixture());
+    const room = await roomModel.create(
+      roomFixture({
+        creatorId: owner._id,
+        participants: [
+          { userId: owner._id, role: 'owner' },
+          { userId: m1._id, role: 'member' },
+          { userId: m2._id, role: 'member' },
+        ],
+      }),
+    );
+    const token = tokenFor(jwt, owner);
+
+    await request(app.getHttpServer())
+      .post(`/api/rooms/${room._id}/draw`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ exchangeDate: '2026-12-24' })
+      .expect(200);
+
+    const updatedRoom = await roomModel.findById(room._id).lean();
+    expect(updatedRoom!.status).toBe('drawn');
+    expect(updatedRoom!.assignments).toHaveLength(3);
+    for (const assignment of updatedRoom!.assignments) {
+      expect(assignment.giverId.toString()).not.toBe(
+        assignment.receiverId.toString(),
+      );
+    }
+  });
+
+  it('POST /api/rooms/:id/draw → 403 for a non-creator', async () => {
+    const userModel = app.get(getModelToken(User.name));
+    const roomModel = app.get(getModelToken(Room.name));
+    const jwt = app.get(JwtService);
+
+    const owner = await userModel.create(userFixture());
+    const member = await userModel.create(userFixture());
+    const room = await roomModel.create(
+      roomFixture({
+        creatorId: owner._id,
+        participants: [
+          { userId: owner._id, role: 'owner' },
+          { userId: member._id, role: 'member' },
+        ],
+      }),
+    );
+
+    const memberToken = tokenFor(jwt, member);
+
+    await request(app.getHttpServer())
+      .post(`/api/rooms/${room._id}/draw`)
+      .set('Authorization', `Bearer ${memberToken}`)
+      .send({ exchangeDate: '2026-12-24' })
+      .expect(403);
+  });
+
+  it('GET /api/rooms/:id/assignment → returns the giftee + wishlist after the draw', async () => {
+    const userModel = app.get(getModelToken(User.name));
+    const roomModel = app.get(getModelToken(Room.name));
+    const jwt = app.get(JwtService);
+
+    const owner = await userModel.create(userFixture());
+    const m1 = await userModel.create(userFixture());
+    const m2 = await userModel.create(userFixture());
+    const room = await roomModel.create(
+      roomFixture({
+        creatorId: owner._id,
+        participants: [
+          { userId: owner._id, role: 'owner' },
+          { userId: m1._id, role: 'member' },
+          { userId: m2._id, role: 'member' },
+        ],
+      }),
+    );
+    const token = tokenFor(jwt, owner);
+
+    await request(app.getHttpServer())
+      .post(`/api/rooms/${room._id}/draw`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ exchangeDate: '2026-12-24' });
+
+    const res = await request(app.getHttpServer())
+      .get(`/api/rooms/${room._id}/assignment`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(res.body.receiver).toBeDefined();
+    expect(res.body.receiver.displayName).toBeDefined();
+    expect(res.body.receiver.wishlist).toBeDefined();
+  });
 
   // 👇 Lesson 04 — Authorization: roles & permissions.
   // Gate by PERMISSION, never by role. A missing permission → 403; a non-member → 404.

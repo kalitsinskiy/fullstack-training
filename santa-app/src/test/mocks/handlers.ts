@@ -1,15 +1,18 @@
 import { http, HttpResponse } from 'msw';
 
-/**
- * MSW request handlers. Add one per endpoint your tests touch, then override
- * per-test with `server.use(...)` for error/edge cases.
- *
- * Note: in tests `VITE_API_URL` is unset, so axios issues *relative* URLs.
- * Match them with a leading slash, e.g. '/api/auth/login'.
- */
+const API = import.meta.env.VITE_API_URL ?? '';
+
 export const handlers = [
-  // Example handler — a successful login.
-  http.post('/api/auth/login', () =>
+  http.post(`${API}/api/auth/login`, () =>
     HttpResponse.json({ accessToken: 'test-token' }),
+  ),
+  http.get(`${API}/api/users/me`, () =>
+    HttpResponse.json({ id: 'user-1', email: 'test@test.com', displayName: 'Test User', role: 'user' }),
+  ),
+  http.get(`${API}/api/rooms`, () =>
+    HttpResponse.json({
+      data: [],
+      meta: { total: 0, page: 1, limit: 10, totalPages: 0 },
+    }),
   ),
 ];
