@@ -554,9 +554,9 @@ Add the route in your router configuration:
 Start all services:
 
 ```bash
-docker-compose up -d
+docker compose up -d mongodb redis rabbitmq   # infra
 cd santa-api && npm run start:dev
-cd santa-notifications && npm run start:dev
+cd santa-notifications && npm run dev          # notifications' script is `dev`, not start:dev
 cd santa-app && npm run dev
 ```
 
