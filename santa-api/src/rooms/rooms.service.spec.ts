@@ -6,6 +6,7 @@ import { RoomsService } from './rooms.service';
 import { Room } from './schemas/room.schema';
 import { UsersService } from '../users/users.service';
 import { WishlistService } from '../wishlist/wishlist.service';
+import { RedisService } from '../common/redis/redis.service';
 
 describe('RoomsService', () => {
   let service: RoomsService;
@@ -29,8 +30,18 @@ describe('RoomsService', () => {
     countDocuments: jest.fn(),
   };
 
+  const mockRedisService = {
+    get: jest.fn().mockResolvedValue(null),
+    set: jest.fn().mockResolvedValue(undefined),
+    del: jest.fn().mockResolvedValue(undefined),
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
+
+    mockRedisService.get.mockResolvedValue(null);
+    mockRedisService.set.mockResolvedValue(undefined);
+    mockRedisService.del.mockResolvedValue(undefined);
 
     mockUsersService.findById.mockImplementation((id: string) =>
       Promise.resolve({
@@ -47,6 +58,7 @@ describe('RoomsService', () => {
         { provide: getModelToken(Room.name), useValue: mockRoomModel },
         { provide: UsersService, useValue: mockUsersService },
         { provide: WishlistService, useValue: mockWishlistService },
+        { provide: RedisService, useValue: mockRedisService },
       ],
     }).compile();
 
@@ -268,13 +280,33 @@ describe('RoomsService', () => {
   });
 
   describe('joinByCode', () => {
-    it('throws NotFoundException when invite code does not match any room', async () => {
-      mockRoomModel.findOne.mockReturnValue({
-        exec: jest.fn().mockResolvedValue(null),
-      });
+    it('throws BadRequestException when invite code is not in Redis', async () => {
+      mockRedisService.get.mockResolvedValue(null);
       await expect(service.joinByCode('NOROOM', creatorId)).rejects.toThrow(
-        NotFoundException,
+        BadRequestException,
       );
+    });
+
+    it('joins the room when invite code resolves to a valid roomId', async () => {
+      const roomId = new Types.ObjectId().toString();
+      const doc = {
+        id: roomId,
+        name: 'Party',
+        creatorId: new Types.ObjectId(creatorId),
+        inviteCode: 'JOIN42',
+        participants: [{ userId: new Types.ObjectId(creatorId), role: 'owner' }],
+        status: 'pending',
+        save: jest.fn().mockResolvedValue(undefined),
+      };
+      mockRedisService.get.mockResolvedValue(roomId);
+      mockRoomModel.findById.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(doc),
+      });
+
+      const result = await service.joinByCode('JOIN42', memberId);
+
+      expect(doc.save).toHaveBeenCalled();
+      expect(result.participantCount).toBe(2);
     });
   });
 

@@ -2,12 +2,14 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { UsersService } from '../users/users.service';
 import { WishlistService } from '../wishlist/wishlist.service';
+import { RedisService } from '../common/redis/redis.service';
 import {
   paginate,
   PaginatedResponse,
@@ -18,6 +20,9 @@ import { UpdateRoomDto } from './dto/update-room.dto';
 import { AssignmentView, Room, RoomParticipant } from './room.types';
 import { Room as RoomModel, RoomDocument } from './schemas/room.schema';
 import { permissionsForRole } from './permissions';
+
+const ROOM_TTL = 300; // 5 minutes
+const INVITE_TTL = 48 * 60 * 60; // 48 hours
 
 function sattoloCycle<T>(arr: T[]): T[] {
   const result = [...arr];
@@ -32,11 +37,14 @@ function sattoloCycle<T>(arr: T[]): T[] {
 
 @Injectable()
 export class RoomsService {
+  private readonly logger = new Logger(RoomsService.name);
+
   constructor(
     @InjectModel(RoomModel.name)
     private readonly roomModel: Model<RoomModel>,
     private readonly usersService: UsersService,
     private readonly wishlistService: WishlistService,
+    private readonly redisService: RedisService,
   ) {}
 
   private async toRoomView(doc: RoomDocument, viewerId: string): Promise<Room> {
@@ -87,6 +95,7 @@ export class RoomsService {
       ...(dto.budget !== undefined && { budget: dto.budget }),
       ...(dto.currency && { currency: dto.currency }),
     });
+    await this.redisService.set(`invite:${code}`, doc.id, INVITE_TTL);
     return this.toRoomView(doc, creatorId);
   }
 
@@ -107,13 +116,31 @@ export class RoomsService {
   async findByIdForUser(id: string, userId: string): Promise<Room> {
     if (!Types.ObjectId.isValid(id))
       throw new NotFoundException('Room not found');
-    const doc = await this.roomModel
-      .findOne({
-        _id: id,
-        'participants.userId': new Types.ObjectId(userId),
-      })
-      .exec();
-    if (!doc) throw new NotFoundException('Room not found');
+
+    const cacheKey = `room:${id}`;
+    const cached = await this.redisService.get(cacheKey);
+    let doc: RoomDocument;
+
+    if (cached) {
+      this.logger.debug(`Room cache HIT: ${cacheKey}`);
+      doc = JSON.parse(cached) as RoomDocument;
+      const isMember = doc.participants.some(
+        (p) => p.userId.toString() === userId,
+      );
+      if (!isMember) throw new NotFoundException('Room not found');
+    } else {
+      this.logger.debug(`Room cache MISS: ${cacheKey}`);
+      const found = await this.roomModel
+        .findOne({
+          _id: id,
+          'participants.userId': new Types.ObjectId(userId),
+        })
+        .exec();
+      if (!found) throw new NotFoundException('Room not found');
+      doc = found;
+      await this.redisService.set(cacheKey, JSON.stringify(doc), ROOM_TTL);
+    }
+
     return this.toRoomView(doc, userId);
   }
 
@@ -135,12 +162,16 @@ export class RoomsService {
         role: 'member',
       });
       await doc.save();
+      await this.redisService.del(`room:${id}`);
     }
     return this.toRoomView(doc, userId);
   }
 
   async joinByCode(inviteCode: string, userId: string): Promise<Room> {
-    const doc = await this.roomModel.findOne({ inviteCode }).exec();
+    const roomId = await this.redisService.get(`invite:${inviteCode}`);
+    if (!roomId)
+      throw new BadRequestException('Invalid or expired invite code');
+    const doc = await this.roomModel.findById(roomId).exec();
     if (!doc) throw new NotFoundException('Room not found');
     if (doc.status === 'drawn')
       throw new BadRequestException('Draw already completed');
@@ -153,6 +184,7 @@ export class RoomsService {
         role: 'member',
       });
       await doc.save();
+      await this.redisService.del(`room:${roomId}`);
     }
     return this.toRoomView(doc, userId);
   }
@@ -194,6 +226,7 @@ export class RoomsService {
       )
       .exec();
 
+    await this.redisService.del(`room:${id}`);
     return this.toRoomView(updated as unknown as RoomDocument, requesterId);
   }
 
@@ -254,6 +287,7 @@ export class RoomsService {
     const updated = await this.roomModel
       .findByIdAndUpdate(id, update, { new: true })
       .exec();
+    await this.redisService.del(`room:${id}`);
     return this.toRoomView(updated as unknown as RoomDocument, userId);
   }
 
@@ -263,6 +297,7 @@ export class RoomsService {
     const doc = await this.roomModel.findById(id).exec();
     if (!doc) throw new NotFoundException('Room not found');
     await this.roomModel.findByIdAndDelete(id).exec();
+    await this.redisService.del(`room:${id}`);
   }
 
   async kickMember(
@@ -285,6 +320,7 @@ export class RoomsService {
       (p) => p.userId.toString() !== targetUserId,
     );
     await doc.save();
+    await this.redisService.del(`room:${id}`);
   }
 
   async regenerateInviteCode(id: string, userId: string): Promise<Room> {
@@ -292,10 +328,16 @@ export class RoomsService {
       throw new NotFoundException('Room not found');
     const doc = await this.roomModel.findById(id).exec();
     if (!doc) throw new NotFoundException('Room not found');
+    const oldCode = doc.inviteCode;
     const code = this.generateCode();
     const updated = await this.roomModel
       .findByIdAndUpdate(id, { inviteCode: code }, { new: true })
       .exec();
+    await Promise.all([
+      this.redisService.del(`invite:${oldCode}`),
+      this.redisService.set(`invite:${code}`, id, INVITE_TTL),
+      this.redisService.del(`room:${id}`),
+    ]);
     return this.toRoomView(updated as unknown as RoomDocument, userId);
   }
 
