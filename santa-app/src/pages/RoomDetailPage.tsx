@@ -79,6 +79,7 @@ export function RoomDetailPage() {
 
   const drawMutation = useMutation({
     mutationFn: async (date: string) => {
+      if (!can('room:draw')) return;
       await api.post(`/api/rooms/${id}/draw`, { exchangeDate: date });
     },
     onSuccess: () => {
@@ -95,6 +96,7 @@ export function RoomDetailPage() {
 
   const changeDateMutation = useMutation({
     mutationFn: async (date: string) => {
+      if (!can('room:edit')) return;
       await api.patch(`/api/rooms/${id}`, { exchangeDate: date });
     },
     onSuccess: () => {
@@ -110,6 +112,7 @@ export function RoomDetailPage() {
 
   const kickMutation = useMutation({
     mutationFn: async (memberId: string) => {
+      if (!can('room:kick')) return;
       await api.delete(`/api/rooms/${id}/members/${memberId}`);
     },
     onSuccess: () => {
@@ -123,6 +126,7 @@ export function RoomDetailPage() {
 
   const regenerateCodeMutation = useMutation({
     mutationFn: async () => {
+      if (!can('room:invite')) return;
       await api.post(`/api/rooms/${id}/invite-code/regenerate`);
     },
     onSuccess: () => {
@@ -136,6 +140,7 @@ export function RoomDetailPage() {
 
   const deleteRoomMutation = useMutation({
     mutationFn: async () => {
+      if (!can('room:delete')) return;
       await api.delete(`/api/rooms/${id}`);
     },
     onSuccess: () => {

@@ -1,8 +1,4 @@
-import {
-  BadRequestException,
-  ForbiddenException,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
 import { Types } from 'mongoose';
@@ -309,16 +305,6 @@ describe('RoomsService', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('throws ForbiddenException when requester is not the creator', async () => {
-      const doc = makeDrawableRoom();
-      mockRoomModel.findById.mockReturnValue({
-        exec: jest.fn().mockResolvedValue(doc),
-      });
-      await expect(
-        service.draw(roomId, memberId, '2026-12-24'),
-      ).rejects.toThrow(ForbiddenException);
-    });
-
     it('throws BadRequestException when room is already drawn', async () => {
       const doc = makeDrawableRoom({ status: 'drawn' });
       mockRoomModel.findById.mockReturnValue({
@@ -408,20 +394,35 @@ describe('RoomsService', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('throws ForbiddenException when requester is not the creator', async () => {
+    it('updates only the provided fields', async () => {
       const roomId = new Types.ObjectId().toString();
       const doc = {
         id: roomId,
         creatorId: new Types.ObjectId(creatorId),
-        participants: [],
+        participants: [
+          { userId: new Types.ObjectId(creatorId), role: 'owner' },
+        ],
         status: 'pending',
       };
       mockRoomModel.findById.mockReturnValue({
         exec: jest.fn().mockResolvedValue(doc),
       });
-      await expect(
-        service.editRoom(roomId, {} as any, memberId),
-      ).rejects.toThrow(ForbiddenException);
+      mockRoomModel.findByIdAndUpdate = jest.fn().mockReturnValue({
+        exec: jest.fn().mockResolvedValue({ ...doc, name: 'Renamed' }),
+      });
+
+      const result = await service.editRoom(
+        roomId,
+        { name: 'Renamed' },
+        creatorId,
+      );
+
+      expect(mockRoomModel.findByIdAndUpdate).toHaveBeenCalledWith(
+        roomId,
+        { name: 'Renamed' },
+        { new: true },
+      );
+      expect(result.name).toBe('Renamed');
     });
   });
 
@@ -432,15 +433,19 @@ describe('RoomsService', () => {
       );
     });
 
-    it('throws ForbiddenException when requester is not the creator', async () => {
+    it('deletes the room by id', async () => {
       const roomId = new Types.ObjectId().toString();
       const doc = { id: roomId, creatorId: new Types.ObjectId(creatorId) };
       mockRoomModel.findById.mockReturnValue({
         exec: jest.fn().mockResolvedValue(doc),
       });
-      await expect(service.deleteRoom(roomId, memberId)).rejects.toThrow(
-        ForbiddenException,
-      );
+      mockRoomModel.findByIdAndDelete = jest.fn().mockReturnValue({
+        exec: jest.fn().mockResolvedValue(doc),
+      });
+
+      await service.deleteRoom(roomId, creatorId);
+
+      expect(mockRoomModel.findByIdAndDelete).toHaveBeenCalledWith(roomId);
     });
   });
 
@@ -477,15 +482,31 @@ describe('RoomsService', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('throws ForbiddenException when requester is not the creator', async () => {
+    it('replaces the invite code with a fresh one', async () => {
       const roomId = new Types.ObjectId().toString();
-      const doc = { id: roomId, creatorId: new Types.ObjectId(creatorId) };
+      const doc = {
+        id: roomId,
+        creatorId: new Types.ObjectId(creatorId),
+        inviteCode: 'OLD001',
+        participants: [
+          { userId: new Types.ObjectId(creatorId), role: 'owner' },
+        ],
+      };
       mockRoomModel.findById.mockReturnValue({
         exec: jest.fn().mockResolvedValue(doc),
       });
-      await expect(
-        service.regenerateInviteCode(roomId, memberId),
-      ).rejects.toThrow(ForbiddenException);
+      mockRoomModel.findByIdAndUpdate = jest.fn().mockReturnValue({
+        exec: jest.fn().mockResolvedValue({ ...doc, inviteCode: 'NEW002' }),
+      });
+
+      const result = await service.regenerateInviteCode(roomId, creatorId);
+
+      expect(mockRoomModel.findByIdAndUpdate).toHaveBeenCalledWith(
+        roomId,
+        expect.objectContaining({ inviteCode: expect.any(String) }),
+        { new: true },
+      );
+      expect(result.inviteCode).toBe('NEW002');
     });
   });
 });

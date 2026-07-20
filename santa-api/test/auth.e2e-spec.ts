@@ -6,7 +6,7 @@ import {
 } from '@nestjs/platform-fastify';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
-import AllExceptionsFilter from '../src/common/filters/all-exceptions.filter';
+import { AllExceptionsFilter } from '../src/common/filters/all-exceptions.filter';
 import {
   startInMemoryMongo,
   stopInMemoryMongo,

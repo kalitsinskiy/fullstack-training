@@ -167,11 +167,6 @@ export class RoomsService {
     const doc = await this.roomModel.findById(id).exec();
     if (!doc) throw new NotFoundException('Room not found');
 
-    if (doc.creatorId.toString() !== requesterId) {
-      throw new ForbiddenException(
-        'Only the room creator can trigger the draw',
-      );
-    }
     if (doc.status === 'drawn') {
       throw new BadRequestException('Draw has already been performed');
     }
@@ -248,9 +243,6 @@ export class RoomsService {
       throw new NotFoundException('Room not found');
     const doc = await this.roomModel.findById(id).exec();
     if (!doc) throw new NotFoundException('Room not found');
-    if (doc.creatorId.toString() !== userId) {
-      throw new ForbiddenException('Only the room creator can edit the room');
-    }
 
     const update: Record<string, unknown> = {};
     if (dto.name !== undefined) update.name = dto.name;
@@ -265,36 +257,30 @@ export class RoomsService {
     return this.toRoomView(updated as unknown as RoomDocument, userId);
   }
 
-  async deleteRoom(id: string, userId: string): Promise<void> {
+  async deleteRoom(id: string, _userId: string): Promise<void> {
     if (!Types.ObjectId.isValid(id))
       throw new NotFoundException('Room not found');
     const doc = await this.roomModel.findById(id).exec();
     if (!doc) throw new NotFoundException('Room not found');
-    if (doc.creatorId.toString() !== userId) {
-      throw new ForbiddenException('Only the room creator can delete the room');
-    }
     await this.roomModel.findByIdAndDelete(id).exec();
   }
 
   async kickMember(
     id: string,
     targetUserId: string,
-    userId: string,
+    _userId: string,
   ): Promise<void> {
     if (!Types.ObjectId.isValid(id))
       throw new NotFoundException('Room not found');
     const doc = await this.roomModel.findById(id).exec();
     if (!doc) throw new NotFoundException('Room not found');
-    if (doc.creatorId.toString() !== userId) {
-      throw new ForbiddenException('Only the room creator can remove members');
-    }
-    if (targetUserId === userId) {
-      throw new BadRequestException('Cannot remove the owner');
-    }
-    const memberExists = doc.participants.some(
+    const target = doc.participants.find(
       (p) => p.userId.toString() === targetUserId,
     );
-    if (!memberExists) throw new NotFoundException('Member not found');
+    if (!target) throw new NotFoundException('Member not found');
+    if (target.role === 'owner') {
+      throw new BadRequestException('Cannot remove the owner');
+    }
     doc.participants = doc.participants.filter(
       (p) => p.userId.toString() !== targetUserId,
     );
@@ -306,11 +292,6 @@ export class RoomsService {
       throw new NotFoundException('Room not found');
     const doc = await this.roomModel.findById(id).exec();
     if (!doc) throw new NotFoundException('Room not found');
-    if (doc.creatorId.toString() !== userId) {
-      throw new ForbiddenException(
-        'Only the room creator can regenerate the invite code',
-      );
-    }
     const code = this.generateCode();
     const updated = await this.roomModel
       .findByIdAndUpdate(id, { inviteCode: code }, { new: true })
