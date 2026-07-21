@@ -76,7 +76,15 @@ export interface Notification {
   userId: string;
   type: string;
   message: string;
-  payload?: unknown;
+  roomId?: string;
   read: boolean;
   createdAt: string;
+}
+
+export interface NotificationsResponse {
+  data: Notification[];
+  total: number;
+  unreadCount: number;
+  page: number;
+  limit: number;
 }

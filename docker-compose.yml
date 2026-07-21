@@ -146,7 +146,7 @@ services:
       context: ./santa-app
       dockerfile: Dockerfile
       args:
-        VITE_API_URL: http://localhost:3001
+        VITE_API_URL: ""
     container_name: santa-app
     ports:
       - '5173:80'

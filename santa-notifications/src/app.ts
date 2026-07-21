@@ -4,6 +4,7 @@ import ajvFormats from 'ajv-formats';
 
 import configPlugin from './plugins/config';
 import redisPlugin from './plugins/redis';
+import authPlugin from './plugins/auth';
 import eventsPlugin from './plugins/events';
 import { AppError, ValidationError } from './errors';
 import timingPlugin from './plugins/timing';
@@ -14,12 +15,9 @@ import usersRoutes from './routes/users';
 export function buildApp() {
   const app = Fastify({
     logger: {
-      level:
-        process.env.LOG_LEVEL ??
-        (process.env.NODE_ENV === 'test' ? 'silent' : 'info'),
+      level: process.env.LOG_LEVEL ?? (process.env.NODE_ENV === 'test' ? 'silent' : 'info'),
       transport:
-        process.env.NODE_ENV !== 'production' &&
-        process.env.NODE_ENV !== 'test'
+        process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test'
           ? {
               target: 'pino-pretty',
               options: {
@@ -44,6 +42,7 @@ export function buildApp() {
   });
   app.register(configPlugin);
   app.register(redisPlugin);
+  app.register(authPlugin);
   app.register(eventsPlugin);
   app.register(timingPlugin);
   app.register(healthRoutes);

@@ -7,6 +7,9 @@ export interface AppConfig {
   mongoUrl: string;
   redisUrl: string;
   rabbitUrl: string;
+  jwtSecret: string;
+  santaApiUrl: string;
+  serviceApiKey: string;
 }
 
 declare module 'fastify' {
@@ -21,15 +24,28 @@ async function configPlugin(fastify: FastifyInstance) {
   const mongoUrl = process.env.MONGO_URL ?? '';
   const redisUrl = process.env.REDIS_URL ?? 'redis://localhost:6379';
   const rabbitUrl = process.env.RABBITMQ_URL ?? '';
+  const jwtSecret = process.env.JWT_SECRET ?? '';
+  const santaApiUrl = process.env.SANTA_API_URL ?? 'http://localhost:3001';
+  const serviceApiKey = process.env.SERVICE_API_KEY ?? '';
 
   const missing: string[] = [];
   if (!mongoUrl) missing.push('MONGO_URL');
+  if (!jwtSecret) missing.push('JWT_SECRET');
 
   if (missing.length > 0) {
     throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
   }
 
-  fastify.decorate('config', { port, env, mongoUrl, redisUrl, rabbitUrl });
+  fastify.decorate('config', {
+    port,
+    env,
+    mongoUrl,
+    redisUrl,
+    rabbitUrl,
+    jwtSecret,
+    santaApiUrl,
+    serviceApiKey,
+  });
 }
 
 export default fp(configPlugin, { name: 'config' });

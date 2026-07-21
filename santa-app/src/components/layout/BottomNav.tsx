@@ -1,9 +1,12 @@
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { useUnreadCount } from '@/features/notifications/useUnreadCount';
 import { navItems } from './navItems';
 
 /** Mobile bottom tab bar (hidden on desktop, where Sidebar takes over). */
 export function BottomNav() {
+  const unreadCount = useUnreadCount();
+
   return (
     <nav className="fixed inset-x-0 bottom-0 z-10 flex border-t border-border bg-card md:hidden">
       {navItems.map(({ to, label, icon: Icon }) => (
@@ -17,7 +20,14 @@ export function BottomNav() {
             )
           }
         >
-          <Icon className="size-5" />
+          <span className="relative">
+            <Icon className="size-5" />
+            {to === '/notifications' && unreadCount > 0 && (
+              <span className="absolute -right-2 -top-1.5 flex size-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </span>
           {label}
         </NavLink>
       ))}

@@ -243,7 +243,7 @@ export class RoomsService {
     await this.redisService.del(`room:${id}`);
     await this.eventPublisherService.publish('draw.completed', {
       roomId: id,
-      participantCount: doc.participants.length,
+      participantIds: doc.participants.map((p) => p.userId.toString()),
     });
     return this.toRoomView(updated as unknown as RoomDocument, requesterId);
   }

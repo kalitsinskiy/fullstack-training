@@ -406,7 +406,7 @@ describe('RoomsService', () => {
       expect(result.status).toBe('drawn');
       expect(mockEventPublisher.publish).toHaveBeenCalledWith(
         'draw.completed',
-        expect.objectContaining({ roomId, participantCount: 3 }),
+        expect.objectContaining({ roomId, participantIds: expect.arrayContaining([expect.any(String)]) }),
       );
     });
   });
