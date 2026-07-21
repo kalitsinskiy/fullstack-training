@@ -3,6 +3,7 @@ import { getModelToken } from '@nestjs/mongoose';
 import { Types } from 'mongoose';
 import { WishlistService } from './wishlist.service';
 import { Wishlist } from './schemas/wishlist.schema';
+import { EventPublisherService } from '../events/eventPublisher.service';
 
 describe('WishlistService', () => {
   let service: WishlistService;
@@ -10,6 +11,10 @@ describe('WishlistService', () => {
   const mockWishlistModel = {
     findOneAndUpdate: jest.fn(),
     findOne: jest.fn(),
+  };
+
+  const mockEventPublisher = {
+    publish: jest.fn().mockResolvedValue(undefined),
   };
 
   const roomId = new Types.ObjectId().toString();
@@ -22,6 +27,7 @@ describe('WishlistService', () => {
       providers: [
         WishlistService,
         { provide: getModelToken(Wishlist.name), useValue: mockWishlistModel },
+        { provide: EventPublisherService, useValue: mockEventPublisher },
       ],
     }).compile();
 
@@ -52,6 +58,10 @@ describe('WishlistService', () => {
         { upsert: true, new: true },
       );
       expect(result).toEqual({ roomId, userId, items });
+      expect(mockEventPublisher.publish).toHaveBeenCalledWith(
+        'wishlist.updated',
+        { roomId, userId },
+      );
     });
   });
 

@@ -5,9 +5,11 @@ import { Wishlist, WishlistSchema } from './schemas/wishlist.schema';
 import { WishlistService } from './wishlist.service';
 import { Room, RoomSchema } from '../rooms/schemas/room.schema';
 import { RoomPermissionsGuard } from '../rooms/guards/room-permissions.guard';
+import { EventPublisherModule } from 'src/events/eventPublisher.module';
 
 @Module({
   imports: [
+    EventPublisherModule,
     MongooseModule.forFeature([
       { name: Wishlist.name, schema: WishlistSchema },
       { name: Room.name, schema: RoomSchema },

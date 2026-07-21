@@ -7,6 +7,7 @@ import {
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { AllExceptionsFilter } from '../src/common/filters/all-exceptions.filter';
+import { EventPublisherService } from '../src/events/eventPublisher.service';
 import {
   startInMemoryMongo,
   stopInMemoryMongo,
@@ -24,7 +25,10 @@ describe('Auth (e2e)', () => {
 
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(EventPublisherService)
+      .useValue({ publish: jest.fn() })
+      .compile();
 
     app = moduleRef.createNestApplication<NestFastifyApplication>(
       new FastifyAdapter(),

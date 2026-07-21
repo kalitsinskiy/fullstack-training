@@ -20,6 +20,7 @@ import { UpdateRoomDto } from './dto/update-room.dto';
 import { AssignmentView, Room, RoomParticipant } from './room.types';
 import { Room as RoomModel, RoomDocument } from './schemas/room.schema';
 import { permissionsForRole } from './permissions';
+import { EventPublisherService } from 'src/events/eventPublisher.service';
 
 const ROOM_TTL = 300; // 5 minutes
 const INVITE_TTL = 48 * 60 * 60; // 48 hours
@@ -45,6 +46,7 @@ export class RoomsService {
     private readonly usersService: UsersService,
     private readonly wishlistService: WishlistService,
     private readonly redisService: RedisService,
+    private readonly eventPublisherService: EventPublisherService,
   ) {}
 
   private async toRoomView(doc: RoomDocument, viewerId: string): Promise<Room> {
@@ -96,6 +98,11 @@ export class RoomsService {
       ...(dto.currency && { currency: dto.currency }),
     });
     await this.redisService.set(`invite:${code}`, doc.id, INVITE_TTL);
+    await this.eventPublisherService.publish('room.created', {
+      roomId: doc._id,
+      roomName: doc.name,
+      createdBy: await this.getDisplayName(creatorId),
+    });
     return this.toRoomView(doc, creatorId);
   }
 
@@ -164,6 +171,13 @@ export class RoomsService {
       await doc.save();
       await this.redisService.del(`room:${id}`);
     }
+
+    await this.eventPublisherService.publish('user.joined', {
+      roomId: id,
+      userId,
+      userName: await this.getDisplayName(userId),
+    });
+
     return this.toRoomView(doc, userId);
   }
 
@@ -227,6 +241,10 @@ export class RoomsService {
       .exec();
 
     await this.redisService.del(`room:${id}`);
+    await this.eventPublisherService.publish('draw.completed', {
+      roomId: id,
+      participantCount: doc.participants.length,
+    });
     return this.toRoomView(updated as unknown as RoomDocument, requesterId);
   }
 
@@ -343,5 +361,11 @@ export class RoomsService {
 
   private generateCode(): string {
     return Math.random().toString(36).slice(2, 8).toUpperCase();
+  }
+
+  private async getDisplayName(id: string): Promise<string> {
+    const user = await this.usersService.findById(id).catch(() => null);
+
+    return user?.displayName || 'Unknown';
   }
 }

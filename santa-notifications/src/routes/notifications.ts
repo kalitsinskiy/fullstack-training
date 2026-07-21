@@ -27,7 +27,7 @@ const objectIdSchema = { type: 'string', pattern: '^[a-fA-F0-9]{24}$' };
 function toNotification(notification: NotificationDocument): Notification {
   return {
     id: notification._id.toString(),
-    userId: notification.userId.toString(),
+    userId: notification.userId?.toString() ?? '',
     type: notification.type,
     message: notification.message,
     payload: notification.payload,

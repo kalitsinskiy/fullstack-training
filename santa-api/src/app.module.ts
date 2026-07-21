@@ -27,6 +27,7 @@ import { WishlistModule } from './wishlist/wishlist.module';
         JWT_SECRET: Joi.string().required(),
         JWT_EXPIRATION: Joi.string().default('7d'),
         REDIS_URL: Joi.string().default('redis://localhost:6379'),
+        RABBITMQ_URL: Joi.string().optional(),
       }),
     }),
     MongooseModule.forRootAsync({
@@ -42,7 +43,7 @@ import { WishlistModule } from './wishlist/wishlist.module';
         skipIf: () => process.env.NODE_ENV === 'test',
         ...(process.env.NODE_ENV !== 'test' && {
           storage: new ThrottlerStorageRedisService(
-            config.get<string>('REDIS_URL')!,
+            config.get<string>('REDIS_URL'),
           ),
         }),
       }),

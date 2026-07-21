@@ -7,6 +7,7 @@ import { Room } from './schemas/room.schema';
 import { UsersService } from '../users/users.service';
 import { WishlistService } from '../wishlist/wishlist.service';
 import { RedisService } from '../common/redis/redis.service';
+import { EventPublisherService } from '../events/eventPublisher.service';
 
 describe('RoomsService', () => {
   let service: RoomsService;
@@ -36,6 +37,10 @@ describe('RoomsService', () => {
     del: jest.fn().mockResolvedValue(undefined),
   };
 
+  const mockEventPublisher = {
+    publish: jest.fn().mockResolvedValue(undefined),
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
 
@@ -59,6 +64,7 @@ describe('RoomsService', () => {
         { provide: UsersService, useValue: mockUsersService },
         { provide: WishlistService, useValue: mockWishlistService },
         { provide: RedisService, useValue: mockRedisService },
+        { provide: EventPublisherService, useValue: mockEventPublisher },
       ],
     }).compile();
 
@@ -97,6 +103,10 @@ describe('RoomsService', () => {
       expect(result.participants).toHaveLength(1);
       expect(result.participants[0].role).toBe('owner');
       expect(result.inviteCode).toBeDefined();
+      expect(mockEventPublisher.publish).toHaveBeenCalledWith(
+        'room.created',
+        expect.objectContaining({ roomName: 'Holiday Party' }),
+      );
     });
 
     it('includes budget and currency when provided', async () => {
@@ -228,6 +238,10 @@ describe('RoomsService', () => {
       });
       expect(doc.save).toHaveBeenCalled();
       expect(result.participantCount).toBe(2);
+      expect(mockEventPublisher.publish).toHaveBeenCalledWith(
+        'user.joined',
+        expect.objectContaining({ roomId, userId: memberId }),
+      );
     });
 
     it('does not duplicate if user is already a member', async () => {
@@ -390,6 +404,10 @@ describe('RoomsService', () => {
         { new: true },
       );
       expect(result.status).toBe('drawn');
+      expect(mockEventPublisher.publish).toHaveBeenCalledWith(
+        'draw.completed',
+        expect.objectContaining({ roomId, participantCount: 3 }),
+      );
     });
   });
 

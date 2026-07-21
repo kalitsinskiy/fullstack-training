@@ -4,6 +4,7 @@ import ajvFormats from 'ajv-formats';
 
 import configPlugin from './plugins/config';
 import redisPlugin from './plugins/redis';
+import eventsPlugin from './plugins/events';
 import { AppError, ValidationError } from './errors';
 import timingPlugin from './plugins/timing';
 import healthRoutes from './routes/health';
@@ -43,6 +44,7 @@ export function buildApp() {
   });
   app.register(configPlugin);
   app.register(redisPlugin);
+  app.register(eventsPlugin);
   app.register(timingPlugin);
   app.register(healthRoutes);
   app.register(notificationRoutes, { prefix: '/api/notifications' });

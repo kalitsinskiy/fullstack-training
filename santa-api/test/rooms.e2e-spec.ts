@@ -10,6 +10,8 @@ import { JwtService } from '@nestjs/jwt';
 import { getModelToken } from '@nestjs/mongoose';
 import { AppModule } from '../src/app.module';
 import { AllExceptionsFilter } from '../src/common/filters/all-exceptions.filter';
+import { EventPublisherService } from '../src/events/eventPublisher.service';
+import { RedisService } from '../src/common/redis/redis.service';
 import { tokenFor } from './auth-token.helper';
 import { userFixture } from './factories';
 import {
@@ -29,9 +31,19 @@ describe('Rooms (e2e)', () => {
     const uri = await startInMemoryMongo();
     process.env.MONGO_URL = uri;
 
+    const store = new Map<string, string>();
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(EventPublisherService)
+      .useValue({ publish: jest.fn() })
+      .overrideProvider(RedisService)
+      .useValue({
+        get: (k: string) => Promise.resolve(store.get(k) ?? null),
+        set: (k: string, v: string) => { store.set(k, v); return Promise.resolve(); },
+        del: (k: string) => { store.delete(k); return Promise.resolve(); },
+      })
+      .compile();
 
     app = moduleRef.createNestApplication<NestFastifyApplication>(
       new FastifyAdapter(),
