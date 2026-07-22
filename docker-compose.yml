@@ -126,7 +126,24 @@ services:
       rabbitmq:
         condition: service_healthy
 
+  # --- Frontend Service ---
+
+  santa-app:
+    build:
+      context: ./santa-app
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://localhost:3001
+    container_name: santa-app
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      santa-api:
+        condition: service_healthy
+
 volumes:
   mongodb_data:
   redis_data:
   rabbitmq_data:
+

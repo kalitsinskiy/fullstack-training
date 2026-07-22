@@ -1,0 +1,20 @@
+services:
+  santa-api:
+    build:
+      context: ./santa-api
+      dockerfile: Dockerfile.dev
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ./santa-api:/app
+      - /app/node_modules
+
+  santa-notifications:
+    build:
+      context: ./santa-notifications
+      dockerfile: Dockerfile.dev
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ./santa-notifications:/app
+      - /app/node_modules
