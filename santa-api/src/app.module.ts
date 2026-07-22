@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import * as Joi from 'joi';
 import { LoggerModule } from 'nestjs-pino';
 import { AppController } from './app.controller';
 import { AuthModule } from './auth/auth.module';
@@ -13,10 +15,23 @@ import { WishlistModule } from './wishlist/wishlist.module';
 
 @Module({
   imports: [
-    MongooseModule.forRootAsync({
-      useFactory: () => ({
-        uri: process.env.MONGO_URL ?? 'mongodb://localhost:27017/santa-api',
+    ConfigModule.forRoot({
+      isGlobal: true,
+      validationSchema: Joi.object({
+        PORT: Joi.number().default(3001),
+        NODE_ENV: Joi.string()
+          .valid('development', 'staging', 'production', 'test')
+          .default('development'),
+        MONGO_URL: Joi.string().required(),
+        JWT_SECRET: Joi.string().required(),
+        JWT_EXPIRATION: Joi.string().default('7d'),
       }),
+    }),
+    MongooseModule.forRootAsync({
+      useFactory: (configService: ConfigService) => ({
+        uri: configService.get<string>('MONGO_URL'),
+      }),
+      inject: [ConfigService],
     }),
     ThrottlerModule.forRoot({
       throttlers: [{ ttl: 60_000, limit: 100 }],

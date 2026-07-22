@@ -83,9 +83,9 @@ services:
       REDIS_URL: redis://redis:6379
       RABBITMQ_URL: amqp://santa:santa123@rabbitmq:5672
       CORS_ORIGIN: http://localhost:5173
-      JWT_SECRET: dev-secret-change-in-production
+      JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRATION: 7d
-      SERVICE_API_KEY: dev-service-key-change-in-production
+      SERVICE_API_KEY: ${SERVICE_API_KEY}
     depends_on:
       mongodb:
         condition: service_healthy
@@ -116,8 +116,8 @@ services:
       RABBITMQ_URL: amqp://santa:santa123@rabbitmq:5672
       CORS_ORIGIN: http://localhost:5173
       SANTA_API_URL: http://santa-api:3001
-      JWT_SECRET: dev-secret-change-in-production
-      SERVICE_API_KEY: dev-service-key-change-in-production
+      JWT_SECRET: ${JWT_SECRET}
+      SERVICE_API_KEY: ${SERVICE_API_KEY}
     depends_on:
       mongodb:
         condition: service_healthy

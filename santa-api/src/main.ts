@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { Logger } from 'nestjs-pino';
 import {
@@ -18,10 +19,10 @@ async function bootstrap() {
 
   await configureApp(app);
 
-  await app.listen(
-    process.env.PORT ? Number(process.env.PORT) : 3001,
-    '0.0.0.0',
-  );
+  const configService = app.get(ConfigService);
+  const port = configService.get<number>('PORT', 3001);
+
+  await app.listen(port, '0.0.0.0');
 }
 bootstrap().catch((error: unknown) => {
   console.error(error);
