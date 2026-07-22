@@ -1,3 +1,5 @@
+@import 'react-day-picker/style.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -64,3 +66,27 @@
     @apply font-display;
   }
 }
+
+.santa-cal {
+  font-family: inherit;
+  --rdp-accent-color: hsl(var(--primary));
+  --rdp-background-color: hsl(var(--primary-soft));
+}
+
+.santa-cal .rdp-day_selected,
+.santa-cal .rdp-day_selected:hover {
+  background-color: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
+  font-weight: bold;
+}
+
+.santa-cal .rdp-button:hover:not([disabled]):not(.rdp-day_selected) {
+  background-color: hsl(var(--primary-soft));
+}
+
+.santa-cal .rdp-caption_label,
+.santa-cal .rdp-head_cell,
+.santa-cal .rdp-nav_button {
+  color: hsl(var(--foreground));
+}
+

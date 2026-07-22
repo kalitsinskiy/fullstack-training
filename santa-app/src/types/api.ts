@@ -51,6 +51,7 @@ export interface RoomDetail {
   participants: RoomMember[];
   participantCount: number;
   drawDate?: string;
+  exchangeDate?: string;
   /**
    * The caller's effective permissions for this room — the single source for UI
    * gating. Optional: the API populates it from Lesson 04 (authorization) onward.
