@@ -90,6 +90,19 @@ class SantaApiClient {
     );
   }
 
+  async getRelations(
+    roomId: string,
+    userId: string,
+  ): Promise<{ gifteeId: string | null; santaId: string | null }> {
+    return this.circuitBreaker.call(() =>
+      withRetry(() =>
+        this.get<{ gifteeId: string | null; santaId: string | null }>(
+          `/api/internal/rooms/${roomId}/relations/${userId}`,
+        ),
+      ),
+    );
+  }
+
   private async get<T>(path: string): Promise<T> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5_000);

@@ -40,4 +40,34 @@ export class InternalController {
       memberIds: doc.participants.map((p) => p.userId.toString()),
     };
   }
+
+  @Get('rooms/:roomId/relations/:userId')
+  async getRelations(
+    @Param('roomId') roomId: string,
+    @Param('userId') userId: string,
+  ): Promise<{ gifteeId: string | null; santaId: string | null }> {
+    if (!Types.ObjectId.isValid(roomId))
+      throw new NotFoundException('Room not found');
+    const doc = await this.roomModel
+      .findById(roomId)
+      .lean<RoomDocument>()
+      .exec();
+    if (!doc) throw new NotFoundException('Room not found');
+
+    if (doc.status !== 'drawn') {
+      return { gifteeId: null, santaId: null };
+    }
+
+    const gifteeAssignment = doc.assignments.find(
+      (a) => a.giverId.toString() === userId,
+    );
+    const santaAssignment = doc.assignments.find(
+      (a) => a.receiverId.toString() === userId,
+    );
+
+    return {
+      gifteeId: gifteeAssignment?.receiverId.toString() ?? null,
+      santaId: santaAssignment?.giverId.toString() ?? null,
+    };
+  }
 }

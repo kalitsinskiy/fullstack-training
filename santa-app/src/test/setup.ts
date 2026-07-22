@@ -1,6 +1,10 @@
 import '@testing-library/jest-dom/vitest';
-import { afterAll, afterEach, beforeAll } from 'vitest';
+import { afterAll, afterEach, beforeAll, vi } from 'vitest';
 import { server } from './mocks/server';
+
+// jsdom doesn't implement scrollIntoView — stub it out globally so components
+// that call it (e.g. ChatPanel auto-scroll) don't throw in tests.
+Element.prototype.scrollIntoView = vi.fn();
 
 // Start MSW once, reset handlers between tests, and stop it at the end.
 // `onUnhandledRequest: 'error'` makes any un-mocked request fail loudly — add a

@@ -88,3 +88,26 @@ export interface NotificationsResponse {
   page: number;
   limit: number;
 }
+
+export interface ChatMessage {
+  id: string;
+  roomId: string;
+  text: string;
+  createdAt: string;
+  direction: 'in' | 'out';
+}
+
+export interface GifteeThread {
+  id: string;
+  name: string | null;
+  messages: ChatMessage[];
+}
+
+export interface SantaThread {
+  messages: ChatMessage[];
+}
+
+export interface MessagesResponse {
+  giftee: GifteeThread | null;
+  santa: SantaThread | null;
+}

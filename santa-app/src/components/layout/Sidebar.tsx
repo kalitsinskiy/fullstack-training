@@ -4,12 +4,14 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/features/auth/useAuth';
 import { useUnreadCount } from '@/features/notifications/useUnreadCount';
+import { useUnreadMessages } from '@/features/messages/useUnreadMessages';
 import { navItems } from './navItems';
 
 /** Desktop navigation rail (hidden on mobile, where BottomNav takes over). */
 export function Sidebar() {
   const { user, logout } = useAuth();
   const unreadCount = useUnreadCount();
+  const { total: unreadMessages } = useUnreadMessages();
 
   return (
     <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-card p-4 md:flex">
@@ -37,6 +39,11 @@ export function Sidebar() {
               {to === '/notifications' && unreadCount > 0 && (
                 <span className="absolute -right-1.5 -top-1.5 flex size-3.5 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
                   {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+              {to === '/messages' && unreadMessages > 0 && (
+                <span className="absolute -right-1.5 -top-1.5 flex size-3.5 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
+                  {unreadMessages > 9 ? '9+' : unreadMessages}
                 </span>
               )}
             </span>

@@ -119,6 +119,28 @@ export const handlers = [
 
   http.post('/api/rooms/:id/draw', () => HttpResponse.json({ success: true })),
 
+  // Messages
+  http.get('/api/messages/:roomId', () =>
+    HttpResponse.json({
+      giftee: { id: 'user-2', name: 'Bob', messages: [] },
+      santa: { messages: [] },
+    }),
+  ),
+
+  http.post('/api/messages', () =>
+    HttpResponse.json(
+      {
+        id: 'msg-1',
+        roomId: 'room-1',
+        text: 'Hope you like it!',
+        createdAt: new Date('2024-12-01T10:00:00Z').toISOString(),
+        direction: 'out',
+        thread: 'giftee',
+      },
+      { status: 201 },
+    ),
+  ),
+
   // Notifications
   http.get('/api/notifications', () =>
     HttpResponse.json({

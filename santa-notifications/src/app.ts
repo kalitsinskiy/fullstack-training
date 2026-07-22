@@ -6,10 +6,12 @@ import configPlugin from './plugins/config';
 import redisPlugin from './plugins/redis';
 import authPlugin from './plugins/auth';
 import eventsPlugin from './plugins/events';
+import publisherPlugin from './plugins/publisher';
 import { AppError, ValidationError } from './errors';
 import timingPlugin from './plugins/timing';
 import healthRoutes from './routes/health';
 import notificationRoutes from './routes/notifications';
+import messageRoutes from './routes/messages';
 import usersRoutes from './routes/users';
 
 export function buildApp() {
@@ -44,9 +46,11 @@ export function buildApp() {
   app.register(redisPlugin);
   app.register(authPlugin);
   app.register(eventsPlugin);
+  app.register(publisherPlugin);
   app.register(timingPlugin);
   app.register(healthRoutes);
   app.register(notificationRoutes, { prefix: '/api/notifications' });
+  app.register(messageRoutes, { prefix: '/api/messages' });
   app.register(usersRoutes, { prefix: '/users' });
 
   app.setErrorHandler((error: FastifyError, request, reply) => {

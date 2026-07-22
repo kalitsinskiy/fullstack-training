@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { DayPicker } from 'react-day-picker';
-import { Gift, CalendarDays, RefreshCw, Trash2 } from 'lucide-react';
+import { Gift, CalendarDays, MessageCircle, RefreshCw, Trash2 } from 'lucide-react';
 import { api, getApiErrorMessage } from '@/lib/api';
 import { useAuth } from '@/features/auth/useAuth';
 import { usePermissions } from '@/features/rooms/usePermissions';
@@ -21,6 +21,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { Link } from 'react-router-dom';
 import { useSocket } from '@/hooks/useSocket';
 import type { RoomDetail, Wishlist, Assignment } from '@/types/api';
 
@@ -518,6 +519,12 @@ export function RoomDetailPage() {
                   Loading assignment…
                 </p>
               )}
+              <Button asChild size="sm" variant="outline" className="mt-2">
+                <Link to={`/rooms/${id}/messages`}>
+                  <MessageCircle className="size-4" />
+                  Messages
+                </Link>
+              </Button>
             </CardContent>
           </Card>
         )}
