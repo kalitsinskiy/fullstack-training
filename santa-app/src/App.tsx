@@ -26,7 +26,7 @@ export default function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
 
-            {/* Protected */}
+            {/* Protected — SocketProvider mounts inside AuthGuard, after login */}
             <Route element={<AuthGuard />}>
               <Route element={<AppLayout />}>
                 <Route path="/rooms" element={<RoomListPage />} />

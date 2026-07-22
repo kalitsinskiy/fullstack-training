@@ -1,5 +1,7 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from './useAuth';
+import { SocketProvider } from '@/features/socket/SocketContext';
+import { SocketNotifications } from '@/components/SocketNotifications';
 
 /** Gate for protected routes. Redirects to /login when unauthenticated. */
 export function AuthGuard() {
@@ -18,5 +20,10 @@ export function AuthGuard() {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  return <Outlet />;
+  return (
+    <SocketProvider>
+      <SocketNotifications />
+      <Outlet />
+    </SocketProvider>
+  );
 }

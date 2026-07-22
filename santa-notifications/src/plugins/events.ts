@@ -4,6 +4,7 @@ import amqp from 'amqplib';
 import { Types } from 'mongoose';
 import { NotificationModel, NotificationType } from '../models/notification';
 import { getSantaApiClient } from '../services/santa-api-client';
+import { getIo } from '../io-instance';
 
 interface NotificationInsert {
   userId?: Types.ObjectId;
@@ -232,7 +233,35 @@ async function eventsPlugin(fastify: FastifyInstance) {
           if (notifications.length === 1) {
             notifications[0].messageId = messageId;
           }
-          await NotificationModel.insertMany(notifications, { ordered: false });
+          const saved = await NotificationModel.insertMany(notifications, { ordered: false });
+
+          // Push each saved notification to its recipient via Socket.IO
+          try {
+            const io = getIo();
+            for (const doc of saved) {
+              io.to(`user:${doc.userId}`).emit('notification', {
+                id: doc._id,
+                type: doc.type,
+                message: doc.message,
+                roomId: doc.roomId,
+                createdAt: doc.createdAt,
+              });
+            }
+
+            // Broadcast room-level events so detail pages can refetch without polling
+            const roomId = data.roomId as string | undefined;
+            if (routingKey === 'user.joined' && roomId) {
+              io.to(`room:${roomId}`).emit('room:member-joined', {
+                roomId,
+                userId: data.userId,
+              });
+            }
+            if (routingKey === 'draw.completed' && roomId) {
+              io.to(`room:${roomId}`).emit('room:draw-completed', { roomId });
+            }
+          } catch {
+            // io not ready yet (e.g. during tests) — skip silently
+          }
         }
 
         channel.ack(msg);

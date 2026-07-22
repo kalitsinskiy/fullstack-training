@@ -59,7 +59,7 @@ export function NotificationsPage() {
   const queryClient = useQueryClient();
 
   const { data, isLoading, isError, error } = useQuery<NotificationsResponse>({
-    queryKey: ['notifications'],
+    queryKey: ['notifications', 'list'],
     queryFn: async () => {
       const { data } = await api.get<NotificationsResponse>(
         `/api/notifications?page=1&limit=${PAGE_LIMIT}`,
@@ -72,7 +72,7 @@ export function NotificationsPage() {
     mutationFn: (id: string) => api.patch(`/api/notifications/${id}/read`),
     onSuccess: (_, id) => {
       queryClient.setQueryData<NotificationsResponse>(
-        ['notifications'],
+        ['notifications', 'list'],
         (prev) => {
           if (!prev) return prev;
           return {
@@ -84,6 +84,13 @@ export function NotificationsPage() {
           };
         },
       );
+      queryClient.setQueryData<NotificationsResponse>(
+        ['notifications', 'unread-count'],
+        (prev) => {
+          if (!prev) return prev;
+          return { ...prev, unreadCount: Math.max(0, prev.unreadCount - 1) };
+        },
+      );
     },
     onError: (err) =>
       toast.error(getApiErrorMessage(err, 'Could not mark as read')),
@@ -93,7 +100,7 @@ export function NotificationsPage() {
     mutationFn: () => api.patch('/api/notifications/read-all'),
     onSuccess: () => {
       queryClient.setQueryData<NotificationsResponse>(
-        ['notifications'],
+        ['notifications', 'list'],
         (prev) => {
           if (!prev) return prev;
           return {
@@ -101,6 +108,13 @@ export function NotificationsPage() {
             unreadCount: 0,
             data: prev.data.map((n) => ({ ...n, read: true })),
           };
+        },
+      );
+      queryClient.setQueryData<NotificationsResponse>(
+        ['notifications', 'unread-count'],
+        (prev) => {
+          if (!prev) return prev;
+          return { ...prev, unreadCount: 0 };
         },
       );
       toast.success('All notifications marked as read');

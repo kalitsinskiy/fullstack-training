@@ -1,5 +1,5 @@
 import 'react-day-picker/style.css';
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -21,6 +21,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { useSocket } from '@/hooks/useSocket';
 import type { RoomDetail, Wishlist, Assignment } from '@/types/api';
 
 export function RoomDetailPage() {
@@ -32,6 +33,29 @@ export function RoomDetailPage() {
   const [exchangeDate, setExchangeDate] = useState<Date | undefined>(undefined);
   const [changeDateOpen, setChangeDateOpen] = useState(false);
   const [changeDate, setChangeDate] = useState<Date | undefined>(undefined);
+
+  const { socket, joinRoom, leaveRoom } = useSocket();
+
+  useEffect(() => {
+    if (!socket || !id) return;
+    joinRoom(id);
+
+    const refetchRoom = () => {
+      void queryClient.invalidateQueries({ queryKey: ['rooms', id] });
+      void queryClient.invalidateQueries({
+        queryKey: ['rooms', id, 'assignment'],
+      });
+    };
+
+    socket.on('room:member-joined', refetchRoom);
+    socket.on('room:draw-completed', refetchRoom);
+
+    return () => {
+      leaveRoom(id);
+      socket.off('room:member-joined', refetchRoom);
+      socket.off('room:draw-completed', refetchRoom);
+    };
+  }, [socket, id, joinRoom, leaveRoom, queryClient]);
 
   const { data: room, isLoading: roomLoading } = useQuery<RoomDetail>({
     queryKey: ['rooms', id],
