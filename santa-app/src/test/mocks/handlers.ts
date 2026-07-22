@@ -15,7 +15,12 @@ export const handlers = [
 
   http.post('/api/auth/register', () =>
     HttpResponse.json(
-      { accessToken: 'test-token', id: 'user-1', email: 'test@example.com', displayName: 'Test' },
+      {
+        accessToken: 'test-token',
+        id: 'user-1',
+        email: 'test@example.com',
+        displayName: 'Test',
+      },
       { status: 201 },
     ),
   ),
@@ -59,13 +64,29 @@ export const handlers = [
         { id: 'user-2', displayName: 'Another User', role: 'member' },
       ],
       participantCount: 2,
-      viewerPermissions: ['room:view', 'room:draw', 'room:invite', 'room:kick', 'room:edit', 'room:delete', 'wishlist:set'],
+      viewerPermissions: [
+        'room:view',
+        'room:draw',
+        'room:invite',
+        'room:kick',
+        'room:edit',
+        'room:delete',
+        'wishlist:set',
+      ],
     }),
   ),
 
   http.post('/api/rooms', () =>
     HttpResponse.json(
-      { id: 'room-new', name: 'New Room', inviteCode: 'XYZ789', creatorId: 'user-1', status: 'pending', participants: [], participantCount: 1 },
+      {
+        id: 'room-new',
+        name: 'New Room',
+        inviteCode: 'XYZ789',
+        creatorId: 'user-1',
+        status: 'pending',
+        participants: [],
+        participantCount: 1,
+      },
       { status: 201 },
     ),
   ),
@@ -79,16 +100,48 @@ export const handlers = [
   ),
 
   http.get('/api/rooms/:id/wishlist/:userId', () =>
-    HttpResponse.json({ userId: 'user-1', roomId: 'room-1', items: ['Socks', 'Book'] }),
+    HttpResponse.json({
+      userId: 'user-1',
+      roomId: 'room-1',
+      items: ['Socks', 'Book'],
+    }),
   ),
 
   http.get('/api/rooms/:id/assignment', () =>
     HttpResponse.json({
-      receiver: { id: 'user-2', displayName: 'Another User', wishlist: ['Chocolate'] },
+      receiver: {
+        id: 'user-2',
+        displayName: 'Another User',
+        wishlist: ['Chocolate'],
+      },
     }),
   ),
 
-  http.post('/api/rooms/:id/draw', () =>
+  http.post('/api/rooms/:id/draw', () => HttpResponse.json({ success: true })),
+
+  // Notifications
+  http.get('/api/notifications', () =>
+    HttpResponse.json({
+      data: [],
+      total: 0,
+      unreadCount: 0,
+      page: 1,
+      limit: 20,
+    }),
+  ),
+
+  http.patch('/api/notifications/:id/read', ({ params }) =>
+    HttpResponse.json({
+      id: params.id,
+      userId: 'user-1',
+      type: 'user.joined',
+      message: 'Alice joined "Test Room"',
+      read: true,
+      createdAt: new Date().toISOString(),
+    }),
+  ),
+
+  http.patch('/api/notifications/read-all', () =>
     HttpResponse.json({ success: true }),
   ),
 ];
