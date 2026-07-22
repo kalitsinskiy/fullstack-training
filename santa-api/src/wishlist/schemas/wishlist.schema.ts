@@ -11,17 +11,8 @@ export class Wishlist {
   @Prop({ type: Types.ObjectId, ref: 'Room', required: true })
   roomId!: Types.ObjectId;
 
-  @Prop({
-    type: [
-      {
-        name: { type: String, required: true },
-        url: { type: String },
-        priority: { type: Number },
-      },
-    ],
-    default: [],
-  })
-  items!: Array<{ name: string; url?: string; priority?: number }>;
+  @Prop({ type: [String], default: [] })
+  items!: string[];
 }
 
 export const WishlistSchema = SchemaFactory.createForClass(Wishlist);

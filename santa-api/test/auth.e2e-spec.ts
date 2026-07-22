@@ -1,127 +1,173 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import request from 'supertest';
 import {
-  describe,
-  it,
-  expect,
-  beforeAll,
-  afterAll,
-  beforeEach,
-} from '@jest/globals';
-import { NestFastifyApplication } from '@nestjs/platform-fastify';
+  FastifyAdapter,
+  NestFastifyApplication,
+} from '@nestjs/platform-fastify';
+import { getConnectionToken } from '@nestjs/mongoose';
 import { Connection } from 'mongoose';
-import { createTestApp } from './helpers/test-app.helper';
-import { post } from './helpers/api-request.helper';
+import { AppModule } from '../src/app.module';
+import { configureApp } from '../src/configure-app';
+import {
+  clearAllCollections,
+  startInMemoryMongo,
+  stopInMemoryMongo,
+} from './setup-mongo';
 
-interface RegisterResponse {
-  id: string;
-  email: string;
-  displayName: string;
-  accessToken: string;
-}
-
-interface LoginResponse {
-  accessToken: string;
-}
-
-describe('Auth (e2e)', () => {
+/**
+ * COMPONENT TEST (HTTP slice) — the approach for this whole course.
+ *
+ * We boot the real AppModule against an in-memory MongoDB and drive it through
+ * real HTTP with supertest. No mocking of services or the database: a request
+ * goes through pipes → guards → controller → service → Mongo, exactly like prod.
+ *
+ * One example below is fully written so you can see the wiring. The rest are
+ * `it.todo(...)` — turn each into a real test as you implement AuthService.
+ * Add more scenarios as you find edge cases; this list is a floor, not a ceiling.
+ */
+describe('Auth (HTTP)', () => {
   let app: NestFastifyApplication;
-  let connection: Connection;
+  const originalJwtSecret = process.env.JWT_SECRET;
+  const originalMongoUrl = process.env.MONGO_URL;
 
   beforeAll(async () => {
-    process.env.JWT_SECRET = 'auth-e2e-test-secret';
-
-    ({ app, connection } = await createTestApp({
-      validation: true,
-      globalPrefix: 'api',
-    }));
-  }, 30000);
+    process.env.JWT_SECRET = process.env.JWT_SECRET ?? 'test-secret';
+    process.env.MONGO_URL = await startInMemoryMongo();
+  });
 
   beforeEach(async () => {
-    await connection.dropDatabase();
+    const moduleRef: TestingModule = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
+
+    app = moduleRef.createNestApplication<NestFastifyApplication>(
+      new FastifyAdapter(),
+    );
+    await configureApp(app);
+    await app.init();
+    await app.getHttpAdapter().getInstance().ready();
+  });
+
+  afterEach(async () => {
+    if (app) {
+      const connection = app.get<Connection>(getConnectionToken());
+      await clearAllCollections(connection);
+      await app.close();
+    }
   });
 
   afterAll(async () => {
-    await app.close();
+    if (originalJwtSecret === undefined) {
+      delete process.env.JWT_SECRET;
+    } else {
+      process.env.JWT_SECRET = originalJwtSecret;
+    }
+    if (originalMongoUrl === undefined) {
+      delete process.env.MONGO_URL;
+    } else {
+      process.env.MONGO_URL = originalMongoUrl;
+    }
+    await stopInMemoryMongo();
   });
 
-  describe('POST /api/auth/register', () => {
-    it('should return 201 with accessToken on valid registration', async () => {
-      const res = await post<RegisterResponse>(app, '/api/auth/register', {
-        email: 'alice@test.com',
-        password: 'password123',
-        displayName: 'Alice',
-      });
+  // ✅ WORKED EXAMPLE — green against the skeleton: validation runs in the
+  // ValidationPipe, before AuthService is ever called. Study this wiring, then
+  // implement the service and fill in the `it.todo`s below the same way.
+  it('POST /api/auth/register → 400 when required fields are missing', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/auth/register')
+      .send({ email: 'alice@test.com' })
+      .expect(400);
 
-      expect(res.statusCode).toBe(201);
-      expect(res.body).toMatchObject({
-        id: expect.any(String),
-        email: 'alice@test.com',
-        displayName: 'Alice',
-        accessToken: expect.any(String),
-      });
-    });
-
-    it('should return 400 when required fields are missing', async () => {
-      const res = await post(app, '/api/auth/register', {
-        email: 'alice@test.com',
-      });
-
-      expect(res.statusCode).toBe(400);
-    });
-
-    it('should return 409 on duplicate email', async () => {
-      await post(app, '/api/auth/register', {
-        email: 'alice@test.com',
-        password: 'password123',
-        displayName: 'Alice',
-      });
-
-      const res = await post(app, '/api/auth/register', {
-        email: 'alice@test.com',
-        password: 'password123',
-        displayName: 'Alice Again',
-      });
-
-      expect(res.statusCode).toBe(409);
+    expect(response.body).toMatchObject({
+      success: false,
+      statusCode: 400,
+      message: expect.any(Array) as string[],
     });
   });
 
-  describe('POST /api/auth/login', () => {
-    beforeEach(async () => {
-      await post(app, '/api/auth/register', {
-        email: 'alice@test.com',
-        password: 'password123',
+  it('POST /api/auth/register → 201 returns { id, email, displayName, accessToken }', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/auth/register')
+      .send({
+        email: 'alice@example.com',
+        password: 'Passw0rd!',
         displayName: 'Alice',
-      });
+      })
+      .expect(201);
+
+    expect(response.body).toMatchObject({
+      id: expect.any(String),
+      email: 'alice@example.com',
+      displayName: 'Alice',
+      accessToken: expect.any(String),
+    });
+  });
+
+  it('POST /api/auth/register → 409 when the email is already registered', async () => {
+    await request(app.getHttpServer()).post('/api/auth/register').send({
+      email: 'bob@example.com',
+      password: 'Passw0rd!',
+      displayName: 'Bob',
     });
 
-    it('should return 200 with accessToken on valid credentials', async () => {
-      const res = await post<LoginResponse>(app, '/api/auth/login', {
-        email: 'alice@test.com',
-        password: 'password123',
-      });
+    const response = await request(app.getHttpServer())
+      .post('/api/auth/register')
+      .send({
+        email: 'bob@example.com',
+        password: 'Password123!',
+        displayName: 'Bob 2',
+      })
+      .expect(409);
 
-      expect(res.statusCode).toBe(200);
-      expect(res.body).toMatchObject({ accessToken: expect.any(String) });
+    expect(response.body).toMatchObject({
+      statusCode: 409,
+    });
+  });
+
+  it('POST /api/auth/login → 200 returns an accessToken for valid credentials', async () => {
+    await request(app.getHttpServer()).post('/api/auth/register').send({
+      email: 'charlie@example.com',
+      password: 'Passw0rd!',
+      displayName: 'Charlie',
     });
 
-    it('should return 401 with "Invalid credentials" for wrong password', async () => {
-      const res = await post<{ message: string }>(app, '/api/auth/login', {
-        email: 'alice@test.com',
-        password: 'wrongpassword',
-      });
+    const response = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({
+        email: 'charlie@example.com',
+        password: 'Passw0rd!',
+      })
+      .expect(200);
 
-      expect(res).toBeUnauthorized();
-      expect(res.body.message).toBe('Invalid credentials');
+    expect(response.body).toMatchObject({
+      accessToken: expect.any(String),
+    });
+  });
+
+  it('POST /api/auth/login → 401 with the SAME generic message for a wrong password AND an unknown email', async () => {
+    await request(app.getHttpServer()).post('/api/auth/register').send({
+      email: 'dave@example.com',
+      password: 'Passw0rd!',
+      displayName: 'Dave',
     });
 
-    it('should return 401 with same "Invalid credentials" message for unknown email', async () => {
-      const res = await post<{ message: string }>(app, '/api/auth/login', {
-        email: 'nobody@test.com',
-        password: 'password123',
-      });
+    const res1 = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({
+        email: 'dave@example.com',
+        password: 'WrongPassword!',
+      })
+      .expect(401);
 
-      expect(res).toBeUnauthorized();
-      expect(res.body.message).toBe('Invalid credentials');
-    });
+    const res2 = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({
+        email: 'unknown@example.com',
+        password: 'Passw0rd!',
+      })
+      .expect(401);
+
+    expect(res1.body.message).toEqual(res2.body.message);
   });
 });

@@ -1,53 +1,50 @@
 import {
+  ArgumentsHost,
   Catch,
   ExceptionFilter,
-  ExecutionContext,
   HttpException,
+  HttpStatus,
 } from '@nestjs/common';
 import { FastifyReply } from 'fastify';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
-  catch(exception: unknown, host: ExecutionContext): void {
-    const ctx = host.switchToHttp();
-    const response = ctx.getResponse<FastifyReply>();
+  catch(exception: unknown, host: ArgumentsHost): void {
+    const response = host.switchToHttp().getResponse<FastifyReply>();
 
-    let statusCode = 500;
-    let message: string = 'Internal server error';
+    const statusCode =
+      exception instanceof HttpException
+        ? exception.getStatus()
+        : HttpStatus.INTERNAL_SERVER_ERROR;
 
-    if (exception instanceof HttpException) {
-      statusCode = exception.getStatus();
-      const exceptionResponse = exception.getResponse();
+    const message =
+      exception instanceof HttpException
+        ? this.getHttpExceptionMessage(exception)
+        : 'Internal server error';
 
-      if (typeof exceptionResponse === 'string') {
-        message = exceptionResponse;
-      } else if (
-        typeof exceptionResponse === 'object' &&
-        exceptionResponse !== null
-      ) {
-        const responseObj = exceptionResponse as Record<string, unknown>;
-        if ('message' in responseObj) {
-          const msg = responseObj.message;
-          if (
-            Array.isArray(msg) &&
-            msg.length > 0 &&
-            typeof msg[0] === 'string'
-          ) {
-            message = msg[0];
-          } else if (typeof msg === 'string') {
-            message = msg;
-          }
-        }
-      }
-    }
-
-    const errorResponse = {
+    response.status(statusCode).send({
       success: false,
       statusCode,
       message,
       timestamp: new Date().toISOString(),
-    };
+    });
+  }
 
-    response.status(statusCode).send(errorResponse);
+  private getHttpExceptionMessage(exception: HttpException): string | string[] {
+    const payload = exception.getResponse();
+
+    if (typeof payload === 'string') {
+      return payload;
+    }
+
+    if (
+      typeof payload === 'object' &&
+      payload !== null &&
+      'message' in payload
+    ) {
+      return payload.message as string | string[];
+    }
+
+    return exception.message;
   }
 }

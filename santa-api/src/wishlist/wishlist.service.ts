@@ -1,26 +1,55 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { Wishlist } from './schemas/wishlist.schema';
-import { WishlistItemDto } from './dto/update-wishlist.dto';
+import { Model, Types } from 'mongoose';
+import { Wishlist } from './wishlist.types';
+import { Wishlist as WishlistModel } from './schemas/wishlist.schema';
 
 @Injectable()
 export class WishlistService {
   constructor(
-    @InjectModel(Wishlist.name) private readonly wishlistModel: Model<Wishlist>,
+    @InjectModel(WishlistModel.name)
+    private readonly wishlistModel: Model<WishlistModel>,
   ) {}
 
-  set(roomId: string, userId: string, items: WishlistItemDto[]) {
-    return this.wishlistModel
+  async set(roomId: string, userId: string, items: string[]): Promise<Wishlist> {
+    const doc = await this.wishlistModel
       .findOneAndUpdate(
-        { userId, roomId },
-        { $set: { items } },
-        { upsert: true, new: true },
+        {
+          roomId: new Types.ObjectId(roomId),
+          userId: new Types.ObjectId(userId),
+        },
+        { items },
+        { new: true, upsert: true },
       )
       .exec();
+
+    return {
+      roomId: doc.roomId.toString(),
+      userId: doc.userId.toString(),
+      items: doc.items,
+    };
   }
 
-  get(roomId: string, userId: string) {
-    return this.wishlistModel.findOne({ userId, roomId }).exec();
+  async get(roomId: string, userId: string): Promise<Wishlist> {
+    const doc = await this.wishlistModel
+      .findOne({
+        roomId: new Types.ObjectId(roomId),
+        userId: new Types.ObjectId(userId),
+      })
+      .exec();
+
+    if (!doc) {
+      return {
+        roomId,
+        userId,
+        items: [],
+      };
+    }
+
+    return {
+      roomId: doc.roomId.toString(),
+      userId: doc.userId.toString(),
+      items: doc.items,
+    };
   }
 }

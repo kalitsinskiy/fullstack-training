@@ -3,17 +3,22 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
-import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { RegisterDto } from './dto/register.dto';
 
-export interface IUser {
-  _id: any;
+export type RegisterResponse = {
+  id: string;
   email: string;
-  role: string;
-}
+  displayName: string;
+  accessToken: string;
+};
+
+export type LoginResponse = {
+  accessToken: string;
+};
 
 @Injectable()
 export class AuthService {
@@ -22,51 +27,58 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async register(dto: RegisterDto) {
-    const existing = await this.usersService.findByEmail(dto.email);
-    if (existing) {
-      throw new ConflictException('Email already registered');
+  async register(dto: RegisterDto): Promise<RegisterResponse> {
+    const userEmail = dto.email.toLowerCase().trim();
+
+    const ifUserExists = await this.usersService.findByEmail(userEmail);
+
+    if (ifUserExists) {
+      throw new ConflictException('Email already exists');
     }
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
 
-    const user = await this.usersService.create({
-      email: dto.email.toLowerCase(),
-      passwordHash,
+    const newUser = await this.usersService.create({
+      email: userEmail,
       displayName: dto.displayName,
+      passwordHash,
     });
 
-    const accessToken = this.sign(user);
+    const accessToken = await this.jwtService.signAsync({
+      sub: newUser.id,
+      userId: newUser.id,
+      email: newUser.email,
+      role: newUser.role,
+    });
 
     return {
-      id: String(user._id),
-      email: user.email,
-      displayName: user.displayName,
-      accessToken,
+      id: newUser.id,
+      email: newUser.email,
+      displayName: newUser.displayName,
+      accessToken: accessToken,
     };
   }
 
-  async login(dto: LoginDto) {
-    const user = await this.usersService.findByEmail(dto.email, {
+  async login(dto: LoginDto): Promise<LoginResponse> {
+    const userEmail = dto.email.toLowerCase().trim();
+
+    const user = await this.usersService.findByEmail(userEmail, {
       withPassword: true,
     });
 
-    const isValid =
-      user && (await bcrypt.compare(dto.password, user.passwordHash));
-    if (!isValid) {
-      throw new UnauthorizedException('Invalid credentials');
+    if (!user || !(await bcrypt.compare(dto.password, user.passwordHash))) {
+      throw new UnauthorizedException('Invalid email or password');
     }
 
-    return { accessToken: this.sign(user) };
-  }
-
-  private sign(user: IUser): string {
-    const sub = String(user._id);
-
-    return this.jwtService.sign({
-      sub,
+    const accessToken = await this.jwtService.signAsync({
+      sub: user._id.toString(),
+      userId: user._id.toString(),
       email: user.email,
       role: user.role,
     });
+
+    return {
+      accessToken: accessToken,
+    };
   }
 }

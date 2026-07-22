@@ -1,7 +1,49 @@
 import { FastifyInstance } from 'fastify';
 import { NotFoundError } from '../errors';
-import { NotificationModel } from '../models/notification';
+import { NotificationDocument, NotificationModel, NotificationType } from '../models/notification';
 
+interface Notification {
+  id: string;
+  userId: string;
+  type: string;
+  message: string;
+  payload?: unknown;
+  read: boolean;
+  createdAt: string;
+}
+
+const notificationTypeValues = ['room_invite', 'assignment', 'wishlist_update', 'system'] as const;
+
+const idParamsSchema = {
+  type: 'object',
+  required: ['id'],
+  properties: {
+    id: { type: 'string', pattern: '^[a-fA-F0-9]{24}$' },
+  },
+};
+
+const objectIdSchema = { type: 'string', pattern: '^[a-fA-F0-9]{24}$' };
+
+function toNotification(notification: NotificationDocument): Notification {
+  return {
+    id: notification._id.toString(),
+    userId: notification.userId.toString(),
+    type: notification.type,
+    message: notification.message,
+    payload: notification.payload,
+    read: notification.read,
+    createdAt: notification.createdAt.toISOString(),
+  };
+}
+
+/**
+ * ⚠️ SECURITY (intentional, until Lesson 07): these routes are NOT authenticated
+ * and trust the `userId` from the query/body — a classic IDOR (anyone can read,
+ * mark-read, or delete another user's notifications by id, or list them via
+ * `?userId=`). This is deliberate kickoff scaffolding. Lesson 07 adds a JWT
+ * `fastify.authenticate` preHandler and scopes every query to `request.user`,
+ * which closes the IDOR. DO NOT deploy this service as-is (see Lesson 11).
+ */
 export default async function notificationRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/',
@@ -10,7 +52,7 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
         querystring: {
           type: 'object',
           properties: {
-            userId: { type: 'string' },
+            userId: objectIdSchema,
           },
         },
       },
@@ -18,26 +60,29 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
     async (request) => {
       const { userId } = request.query as { userId?: string };
       const query = userId ? { userId } : {};
-      return NotificationModel.find(query).sort({ createdAt: -1 });
-    },
+      const notifications = await NotificationModel.find(query).sort({ createdAt: -1 }).exec();
+
+      return notifications.map((notification) => toNotification(notification));
+    }
   );
 
   fastify.get(
     '/:id',
     {
       schema: {
-        params: {
-          type: 'object',
-          properties: { id: { type: 'string', pattern: '^[a-fA-F0-9]{24}$' } },
-        },
+        params: idParamsSchema,
       },
     },
     async (request) => {
       const { id } = request.params as { id: string };
-      const notification = await NotificationModel.findById(id);
-      if (!notification) throw new NotFoundError('Notification', id);
-      return notification;
-    },
+      const notification = await NotificationModel.findById(id).exec();
+
+      if (!notification) {
+        throw new NotFoundError('Notification', id);
+      }
+
+      return toNotification(notification);
+    }
   );
 
   fastify.post(
@@ -48,44 +93,44 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
           type: 'object',
           required: ['userId', 'type', 'message'],
           properties: {
-            userId: { type: 'string' },
-            type: {
-              type: 'string',
-              enum: ['room_invite', 'assignment', 'wishlist_update', 'system'],
-            },
-            message: { type: 'string', minLength: 1, maxLength: 500 },
+            userId: objectIdSchema,
+            type: { type: 'string', enum: [...notificationTypeValues] },
             payload: {},
+            message: { type: 'string', minLength: 1, maxLength: 500 },
           },
           additionalProperties: false,
         },
       },
     },
     async (request, reply) => {
-      const { userId, type, message, payload } = request.body as {
+      const { userId, type, payload, message } = request.body as {
         userId: string;
-        type: 'room_invite' | 'assignment' | 'wishlist_update' | 'system';
-        message: string;
+        type: NotificationType;
         payload?: unknown;
+        message: string;
       };
-      const notification = await NotificationModel.create({
+
+      const createdNotification = await NotificationModel.create({
         userId,
         type,
-        message,
         payload,
+        message,
       });
+
+      request.log.info(
+        { notificationId: createdNotification._id.toString(), userId, type },
+        'Notification created'
+      );
       reply.code(201);
-      return notification;
-    },
+      return toNotification(createdNotification);
+    }
   );
 
   fastify.patch(
     '/:id/read',
     {
       schema: {
-        params: {
-          type: 'object',
-          properties: { id: { type: 'string', pattern: '^[a-fA-F0-9]{24}$' } },
-        },
+        params: idParamsSchema,
       },
     },
     async (request) => {
@@ -93,28 +138,38 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
       const notification = await NotificationModel.findByIdAndUpdate(
         id,
         { read: true },
-        { new: true },
+        { new: true }
+      ).exec();
+
+      if (!notification) {
+        throw new NotFoundError('Notification', id);
+      }
+
+      request.log.info(
+        { notificationId: notification._id.toString(), read: true },
+        'Notification marked as read'
       );
-      if (!notification) throw new NotFoundError('Notification', id);
-      return notification;
-    },
+      return toNotification(notification);
+    }
   );
 
   fastify.delete(
     '/:id',
     {
       schema: {
-        params: {
-          type: 'object',
-          properties: { id: { type: 'string', pattern: '^[a-fA-F0-9]{24}$' } },
-        },
+        params: idParamsSchema,
       },
     },
     async (request, reply) => {
       const { id } = request.params as { id: string };
-      const notification = await NotificationModel.findByIdAndDelete(id);
-      if (!notification) throw new NotFoundError('Notification', id);
+      const notification = await NotificationModel.findByIdAndDelete(id).exec();
+
+      if (!notification) {
+        throw new NotFoundError('Notification', id);
+      }
+
+      request.log.info({ notificationId: notification._id.toString() }, 'Notification deleted');
       reply.code(204).send();
-    },
+    }
   );
 }

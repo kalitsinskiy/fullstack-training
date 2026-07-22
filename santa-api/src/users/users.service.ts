@@ -1,47 +1,80 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { User } from './schemas/user.schema';
-import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdateCurrentUserDto } from './dto/update-current-user.dto';
+import { User } from './user.types';
+import { User as UserModel, UserDocument } from './schemas/user.schema';
 
-interface CreateUserPayload {
+type CreateUserInput = {
   email: string;
-  passwordHash: string;
   displayName: string;
+  passwordHash: string;
   role?: 'user' | 'admin';
-}
+};
 
 @Injectable()
 export class UsersService {
   constructor(
-    @InjectModel(User.name) private readonly userModel: Model<User>,
+    @InjectModel(UserModel.name)
+    private readonly userModel: Model<UserModel>,
   ) {}
 
-  create(payload: CreateUserPayload) {
-    return this.userModel.create({
-      email: payload.email,
-      displayName: payload.displayName,
-      passwordHash: payload.passwordHash,
-      role: payload.role ?? 'user',
+  async create(input: CreateUserInput): Promise<User> {
+    const newUser = await this.userModel.create({
+      email: input.email.toLowerCase().trim(),
+      displayName: input.displayName,
+      passwordHash: input.passwordHash,
+      role: input.role ?? 'user',
     });
+
+    return this.toUser(newUser);
   }
 
-  findById(id: string) {
-    return this.userModel.findById(id).exec();
-  }
+  findByEmail(
+    email: string,
+    opts: { withPassword?: boolean } = {},
+  ): Promise<UserDocument | null> {
+    const userQuery = this.userModel.findOne({
+      email: email.toLowerCase().trim(),
+    });
 
-  findByEmail(email: string, opts: { withPassword?: boolean } = {}) {
-    // passwordHash has select: false on the schema — only opt in where strictly needed
-    const query = this.userModel.findOne({ email: email.toLowerCase() });
     if (opts.withPassword) {
-      query.select('+passwordHash');
+      userQuery.select('+passwordHash');
     }
-    return query.exec();
+
+    return userQuery.exec();
   }
 
-  updateById(id: string, dto: UpdateUserDto) {
-    return this.userModel
-      .findByIdAndUpdate(id, { $set: dto }, { new: true })
+  async findById(id: string): Promise<User> {
+    const user = await this.userModel.findById(id).exec();
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return this.toUser(user);
+  }
+
+  async updateCurrentUser(
+    id: string,
+    dto: UpdateCurrentUserDto,
+  ): Promise<User> {
+    const updatedUser = await this.userModel
+      .findByIdAndUpdate(id, { displayName: dto.displayName }, { new: true })
       .exec();
+
+    if (!updatedUser) {
+      throw new NotFoundException('User not found');
+    }
+
+    return this.toUser(updatedUser);
+  }
+
+  private toUser(doc: UserDocument): User {
+    return {
+      id: doc._id.toString(),
+      email: doc.email,
+      displayName: doc.displayName,
+      role: doc.role,
+    };
   }
 }

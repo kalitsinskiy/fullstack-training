@@ -1,11 +1,19 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
+import type { AuthenticatedUser } from '../jwt.strategy';
 
 export const CurrentUser = createParamDecorator(
-  (field: string | undefined, ctx: ExecutionContext) => {
-    const request = ctx
+  (
+    property: keyof AuthenticatedUser | undefined,
+    context: ExecutionContext,
+  ) => {
+    const request = context
       .switchToHttp()
-      .getRequest<{ user: Record<string, unknown> }>();
-    const user = request.user;
-    return field ? user?.[field] : user;
+      .getRequest<{ user: AuthenticatedUser }>();
+
+    if (!property) {
+      return request.user;
+    }
+
+    return request.user?.[property];
   },
 );

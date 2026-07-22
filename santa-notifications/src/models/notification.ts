@@ -1,6 +1,17 @@
-import { Schema, model, Types } from 'mongoose';
+import { HydratedDocument, Schema, Types, model } from 'mongoose';
 
-const notificationSchema = new Schema({
+export type NotificationType = 'room_invite' | 'assignment' | 'wishlist_update' | 'system';
+
+interface NotificationRecord {
+  userId: Types.ObjectId;
+  type: NotificationType;
+  payload?: unknown;
+  message: string;
+  read: boolean;
+  createdAt: Date;
+}
+
+const notificationSchema = new Schema<NotificationRecord>({
   userId: { type: Types.ObjectId, ref: 'User', required: true, index: true },
   type: {
     type: String,
@@ -15,4 +26,6 @@ const notificationSchema = new Schema({
 
 notificationSchema.index({ userId: 1, createdAt: -1 });
 
-export const NotificationModel = model('Notification', notificationSchema);
+export type NotificationDocument = HydratedDocument<NotificationRecord>;
+
+export const NotificationModel = model<NotificationRecord>('Notification', notificationSchema);

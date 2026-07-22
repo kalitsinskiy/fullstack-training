@@ -1,5 +1,5 @@
-import fp from 'fastify-plugin';
 import { FastifyInstance } from 'fastify';
+import fp from 'fastify-plugin';
 
 declare module 'fastify' {
   interface FastifyRequest {

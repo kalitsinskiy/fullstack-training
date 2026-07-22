@@ -3,21 +3,27 @@ import { IsEmail, IsString, MaxLength, MinLength } from 'class-validator';
 
 export class RegisterDto {
   @ApiProperty({
-    example: 'alice@example.com',
-    description: 'User email address',
+    description: 'Email address used to sign in',
+    example: 'alex@example.com',
   })
   @IsEmail()
   email!: string;
 
   @ApiProperty({
-    example: 'supersecret',
-    description: 'Password (min 8 chars)',
+    description: 'Password for the new account',
+    example: 'secret123',
+    minLength: 8,
   })
   @IsString()
   @MinLength(8)
   password!: string;
 
-  @ApiProperty({ example: 'Alice', description: 'Display name (1–50 chars)' })
+  @ApiProperty({
+    description: 'Display name shown to other room members',
+    example: 'Alex',
+    minLength: 1,
+    maxLength: 50,
+  })
   @IsString()
   @MinLength(1)
   @MaxLength(50)

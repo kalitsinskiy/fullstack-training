@@ -1,44 +1,16 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
-import {
-  IsArray,
-  IsNumber,
-  IsOptional,
-  IsString,
-  MinLength,
-  ValidateNested,
-} from 'class-validator';
-
-export class WishlistItemDto {
-  @ApiProperty({ example: 'Mechanical keyboard', description: 'Item name' })
-  @IsString()
-  @MinLength(1)
-  name!: string;
-
-  @ApiPropertyOptional({
-    example: 'https://example.com/product',
-    description: 'Product URL',
-  })
-  @IsString()
-  @IsOptional()
-  url?: string;
-
-  @ApiPropertyOptional({
-    example: 1,
-    description: 'Priority (lower = higher priority)',
-  })
-  @IsNumber()
-  @IsOptional()
-  priority?: number;
-}
+import { ApiProperty } from '@nestjs/swagger';
+import { ArrayMaxSize, IsArray, IsString, Length } from 'class-validator';
 
 export class UpdateWishlistDto {
   @ApiProperty({
-    type: [WishlistItemDto],
-    description: 'List of wishlist items',
+    description: 'Wishlist items that replace the current wishlist (one string per item)',
+    type: String,
+    isArray: true,
+    example: ['Wool socks', 'A good book', 'Coffee beans'],
   })
-  @IsArray({ message: 'Items must be an array' })
-  @ValidateNested({ each: true })
-  @Type(() => WishlistItemDto)
-  items!: WishlistItemDto[];
+  @IsArray()
+  @ArrayMaxSize(50)
+  @IsString({ each: true })
+  @Length(1, 200, { each: true })
+  items!: string[];
 }

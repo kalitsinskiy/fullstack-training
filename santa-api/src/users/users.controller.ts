@@ -1,57 +1,49 @@
-import {
-  Body,
-  Controller,
-  Get,
-  NotFoundException,
-  Param,
-  Patch,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, Patch, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
-  ApiParam,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import type { User } from './user.types';
+import { UpdateCurrentUserDto } from './dto/update-current-user.dto';
+import { UserResponseDto } from './dto/user-response.dto';
 import { UsersService } from './users.service';
-import { UpdateUserDto } from './dto/update-user.dto';
 
-@ApiTags('users')
 @Controller('users')
+@ApiTags('users')
+@ApiBearerAuth('JWT')
+@UseGuards(JwtAuthGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get('me')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('JWT')
-  @ApiOperation({ summary: 'Get current user profile' })
-  @ApiResponse({ status: 200, description: 'Current user profile' })
+  @ApiOperation({ summary: 'Get the authenticated user profile' })
+  @ApiResponse({
+    status: 200,
+    description: 'Current user profile returned successfully',
+    type: UserResponseDto,
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  getMe(@CurrentUser('id') userId: string) {
+  findCurrent(@CurrentUser('id') userId: string): Promise<User> {
     return this.usersService.findById(userId);
   }
 
   @Patch('me')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('JWT')
-  @ApiOperation({ summary: 'Update current user profile' })
-  @ApiResponse({ status: 200, description: 'Updated user profile' })
+  @ApiOperation({ summary: 'Update the authenticated user profile' })
+  @ApiResponse({
+    status: 200,
+    description: 'Current user profile updated successfully',
+    type: UserResponseDto,
+  })
+  @ApiResponse({ status: 400, description: 'Validation error' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  updateMe(@CurrentUser('id') userId: string, @Body() dto: UpdateUserDto) {
-    return this.usersService.updateById(userId, dto);
-  }
-
-  @Get(':id')
-  @ApiOperation({ summary: 'Get user by ID' })
-  @ApiParam({ name: 'id', description: 'User MongoDB ID' })
-  @ApiResponse({ status: 200, description: 'User found' })
-  @ApiResponse({ status: 404, description: 'User not found' })
-  async findOne(@Param('id') id: string) {
-    const user = await this.usersService.findById(id);
-    if (!user) throw new NotFoundException('User not found');
-    return user;
+  updateCurrent(
+    @CurrentUser('id') userId: string,
+    @Body() body: UpdateCurrentUserDto,
+  ): Promise<User> {
+    return this.usersService.updateCurrentUser(userId, body);
   }
 }
