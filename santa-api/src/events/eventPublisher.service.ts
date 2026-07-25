@@ -25,7 +25,7 @@ export class EventPublisherService implements OnModuleInit, OnModuleDestroy {
     this.configured = true;
   }
 
-  async publish(routingKey: RoutingKey, data: object): Promise<void> {
+  publish(routingKey: RoutingKey, data: object): void {
     if (!this.configured) return;
 
     this.channel.publish(

@@ -4,6 +4,8 @@
   "description": "Fullstack JavaScript/TypeScript training repository with practical examples and test-driven exercises",
   "main": "index.js",
   "scripts": {
+    "ci": "node scripts/ci.mjs",
+    "prepare": "husky",
     "ts-node": "TS_NODE_PROJECT=config/tsconfig.json ts-node",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -53,7 +55,11 @@
     "supertest": "^7.2.2",
     "ts-jest": "^29.1.2",
     "ts-node": "^10.9.2",
-    "typescript": "^5.4.2"
+    "typescript": "^5.4.2",
+    "@commitlint/cli": "^19.6.0",
+    "@commitlint/config-conventional": "^19.6.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.10"
   },
   "dependencies": {
     "@fastify/cors": "^11.2.0",

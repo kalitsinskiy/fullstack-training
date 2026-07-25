@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { useSocketContext } from '@/features/socket/SocketContext';
+import { useSocketContext } from '@/features/socket/useSocketContext';
 
 export function useSocket() {
   const { socket, isConnected } = useSocketContext();

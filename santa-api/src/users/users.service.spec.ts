@@ -69,7 +69,11 @@ describe('UsersService', () => {
         role: 'user',
       });
 
-      await service.create({ email: 'a@b.com', displayName: 'A', passwordHash: 'h' });
+      await service.create({
+        email: 'a@b.com',
+        displayName: 'A',
+        passwordHash: 'h',
+      });
 
       expect(mockUserModel.create).toHaveBeenCalledWith(
         expect.objectContaining({ role: 'user' }),
@@ -79,19 +83,33 @@ describe('UsersService', () => {
 
   describe('findByEmail', () => {
     it('finds a user by lowercase email', async () => {
-      const doc = { id: 'user-id', email: 'alice@test.com', passwordHash: 'hash' };
-      const mockQuery = { select: jest.fn().mockReturnThis(), exec: jest.fn().mockResolvedValue(doc) };
+      const doc = {
+        id: 'user-id',
+        email: 'alice@test.com',
+        passwordHash: 'hash',
+      };
+      const mockQuery = {
+        select: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(doc),
+      };
       mockUserModel.findOne.mockReturnValue(mockQuery);
 
-      const result = await service.findByEmail('Alice@Test.com', { withPassword: true });
+      const result = await service.findByEmail('Alice@Test.com', {
+        withPassword: true,
+      });
 
-      expect(mockUserModel.findOne).toHaveBeenCalledWith({ email: 'alice@test.com' });
+      expect(mockUserModel.findOne).toHaveBeenCalledWith({
+        email: 'alice@test.com',
+      });
       expect(mockQuery.select).toHaveBeenCalledWith('+passwordHash');
       expect(result).toEqual(doc);
     });
 
     it('returns null when user not found', async () => {
-      const mockQuery = { select: jest.fn().mockReturnThis(), exec: jest.fn().mockResolvedValue(null) };
+      const mockQuery = {
+        select: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(null),
+      };
       mockUserModel.findOne.mockReturnValue(mockQuery);
 
       const result = await service.findByEmail('unknown@test.com');
@@ -100,7 +118,10 @@ describe('UsersService', () => {
     });
 
     it('does not select passwordHash by default', async () => {
-      const mockQuery = { select: jest.fn().mockReturnThis(), exec: jest.fn().mockResolvedValue(null) };
+      const mockQuery = {
+        select: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(null),
+      };
       mockUserModel.findOne.mockReturnValue(mockQuery);
 
       await service.findByEmail('a@b.com');
@@ -111,49 +132,88 @@ describe('UsersService', () => {
 
   describe('findById', () => {
     it('returns the User shape for a valid id', async () => {
-      const doc = { id: '64e000000000000000000001', email: 'a@b.com', displayName: 'A', role: 'user' };
-      mockUserModel.findById.mockReturnValue({ exec: jest.fn().mockResolvedValue(doc) });
+      const doc = {
+        id: '64e000000000000000000001',
+        email: 'a@b.com',
+        displayName: 'A',
+        role: 'user',
+      };
+      mockUserModel.findById.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(doc),
+      });
 
       const result = await service.findById('64e000000000000000000001');
 
-      expect(result).toEqual({ id: '64e000000000000000000001', email: 'a@b.com', displayName: 'A', role: 'user' });
+      expect(result).toEqual({
+        id: '64e000000000000000000001',
+        email: 'a@b.com',
+        displayName: 'A',
+        role: 'user',
+      });
     });
 
     it('throws NotFoundException for invalid ObjectId', async () => {
-      await expect(service.findById('invalid')).rejects.toThrow(NotFoundException);
+      await expect(service.findById('invalid')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('throws NotFoundException when user does not exist', async () => {
-      mockUserModel.findById.mockReturnValue({ exec: jest.fn().mockResolvedValue(null) });
+      mockUserModel.findById.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(null),
+      });
 
-      await expect(service.findById('64e000000000000000000001')).rejects.toThrow(NotFoundException);
+      await expect(
+        service.findById('64e000000000000000000001'),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('updateCurrentUser', () => {
     it('updates displayName and returns the updated User', async () => {
-      const doc = { id: '64e000000000000000000001', email: 'a@b.com', displayName: 'New Name', role: 'user' };
-      mockUserModel.findByIdAndUpdate.mockReturnValue({ exec: jest.fn().mockResolvedValue(doc) });
+      const doc = {
+        id: '64e000000000000000000001',
+        email: 'a@b.com',
+        displayName: 'New Name',
+        role: 'user',
+      };
+      mockUserModel.findByIdAndUpdate.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(doc),
+      });
 
-      const result = await service.updateCurrentUser('64e000000000000000000001', { displayName: 'New Name' });
+      const result = await service.updateCurrentUser(
+        '64e000000000000000000001',
+        { displayName: 'New Name' },
+      );
 
       expect(mockUserModel.findByIdAndUpdate).toHaveBeenCalledWith(
         '64e000000000000000000001',
         { displayName: 'New Name' },
         { new: true },
       );
-      expect(result).toEqual({ id: '64e000000000000000000001', email: 'a@b.com', displayName: 'New Name', role: 'user' });
+      expect(result).toEqual({
+        id: '64e000000000000000000001',
+        email: 'a@b.com',
+        displayName: 'New Name',
+        role: 'user',
+      });
     });
 
     it('throws NotFoundException for invalid id', async () => {
-      await expect(service.updateCurrentUser('bad-id', { displayName: 'X' })).rejects.toThrow(NotFoundException);
+      await expect(
+        service.updateCurrentUser('bad-id', { displayName: 'X' }),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('throws NotFoundException when user does not exist', async () => {
-      mockUserModel.findByIdAndUpdate.mockReturnValue({ exec: jest.fn().mockResolvedValue(null) });
+      mockUserModel.findByIdAndUpdate.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(null),
+      });
 
       await expect(
-        service.updateCurrentUser('64e000000000000000000001', { displayName: 'X' }),
+        service.updateCurrentUser('64e000000000000000000001', {
+          displayName: 'X',
+        }),
       ).rejects.toThrow(NotFoundException);
     });
   });

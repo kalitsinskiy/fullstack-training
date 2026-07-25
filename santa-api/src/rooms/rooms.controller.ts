@@ -193,7 +193,11 @@ export class RoomsController {
   @RequirePermissions('room:edit')
   @ApiOperation({ summary: 'Edit a room (owner only)' })
   @ApiParam({ name: 'id', description: 'Room identifier' })
-  @ApiResponse({ status: 200, description: 'Room updated', type: RoomResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Room updated',
+    type: RoomResponseDto,
+  })
   @ApiResponse({ status: 400, description: 'Validation error' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Missing room:edit permission' })
@@ -215,11 +219,8 @@ export class RoomsController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Missing room:delete permission' })
   @ApiResponse({ status: 404, description: 'Room not found' })
-  remove(
-    @Param('id') id: string,
-    @CurrentUser('id') userId: string,
-  ): Promise<void> {
-    return this.roomsService.deleteRoom(id, userId);
+  remove(@Param('id') id: string): Promise<void> {
+    return this.roomsService.deleteRoom(id);
   }
 
   @Delete(':id/members/:userId')
@@ -236,9 +237,8 @@ export class RoomsController {
   kick(
     @Param('id') id: string,
     @Param('userId') targetUserId: string,
-    @CurrentUser('id') userId: string,
   ): Promise<void> {
-    return this.roomsService.kickMember(id, targetUserId, userId);
+    return this.roomsService.kickMember(id, targetUserId);
   }
 
   @Post(':id/invite-code/regenerate')

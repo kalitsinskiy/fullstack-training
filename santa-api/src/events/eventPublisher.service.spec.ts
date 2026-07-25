@@ -9,7 +9,8 @@ jest.mock('amqplib', () => ({
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const amqp = require('amqplib').default as { connect: jest.Mock };
+const amqp = (require('amqplib') as { default: { connect: jest.Mock } })
+  .default;
 
 const mockChannel = {
   assertExchange: jest.fn(),
@@ -79,8 +80,8 @@ describe('EventPublisherService', () => {
       await service.onModuleInit();
     });
 
-    it('publishes to the santa.events exchange with the routing key', async () => {
-      await service.publish('room.created', {
+    it('publishes to the santa.events exchange with the routing key', () => {
+      service.publish('room.created', {
         roomId: 'abc',
         roomName: 'Party',
         createdBy: 'Alice',
@@ -93,38 +94,48 @@ describe('EventPublisherService', () => {
         expect.objectContaining({
           persistent: true,
           contentType: 'application/json',
-          messageId: expect.any(String),
-          timestamp: expect.any(Number),
+          messageId: expect.any(String) as string,
+          timestamp: expect.any(Number) as number,
         }),
       );
     });
 
-    it('generates a unique messageId per publish call', async () => {
-      await service.publish('user.joined', {
+    it('generates a unique messageId per publish call', () => {
+      service.publish('user.joined', {
         roomId: '1',
         userId: 'u1',
         userName: 'Bob',
       });
-      await service.publish('user.joined', {
+      service.publish('user.joined', {
         roomId: '1',
         userId: 'u2',
         userName: 'Carol',
       });
 
-      const opts1 = mockChannel.publish.mock.calls[0][3] as {
-        messageId: string;
-      };
-      const opts2 = mockChannel.publish.mock.calls[1][3] as {
-        messageId: string;
-      };
+      const opts1 = (
+        mockChannel.publish.mock.calls[0] as [
+          unknown,
+          unknown,
+          unknown,
+          { messageId: string },
+        ]
+      )[3];
+      const opts2 = (
+        mockChannel.publish.mock.calls[1] as [
+          unknown,
+          unknown,
+          unknown,
+          { messageId: string },
+        ]
+      )[3];
       expect(opts1.messageId).not.toBe(opts2.messageId);
     });
 
-    it('does nothing when not configured (no RABBITMQ_URL)', async () => {
+    it('does nothing when not configured (no RABBITMQ_URL)', () => {
       delete process.env.RABBITMQ_URL;
       const unconfiguredService = new EventPublisherService();
 
-      await unconfiguredService.publish('room.created', { roomId: '1' });
+      unconfiguredService.publish('room.created', { roomId: '1' });
 
       expect(mockChannel.publish).not.toHaveBeenCalled();
     });

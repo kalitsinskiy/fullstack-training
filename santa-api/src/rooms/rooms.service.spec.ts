@@ -29,6 +29,8 @@ describe('RoomsService', () => {
     findOne: jest.fn(),
     findById: jest.fn(),
     countDocuments: jest.fn(),
+    findByIdAndUpdate: jest.fn(),
+    findByIdAndDelete: jest.fn(),
   };
 
   const mockRedisService = {
@@ -78,13 +80,15 @@ describe('RoomsService', () => {
   describe('create', () => {
     it('creates a room with the creator as owner', async () => {
       const dto = { name: 'Holiday Party' };
-      mockRoomModel.create.mockImplementation(async (data: any) => ({
-        id: 'room-id',
-        ...data,
-        status: 'pending',
-        participants: data.participants,
-        toJSON: () => data,
-      }));
+      mockRoomModel.create.mockImplementation(
+        (data: { participants: unknown[] }) => ({
+          id: 'room-id',
+          ...data,
+          status: 'pending',
+          participants: data.participants,
+          toJSON: () => data,
+        }),
+      );
 
       const result = await service.create(dto, creatorId);
 
@@ -111,11 +115,13 @@ describe('RoomsService', () => {
 
     it('includes budget and currency when provided', async () => {
       const dto = { name: 'Office Party', budget: 500, currency: '₴' };
-      mockRoomModel.create.mockImplementation(async (data: any) => ({
-        id: 'room-id',
-        ...data,
-        participants: data.participants,
-      }));
+      mockRoomModel.create.mockImplementation(
+        (data: { participants: unknown[] }) => ({
+          id: 'room-id',
+          ...data,
+          participants: data.participants,
+        }),
+      );
 
       const result = await service.create(dto, creatorId);
 
@@ -308,7 +314,9 @@ describe('RoomsService', () => {
         name: 'Party',
         creatorId: new Types.ObjectId(creatorId),
         inviteCode: 'JOIN42',
-        participants: [{ userId: new Types.ObjectId(creatorId), role: 'owner' }],
+        participants: [
+          { userId: new Types.ObjectId(creatorId), role: 'owner' },
+        ],
         status: 'pending',
         save: jest.fn().mockResolvedValue(undefined),
       };
@@ -383,11 +391,13 @@ describe('RoomsService', () => {
         status: 'drawn',
         drawDate: new Date(),
         exchangeDate: new Date('2026-12-24'),
-        assignments: doc.participants.map((p: any, i: number) => ({
-          giverId: p.userId,
-          receiverId:
-            doc.participants[(i + 1) % doc.participants.length].userId,
-        })),
+        assignments: doc.participants.map(
+          (p: { userId: unknown }, i: number) => ({
+            giverId: p.userId,
+            receiverId:
+              doc.participants[(i + 1) % doc.participants.length].userId,
+          }),
+        ),
       };
       mockRoomModel.findById.mockReturnValue({
         exec: jest.fn().mockResolvedValue(doc),
@@ -406,7 +416,12 @@ describe('RoomsService', () => {
       expect(result.status).toBe('drawn');
       expect(mockEventPublisher.publish).toHaveBeenCalledWith(
         'draw.completed',
-        expect.objectContaining({ roomId, participantIds: expect.arrayContaining([expect.any(String)]) }),
+        expect.objectContaining({
+          roomId,
+          participantIds: expect.arrayContaining([
+            expect.any(String),
+          ]) as string[],
+        }),
       );
     });
   });
@@ -440,7 +455,7 @@ describe('RoomsService', () => {
   describe('editRoom', () => {
     it('throws NotFoundException for invalid ObjectId', async () => {
       await expect(
-        service.editRoom('invalid-id', {} as any, creatorId),
+        service.editRoom('invalid-id', {}, creatorId),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -478,7 +493,7 @@ describe('RoomsService', () => {
 
   describe('deleteRoom', () => {
     it('throws NotFoundException for invalid ObjectId', async () => {
-      await expect(service.deleteRoom('invalid-id', creatorId)).rejects.toThrow(
+      await expect(service.deleteRoom('invalid-id')).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -493,7 +508,7 @@ describe('RoomsService', () => {
         exec: jest.fn().mockResolvedValue(doc),
       });
 
-      await service.deleteRoom(roomId, creatorId);
+      await service.deleteRoom(roomId);
 
       expect(mockRoomModel.findByIdAndDelete).toHaveBeenCalledWith(roomId);
     });
@@ -501,9 +516,9 @@ describe('RoomsService', () => {
 
   describe('kickMember', () => {
     it('throws NotFoundException for invalid ObjectId', async () => {
-      await expect(
-        service.kickMember('invalid-id', memberId, creatorId),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.kickMember('invalid-id', memberId)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('throws BadRequestException when trying to kick the owner', async () => {
@@ -519,9 +534,9 @@ describe('RoomsService', () => {
       mockRoomModel.findById.mockReturnValue({
         exec: jest.fn().mockResolvedValue(doc),
       });
-      await expect(
-        service.kickMember(roomId, creatorId, creatorId),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.kickMember(roomId, creatorId)).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
@@ -553,7 +568,7 @@ describe('RoomsService', () => {
 
       expect(mockRoomModel.findByIdAndUpdate).toHaveBeenCalledWith(
         roomId,
-        expect.objectContaining({ inviteCode: expect.any(String) }),
+        expect.objectContaining({ inviteCode: expect.any(String) as string }),
         { new: true },
       );
       expect(result.inviteCode).toBe('NEW002');

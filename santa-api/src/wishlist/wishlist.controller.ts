@@ -1,11 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Put,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, Put, UseGuards } from '@nestjs/common';
 import {
   ApiBody,
   ApiBearerAuth,
@@ -74,7 +67,10 @@ export class WishlistController {
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Missing room:view permission' })
-  @ApiResponse({ status: 404, description: 'Room not found / not a participant' })
+  @ApiResponse({
+    status: 404,
+    description: 'Room not found / not a participant',
+  })
   async findOne(
     @Param('roomId') roomId: string,
     @Param('userId') userId: string,

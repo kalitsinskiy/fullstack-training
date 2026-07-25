@@ -35,24 +35,41 @@ describe('WishlistController', () => {
 
   describe('set', () => {
     it('delegates to wishlistService.set with roomId, userId, items', async () => {
-      const wishlist = { roomId: 'room-id', userId: 'user-id', items: ['Socks', 'Book'] };
+      const wishlist = {
+        roomId: 'room-id',
+        userId: 'user-id',
+        items: ['Socks', 'Book'],
+      };
       mockWishlistService.set.mockResolvedValue(wishlist);
 
-      const result = await controller.set('room-id', 'user-id', { items: ['Socks', 'Book'] });
+      const result = await controller.set('room-id', 'user-id', {
+        items: ['Socks', 'Book'],
+      });
 
-      expect(mockWishlistService.set).toHaveBeenCalledWith('room-id', 'user-id', ['Socks', 'Book']);
+      expect(mockWishlistService.set).toHaveBeenCalledWith(
+        'room-id',
+        'user-id',
+        ['Socks', 'Book'],
+      );
       expect(result).toEqual(wishlist);
     });
   });
 
   describe('findOne', () => {
     it('delegates to wishlistService.get with roomId and userId', async () => {
-      const wishlist = { roomId: 'room-id', userId: 'target-user', items: ['Tea'] };
+      const wishlist = {
+        roomId: 'room-id',
+        userId: 'target-user',
+        items: ['Tea'],
+      };
       mockWishlistService.get.mockResolvedValue(wishlist);
 
       const result = await controller.findOne('room-id', 'target-user');
 
-      expect(mockWishlistService.get).toHaveBeenCalledWith('room-id', 'target-user');
+      expect(mockWishlistService.get).toHaveBeenCalledWith(
+        'room-id',
+        'target-user',
+      );
       expect(result).toEqual(wishlist);
     });
 

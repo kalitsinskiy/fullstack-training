@@ -48,7 +48,7 @@ describe('RoomsController', () => {
       const fakeRoom = { id: 'room-id', name: 'Test Room', status: 'pending' };
       mockRoomsService.create.mockResolvedValue(fakeRoom);
 
-      const result = await controller.create(dto as any, 'user-id');
+      const result = await controller.create(dto, 'user-id');
 
       expect(mockRoomsService.create).toHaveBeenCalledWith(dto, 'user-id');
       expect(result).toEqual(fakeRoom);
@@ -57,12 +57,18 @@ describe('RoomsController', () => {
 
   describe('findAll', () => {
     it('delegates to service.findByUser with userId and pagination', async () => {
-      const response = { data: [], meta: { total: 0, page: 1, limit: 10, totalPages: 1 } };
+      const response = {
+        data: [],
+        meta: { total: 0, page: 1, limit: 10, totalPages: 1 },
+      };
       mockRoomsService.findByUser.mockResolvedValue(response);
 
       const result = await controller.findAll('user-id', 1, 10);
 
-      expect(mockRoomsService.findByUser).toHaveBeenCalledWith('user-id', { page: 1, limit: 10 });
+      expect(mockRoomsService.findByUser).toHaveBeenCalledWith('user-id', {
+        page: 1,
+        limit: 10,
+      });
       expect(result).toEqual(response);
     });
   });
@@ -74,7 +80,10 @@ describe('RoomsController', () => {
 
       const result = await controller.findById('room-id', 'user-id');
 
-      expect(mockRoomsService.findByIdForUser).toHaveBeenCalledWith('room-id', 'user-id');
+      expect(mockRoomsService.findByIdForUser).toHaveBeenCalledWith(
+        'room-id',
+        'user-id',
+      );
       expect(result).toEqual(fakeRoom);
     });
   });
@@ -84,9 +93,15 @@ describe('RoomsController', () => {
       const fakeRoom = { id: 'room-id', name: 'Room' };
       mockRoomsService.joinByCode.mockResolvedValue(fakeRoom);
 
-      const result = await controller.joinByCode({ inviteCode: 'ABC123' } as any, 'user-id');
+      const result = await controller.joinByCode(
+        { inviteCode: 'ABC123' },
+        'user-id',
+      );
 
-      expect(mockRoomsService.joinByCode).toHaveBeenCalledWith('ABC123', 'user-id');
+      expect(mockRoomsService.joinByCode).toHaveBeenCalledWith(
+        'ABC123',
+        'user-id',
+      );
       expect(result).toEqual(fakeRoom);
     });
   });
@@ -96,9 +111,17 @@ describe('RoomsController', () => {
       const fakeRoom = { id: 'room-id', name: 'Room' };
       mockRoomsService.join.mockResolvedValue(fakeRoom);
 
-      const result = await controller.join('room-id', { inviteCode: 'XYZ' } as any, 'user-id');
+      const result = await controller.join(
+        'room-id',
+        { inviteCode: 'XYZ' },
+        'user-id',
+      );
 
-      expect(mockRoomsService.join).toHaveBeenCalledWith('room-id', 'XYZ', 'user-id');
+      expect(mockRoomsService.join).toHaveBeenCalledWith(
+        'room-id',
+        'XYZ',
+        'user-id',
+      );
       expect(result).toEqual(fakeRoom);
     });
   });
@@ -108,21 +131,34 @@ describe('RoomsController', () => {
       const fakeRoom = { id: 'room-id', status: 'drawn' };
       mockRoomsService.draw.mockResolvedValue(fakeRoom);
 
-      const result = await controller.draw('room-id', { exchangeDate: '2026-12-24' } as any, 'user-id');
+      const result = await controller.draw(
+        'room-id',
+        { exchangeDate: '2026-12-24' },
+        'user-id',
+      );
 
-      expect(mockRoomsService.draw).toHaveBeenCalledWith('room-id', 'user-id', '2026-12-24');
+      expect(mockRoomsService.draw).toHaveBeenCalledWith(
+        'room-id',
+        'user-id',
+        '2026-12-24',
+      );
       expect(result).toEqual(fakeRoom);
     });
   });
 
   describe('getAssignment', () => {
     it('delegates to service.getAssignment with id and userId', async () => {
-      const assignment = { receiver: { id: 'giftee-id', displayName: 'Bob', wishlist: [] } };
+      const assignment = {
+        receiver: { id: 'giftee-id', displayName: 'Bob', wishlist: [] },
+      };
       mockRoomsService.getAssignment.mockResolvedValue(assignment);
 
       const result = await controller.getAssignment('room-id', 'user-id');
 
-      expect(mockRoomsService.getAssignment).toHaveBeenCalledWith('room-id', 'user-id');
+      expect(mockRoomsService.getAssignment).toHaveBeenCalledWith(
+        'room-id',
+        'user-id',
+      );
       expect(result).toEqual(assignment);
     });
   });
@@ -132,9 +168,17 @@ describe('RoomsController', () => {
       const fakeRoom = { id: 'room-id', name: 'Renamed' };
       mockRoomsService.editRoom.mockResolvedValue(fakeRoom);
 
-      const result = await controller.edit('room-id', { name: 'Renamed' } as any, 'user-id');
+      const result = await controller.edit(
+        'room-id',
+        { name: 'Renamed' },
+        'user-id',
+      );
 
-      expect(mockRoomsService.editRoom).toHaveBeenCalledWith('room-id', { name: 'Renamed' }, 'user-id');
+      expect(mockRoomsService.editRoom).toHaveBeenCalledWith(
+        'room-id',
+        { name: 'Renamed' },
+        'user-id',
+      );
       expect(result).toEqual(fakeRoom);
     });
   });
@@ -143,9 +187,9 @@ describe('RoomsController', () => {
     it('delegates to service.deleteRoom', async () => {
       mockRoomsService.deleteRoom.mockResolvedValue(undefined);
 
-      await controller.remove('room-id', 'user-id');
+      await controller.remove('room-id');
 
-      expect(mockRoomsService.deleteRoom).toHaveBeenCalledWith('room-id', 'user-id');
+      expect(mockRoomsService.deleteRoom).toHaveBeenCalledWith('room-id');
     });
   });
 
@@ -153,9 +197,12 @@ describe('RoomsController', () => {
     it('delegates to service.kickMember', async () => {
       mockRoomsService.kickMember.mockResolvedValue(undefined);
 
-      await controller.kick('room-id', 'target-id', 'user-id');
+      await controller.kick('room-id', 'target-id');
 
-      expect(mockRoomsService.kickMember).toHaveBeenCalledWith('room-id', 'target-id', 'user-id');
+      expect(mockRoomsService.kickMember).toHaveBeenCalledWith(
+        'room-id',
+        'target-id',
+      );
     });
   });
 
@@ -166,7 +213,10 @@ describe('RoomsController', () => {
 
       const result = await controller.regenerateInvite('room-id', 'user-id');
 
-      expect(mockRoomsService.regenerateInviteCode).toHaveBeenCalledWith('room-id', 'user-id');
+      expect(mockRoomsService.regenerateInviteCode).toHaveBeenCalledWith(
+        'room-id',
+        'user-id',
+      );
       expect(result).toEqual(fakeRoom);
     });
   });

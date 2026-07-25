@@ -98,7 +98,7 @@ export class RoomsService {
       ...(dto.currency && { currency: dto.currency }),
     });
     await this.redisService.set(`invite:${code}`, doc.id, INVITE_TTL);
-    await this.eventPublisherService.publish('room.created', {
+    this.eventPublisherService.publish('room.created', {
       roomId: doc._id,
       roomName: doc.name,
       createdBy: await this.getDisplayName(creatorId),
@@ -181,7 +181,7 @@ export class RoomsService {
       await this.redisService.del(`room:${id}`);
     }
 
-    await this.eventPublisherService.publish('user.joined', {
+    this.eventPublisherService.publish('user.joined', {
       roomId: id,
       userId,
       userName: await this.getDisplayName(userId),
@@ -250,7 +250,7 @@ export class RoomsService {
       .exec();
 
     await this.redisService.del(`room:${id}`);
-    await this.eventPublisherService.publish('draw.completed', {
+    this.eventPublisherService.publish('draw.completed', {
       roomId: id,
       participantIds: doc.participants.map((p) => p.userId.toString()),
     });
@@ -318,7 +318,7 @@ export class RoomsService {
     return this.toRoomView(updated as unknown as RoomDocument, userId);
   }
 
-  async deleteRoom(id: string, _userId: string): Promise<void> {
+  async deleteRoom(id: string): Promise<void> {
     if (!Types.ObjectId.isValid(id))
       throw new NotFoundException('Room not found');
     const doc = await this.roomModel.findById(id).exec();
@@ -327,11 +327,7 @@ export class RoomsService {
     await this.redisService.del(`room:${id}`);
   }
 
-  async kickMember(
-    id: string,
-    targetUserId: string,
-    _userId: string,
-  ): Promise<void> {
+  async kickMember(id: string, targetUserId: string): Promise<void> {
     if (!Types.ObjectId.isValid(id))
       throw new NotFoundException('Room not found');
     const doc = await this.roomModel.findById(id).exec();

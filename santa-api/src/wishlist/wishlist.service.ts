@@ -29,7 +29,7 @@ export class WishlistService {
       )
       .exec();
 
-    await this.eventPublisherService.publish('wishlist.updated', {
+    this.eventPublisherService.publish('wishlist.updated', {
       roomId,
       userId,
     });

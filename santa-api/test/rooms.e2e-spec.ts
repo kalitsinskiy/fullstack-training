@@ -22,6 +22,17 @@ import {
 import { getConnectionToken } from '@nestjs/mongoose/dist/common/mongoose.utils';
 import { User } from '../src/users/schemas/user.schema';
 
+type RoomBody = {
+  id: string;
+  name: string;
+  status: string;
+  inviteCode: string;
+  participants: Array<{ id: string; role: string }>;
+  viewerPermissions: string[];
+  data?: RoomBody[];
+  meta?: Record<string, number>;
+};
+
 describe('Rooms (e2e)', () => {
   let app: NestFastifyApplication;
   let jwt: JwtService;
@@ -40,8 +51,14 @@ describe('Rooms (e2e)', () => {
       .overrideProvider(RedisService)
       .useValue({
         get: (k: string) => Promise.resolve(store.get(k) ?? null),
-        set: (k: string, v: string) => { store.set(k, v); return Promise.resolve(); },
-        del: (k: string) => { store.delete(k); return Promise.resolve(); },
+        set: (k: string, v: string) => {
+          store.set(k, v);
+          return Promise.resolve();
+        },
+        del: (k: string) => {
+          store.delete(k);
+          return Promise.resolve();
+        },
       })
       .compile();
 
@@ -75,8 +92,13 @@ describe('Rooms (e2e)', () => {
   });
 
   /** Seeds a real user in the DB and returns a signed token for them. */
-  async function seedUser(overrides: Partial<any> = {}) {
-    const user = await userModel.create(userFixture(overrides));
+  async function seedUser(
+    overrides: Partial<{ email: string; role: string }> = {},
+  ) {
+    type CreatedUser = { _id: Types.ObjectId; email: string; role: string };
+    const [user] = await (
+      userModel.create as (d: unknown) => Promise<CreatedUser[]>
+    )(userFixture(overrides));
     const token = `Bearer ${tokenFor(jwt, { _id: user._id.toString(), email: user.email, role: user.role })}`;
     return { user, token };
   }
@@ -90,11 +112,12 @@ describe('Rooms (e2e)', () => {
       .send({ name: 'Secret Santa Room' })
       .expect(201);
 
-    expect(response.body).toMatchObject({
+    const body = response.body as RoomBody;
+    expect(body).toMatchObject({
       name: 'Secret Santa Room',
       status: 'pending',
     });
-    expect(response.body.inviteCode).toHaveLength(6);
+    expect(body.inviteCode).toHaveLength(6);
   });
 
   it('returns 401 when creating a room without a token', async () => {
@@ -121,10 +144,11 @@ describe('Rooms (e2e)', () => {
       .set('Authorization', token)
       .expect(200);
 
-    expect(response.body).toHaveProperty('data');
-    expect(response.body).toHaveProperty('meta');
-    expect(response.body.data).toHaveLength(2);
-    expect(response.body.meta).toMatchObject({
+    const body = response.body as RoomBody;
+    expect(body).toHaveProperty('data');
+    expect(body).toHaveProperty('meta');
+    expect(body.data).toHaveLength(2);
+    expect(body.meta).toMatchObject({
       page: 1,
       limit: 2,
       total: 3,
@@ -151,7 +175,7 @@ describe('Rooms (e2e)', () => {
       .expect(201);
 
     await request(app.getHttpServer())
-      .get(`/rooms/${createResponse.body.id}`)
+      .get(`/rooms/${(createResponse.body as RoomBody).id}`)
       .set('Authorization', token)
       .expect(200);
   });
@@ -161,11 +185,12 @@ describe('Rooms (e2e)', () => {
   it('room response includes viewerPermissions for the owner', async () => {
     const { token } = await seedUser();
 
-    const { body: room } = await request(app.getHttpServer())
+    const roomResponse = await request(app.getHttpServer())
       .post('/rooms')
       .set('Authorization', token)
       .send({ name: 'Permissions Room' })
       .expect(201);
+    const room = roomResponse.body as RoomBody;
 
     expect(room.viewerPermissions).toEqual(
       expect.arrayContaining([
@@ -183,11 +208,12 @@ describe('Rooms (e2e)', () => {
   it('owner participant entry has role "owner"', async () => {
     const { token } = await seedUser();
 
-    const { body: room } = await request(app.getHttpServer())
+    const roomResponse = await request(app.getHttpServer())
       .post('/rooms')
       .set('Authorization', token)
       .send({ name: 'Role Check Room' })
       .expect(201);
+    const room = roomResponse.body as RoomBody;
 
     expect(room.participants).toHaveLength(1);
     expect(room.participants[0].role).toBe('owner');
@@ -197,17 +223,19 @@ describe('Rooms (e2e)', () => {
     const { token: ownerToken } = await seedUser();
     const { token: memberToken } = await seedUser();
 
-    const { body: room } = await request(app.getHttpServer())
+    const roomResponse = await request(app.getHttpServer())
       .post('/rooms')
       .set('Authorization', ownerToken)
       .send({ name: 'Member Role Room' })
       .expect(201);
+    const room = roomResponse.body as RoomBody;
 
-    const { body: joined } = await request(app.getHttpServer())
+    const joinedResponse = await request(app.getHttpServer())
       .post(`/rooms/${room.id}/join`)
       .set('Authorization', memberToken)
       .send({ inviteCode: room.inviteCode })
       .expect(201);
+    const joined = joinedResponse.body as RoomBody;
 
     const memberEntry = joined.participants.find(
       (p: { role: string }) => p.role === 'member',
@@ -227,11 +255,12 @@ describe('Rooms (e2e)', () => {
     const { token: ownerToken } = await seedUser();
     const { token: strangerToken } = await seedUser();
 
-    const { body: room } = await request(app.getHttpServer())
+    const roomResponse = await request(app.getHttpServer())
       .post('/rooms')
       .set('Authorization', ownerToken)
       .send({ name: 'Private Room' })
       .expect(201);
+    const room = roomResponse.body as RoomBody;
 
     await request(app.getHttpServer())
       .get(`/rooms/${room.id}`)
@@ -243,11 +272,12 @@ describe('Rooms (e2e)', () => {
     const { token: ownerToken } = await seedUser();
     const { token: memberToken } = await seedUser();
 
-    const { body: room } = await request(app.getHttpServer())
+    const roomResponse = await request(app.getHttpServer())
       .post('/rooms')
       .set('Authorization', ownerToken)
       .send({ name: 'Draw Perm Room' })
       .expect(201);
+    const room = roomResponse.body as RoomBody;
 
     await request(app.getHttpServer())
       .post(`/rooms/${room.id}/join`)
@@ -266,11 +296,12 @@ describe('Rooms (e2e)', () => {
     const { token: ownerToken } = await seedUser();
     const { token: memberToken } = await seedUser();
 
-    const { body: room } = await request(app.getHttpServer())
+    const roomResponse = await request(app.getHttpServer())
       .post('/rooms')
       .set('Authorization', ownerToken)
       .send({ name: 'Edit Perm Room' })
       .expect(201);
+    const room = roomResponse.body as RoomBody;
 
     await request(app.getHttpServer())
       .post(`/rooms/${room.id}/join`)
@@ -289,11 +320,12 @@ describe('Rooms (e2e)', () => {
     const { token: ownerToken } = await seedUser();
     const { token: memberToken } = await seedUser();
 
-    const { body: room } = await request(app.getHttpServer())
+    const roomResponse = await request(app.getHttpServer())
       .post('/rooms')
       .set('Authorization', ownerToken)
       .send({ name: 'Delete Perm Room' })
       .expect(201);
+    const room = roomResponse.body as RoomBody;
 
     await request(app.getHttpServer())
       .post(`/rooms/${room.id}/join`)
@@ -312,17 +344,19 @@ describe('Rooms (e2e)', () => {
     const { token: memberToken } = await seedUser();
     const { token: thirdToken } = await seedUser();
 
-    const { body: room } = await request(app.getHttpServer())
+    const roomResponse = await request(app.getHttpServer())
       .post('/rooms')
       .set('Authorization', ownerToken)
       .send({ name: 'Kick Perm Room' })
       .expect(201);
+    const room = roomResponse.body as RoomBody;
 
-    const { body: bobJoined } = await request(app.getHttpServer())
+    const bobJoinedResponse = await request(app.getHttpServer())
       .post(`/rooms/${room.id}/join`)
       .set('Authorization', memberToken)
       .send({ inviteCode: room.inviteCode })
       .expect(201);
+    const bobJoined = bobJoinedResponse.body as RoomBody;
 
     await request(app.getHttpServer())
       .post(`/rooms/${room.id}/join`)
@@ -335,7 +369,7 @@ describe('Rooms (e2e)', () => {
     );
 
     await request(app.getHttpServer())
-      .delete(`/rooms/${room.id}/members/${bobEntry.id}`)
+      .delete(`/rooms/${room.id}/members/${bobEntry!.id}`)
       .set('Authorization', memberToken)
       .expect(403);
   });
@@ -344,11 +378,12 @@ describe('Rooms (e2e)', () => {
     const { token: ownerToken } = await seedUser();
     const { token: memberToken } = await seedUser();
 
-    const { body: room } = await request(app.getHttpServer())
+    const roomResponse = await request(app.getHttpServer())
       .post('/rooms')
       .set('Authorization', ownerToken)
       .send({ name: 'Invite Perm Room' })
       .expect(201);
+    const room = roomResponse.body as RoomBody;
 
     await request(app.getHttpServer())
       .post(`/rooms/${room.id}/join`)
@@ -365,11 +400,12 @@ describe('Rooms (e2e)', () => {
   it('owner can delete a room (DELETE /rooms/:id returns 204)', async () => {
     const { token } = await seedUser();
 
-    const { body: room } = await request(app.getHttpServer())
+    const roomResponse = await request(app.getHttpServer())
       .post('/rooms')
       .set('Authorization', token)
       .send({ name: 'Room To Delete' })
       .expect(201);
+    const room = roomResponse.body as RoomBody;
 
     await request(app.getHttpServer())
       .delete(`/rooms/${room.id}`)
@@ -385,11 +421,12 @@ describe('Rooms (e2e)', () => {
   it('owner cannot kick themselves (400)', async () => {
     const { token } = await seedUser();
 
-    const { body: room } = await request(app.getHttpServer())
+    const roomResponse = await request(app.getHttpServer())
       .post('/rooms')
       .set('Authorization', token)
       .send({ name: 'Kick Owner Room' })
       .expect(201);
+    const room = roomResponse.body as RoomBody;
 
     const ownerEntry = room.participants[0];
 
@@ -403,31 +440,34 @@ describe('Rooms (e2e)', () => {
     const { token: ownerToken } = await seedUser();
     const { token: memberToken } = await seedUser();
 
-    const { body: room } = await request(app.getHttpServer())
+    const roomResponse = await request(app.getHttpServer())
       .post('/rooms')
       .set('Authorization', ownerToken)
       .send({ name: 'Kick Member Room' })
       .expect(201);
+    const room = roomResponse.body as RoomBody;
 
-    const { body: joined } = await request(app.getHttpServer())
+    const joinedResponse = await request(app.getHttpServer())
       .post(`/rooms/${room.id}/join`)
       .set('Authorization', memberToken)
       .send({ inviteCode: room.inviteCode })
       .expect(201);
+    const joined = joinedResponse.body as RoomBody;
 
     const memberEntry = joined.participants.find(
       (p: { role: string }) => p.role === 'member',
     );
 
     await request(app.getHttpServer())
-      .delete(`/rooms/${room.id}/members/${memberEntry.id}`)
+      .delete(`/rooms/${room.id}/members/${memberEntry!.id}`)
       .set('Authorization', ownerToken)
       .expect(204);
 
-    const { body: updated } = await request(app.getHttpServer())
+    const updatedResponse = await request(app.getHttpServer())
       .get(`/rooms/${room.id}`)
       .set('Authorization', ownerToken)
       .expect(200);
+    const updated = updatedResponse.body as RoomBody;
 
     expect(updated.participants).toHaveLength(1);
   });
@@ -435,16 +475,18 @@ describe('Rooms (e2e)', () => {
   it('owner can regenerate the invite code', async () => {
     const { token } = await seedUser();
 
-    const { body: room } = await request(app.getHttpServer())
+    const roomResponse = await request(app.getHttpServer())
       .post('/rooms')
       .set('Authorization', token)
       .send({ name: 'Regenerate Code Room' })
       .expect(201);
+    const room = roomResponse.body as RoomBody;
 
-    const { body: updated } = await request(app.getHttpServer())
+    const updatedResponse = await request(app.getHttpServer())
       .post(`/rooms/${room.id}/invite-code/regenerate`)
       .set('Authorization', token)
       .expect(200);
+    const updated = updatedResponse.body as RoomBody;
 
     expect(updated.inviteCode).toHaveLength(6);
     expect(updated.inviteCode).not.toBe(room.inviteCode);
@@ -453,17 +495,19 @@ describe('Rooms (e2e)', () => {
   it('owner can edit the room name', async () => {
     const { token } = await seedUser();
 
-    const { body: room } = await request(app.getHttpServer())
+    const roomResponse = await request(app.getHttpServer())
       .post('/rooms')
       .set('Authorization', token)
       .send({ name: 'Original Name' })
       .expect(201);
+    const room = roomResponse.body as RoomBody;
 
-    const { body: updated } = await request(app.getHttpServer())
+    const updatedResponse = await request(app.getHttpServer())
       .patch(`/rooms/${room.id}`)
       .set('Authorization', token)
       .send({ name: 'Renamed Room' })
       .expect(200);
+    const updated = updatedResponse.body as RoomBody;
 
     expect(updated.name).toBe('Renamed Room');
   });

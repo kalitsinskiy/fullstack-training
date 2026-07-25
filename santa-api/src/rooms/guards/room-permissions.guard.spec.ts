@@ -1,8 +1,9 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { Types } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { RoomPermissionsGuard } from './room-permissions.guard';
+import type { Room as RoomModel } from '../schemas/room.schema';
 import { REQUIRE_PERMISSIONS_KEY } from '../decorators/require-permissions.decorator';
 import type { Permission } from '../permissions';
 
@@ -18,7 +19,10 @@ describe('RoomPermissionsGuard', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     reflector = new Reflector();
-    guard = new RoomPermissionsGuard(reflector, roomModel as any);
+    guard = new RoomPermissionsGuard(
+      reflector,
+      roomModel as unknown as Model<RoomModel>,
+    );
   });
 
   function makeContext(
@@ -131,9 +135,7 @@ describe('RoomPermissionsGuard', () => {
       .mockReturnValue(['wishlist:set'] as Permission[]);
     mockRoom([{ userId: memberId, role: 'member' }]);
 
-    const result = await guard.canActivate(
-      makeContext(memberId, { roomId }),
-    );
+    const result = await guard.canActivate(makeContext(memberId, { roomId }));
 
     expect(result).toBe(true);
     expect(roomModel.findOne).toHaveBeenCalled();

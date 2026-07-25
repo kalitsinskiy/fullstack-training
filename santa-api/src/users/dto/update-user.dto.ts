@@ -1,7 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
 
-
 export class UpdateUserDto {
   @ApiPropertyOptional({
     description: 'The new display name of the user',

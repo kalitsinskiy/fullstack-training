@@ -53,7 +53,10 @@ describe('WishlistService', () => {
       const result = await service.set(roomId, userId, items);
 
       expect(mockWishlistModel.findOneAndUpdate).toHaveBeenCalledWith(
-        { roomId: new Types.ObjectId(roomId), userId: new Types.ObjectId(userId) },
+        {
+          roomId: new Types.ObjectId(roomId),
+          userId: new Types.ObjectId(userId),
+        },
         { $set: { items } },
         { upsert: true, new: true },
       );

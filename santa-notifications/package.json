@@ -9,7 +9,7 @@
     "start:ts": "ts-node src/server.ts",
     "build": "tsc",
     "type-check": "tsc --noEmit",
-    "test": "jest",
+    "test": "jest --runInBand",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "lint": "eslint \"src/**/*.ts\" --fix"

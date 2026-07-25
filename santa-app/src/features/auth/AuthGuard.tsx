@@ -1,6 +1,6 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from './useAuth';
-import { SocketProvider } from '@/features/socket/SocketContext';
+import { SocketProvider } from '@/features/socket/SocketProvider';
 import { SocketNotifications } from '@/components/SocketNotifications';
 
 /** Gate for protected routes. Redirects to /login when unauthenticated. */

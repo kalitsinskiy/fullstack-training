@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { Types } from 'mongoose';
 import { NotFoundError } from '../errors';
-import { NotificationDocument, NotificationModel, NotificationType } from '../models/notification';
+import { NotificationDocument, NotificationModel } from '../models/notification';
 
 interface NotificationView {
   id: string;

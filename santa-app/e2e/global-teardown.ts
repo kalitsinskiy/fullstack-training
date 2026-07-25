@@ -18,7 +18,7 @@ export default async function globalTeardown() {
   console.log('\n[E2E teardown] Deleting rooms created during tests…');
   const ctx = await request.newContext();
 
-  for (const [key, account] of Object.entries(ACCOUNTS)) {
+  for (const [key] of Object.entries(ACCOUNTS)) {
     const token = tokens[key];
     if (!token) continue;
 

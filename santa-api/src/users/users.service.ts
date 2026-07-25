@@ -26,26 +26,51 @@ export class UsersService {
       passwordHash: input.passwordHash,
       role: input.role ?? 'user',
     });
-    return { id: doc.id as string, email: doc.email, displayName: doc.displayName, role: doc.role };
+    return {
+      id: doc.id,
+      email: doc.email,
+      displayName: doc.displayName,
+      role: doc.role,
+    };
   }
 
-  async findByEmail(email: string, opts: { withPassword?: boolean } = {}): Promise<UserDocument | null> {
+  async findByEmail(
+    email: string,
+    opts: { withPassword?: boolean } = {},
+  ): Promise<UserDocument | null> {
     const query = this.userModel.findOne({ email: email.toLowerCase() });
     if (opts.withPassword) query.select('+passwordHash');
     return query.exec();
   }
 
   async findById(id: string): Promise<User> {
-    if (!Types.ObjectId.isValid(id)) throw new NotFoundException('User not found');
+    if (!Types.ObjectId.isValid(id))
+      throw new NotFoundException('User not found');
     const doc = await this.userModel.findById(id).exec();
     if (!doc) throw new NotFoundException('User not found');
-    return { id: doc.id as string, email: doc.email, displayName: doc.displayName, role: doc.role };
+    return {
+      id: doc.id,
+      email: doc.email,
+      displayName: doc.displayName,
+      role: doc.role,
+    };
   }
 
-  async updateCurrentUser(id: string, dto: UpdateCurrentUserDto): Promise<User> {
-    if (!Types.ObjectId.isValid(id)) throw new NotFoundException('User not found');
-    const doc = await this.userModel.findByIdAndUpdate(id, { displayName: dto.displayName }, { new: true }).exec();
+  async updateCurrentUser(
+    id: string,
+    dto: UpdateCurrentUserDto,
+  ): Promise<User> {
+    if (!Types.ObjectId.isValid(id))
+      throw new NotFoundException('User not found');
+    const doc = await this.userModel
+      .findByIdAndUpdate(id, { displayName: dto.displayName }, { new: true })
+      .exec();
     if (!doc) throw new NotFoundException('User not found');
-    return { id: doc.id as string, email: doc.email, displayName: doc.displayName, role: doc.role };
+    return {
+      id: doc.id,
+      email: doc.email,
+      displayName: doc.displayName,
+      role: doc.role,
+    };
   }
 }

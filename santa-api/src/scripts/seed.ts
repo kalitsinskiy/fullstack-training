@@ -187,8 +187,12 @@ async function seed() {
     throw error;
   });
 
-  const wishlistsPayload = rooms.flatMap((room, roomIndex) =>
-    (room.participants as Array<{ userId: mongoose.Types.ObjectId; role: string }>).map((p, participantIndex) => ({
+  type RoomDoc = {
+    _id: mongoose.Types.ObjectId;
+    participants: Array<{ userId: mongoose.Types.ObjectId; role: string }>;
+  };
+  const wishlistsPayload = (rooms as RoomDoc[]).flatMap((room, roomIndex) =>
+    room.participants.map((p, participantIndex) => ({
       roomId: room._id,
       userId: p.userId,
       items: pickWishlistItems(roomIndex + participantIndex),

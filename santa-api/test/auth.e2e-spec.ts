@@ -131,7 +131,9 @@ describe('Auth (e2e)', () => {
       .send({ email: payload.email, password: 'wrong-password' })
       .expect(401);
 
-    expect(response.body.message).toBe('Invalid credentials');
+    expect((response.body as { message: string }).message).toBe(
+      'Invalid credentials',
+    );
   });
 
   it('returns 401 for unknown email with the same generic message', async () => {
@@ -140,6 +142,8 @@ describe('Auth (e2e)', () => {
       .send({ email: 'unknown@test.com', password: 'password123' })
       .expect(401);
 
-    expect(response.body.message).toBe('Invalid credentials');
+    expect((response.body as { message: string }).message).toBe(
+      'Invalid credentials',
+    );
   });
 });

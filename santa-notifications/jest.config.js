@@ -8,10 +8,6 @@ module.exports = {
   // is closed in afterEach, so the work is done — forceExit just stops Jest from
   // hanging on that timer. Run `jest --detectOpenHandles` if you suspect a leak.
   forceExit: true,
-  // Run all test files sequentially in the same process — each file starts its
-  // own MongoMemoryServer; running them in parallel workers causes all three to
-  // compete for the MongoDB binary at once and hit the 10 s startup timeout.
-  runInBand: true,
   // The app uses module: "nodenext"; tsconfig.test.json switches the Jest
   // transform to CommonJS (and node resolution) so ts-jest runs without ESM
   // gymnastics, while still extending the base config.

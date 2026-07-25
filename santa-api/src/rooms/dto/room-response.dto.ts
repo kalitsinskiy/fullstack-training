@@ -33,7 +33,11 @@ export class RoomResponseDto {
     ],
     isArray: true,
   })
-  participants!: { id: string; displayName: string; role: 'owner' | 'member' }[];
+  participants!: {
+    id: string;
+    displayName: string;
+    role: 'owner' | 'member';
+  }[];
 
   @ApiProperty({
     description: 'Number of participants in the room',

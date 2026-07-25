@@ -1,6 +1,11 @@
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import {
+  ExecutionContext,
+  INestApplication,
+  ValidationPipe,
+} from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
+import type { Server } from 'http';
 import { Types } from 'mongoose';
 import { AppController } from '../src/app.controller';
 import { AppService } from '../src/app.service';
@@ -15,6 +20,8 @@ import { RoomPermissionsGuard } from '../src/rooms/guards/room-permissions.guard
 
 describe('App (e2e)', () => {
   let app: INestApplication;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+  const server = (): Server => app.getHttpServer();
 
   const usersServiceMock = {
     findById: jest.fn(),
@@ -41,8 +48,10 @@ describe('App (e2e)', () => {
   };
 
   const authGuardMock = {
-    canActivate: jest.fn((context) => {
-      const request = context.switchToHttp().getRequest();
+    canActivate: jest.fn((context: ExecutionContext) => {
+      const request = context
+        .switchToHttp()
+        .getRequest<{ user: { id: string } }>();
       request.user = { id: '64e000000000000000000001' };
       return true;
     }),
@@ -91,28 +100,24 @@ describe('App (e2e)', () => {
   });
 
   it('/ (GET) returns hello world', async () => {
-    await request(app.getHttpServer())
-      .get('/')
-      .expect(200)
-      .expect('Hello World!');
+    await request(server()).get('/').expect(200).expect('Hello World!');
   });
 
   it('/health (GET) returns status ok', async () => {
-    await request(app.getHttpServer())
-      .get('/health')
-      .expect(200)
-      .expect({ status: 'ok' });
+    await request(server()).get('/health').expect(200).expect({ status: 'ok' });
   });
 
   it('/users/me (GET) returns the current user', async () => {
     const id = '64e000000000000000000001';
-    const user = { id, email: 'alice@example.com', displayName: 'Alice', role: 'user' };
+    const user = {
+      id,
+      email: 'alice@example.com',
+      displayName: 'Alice',
+      role: 'user',
+    };
     usersServiceMock.findById.mockResolvedValue(user);
 
-    await request(app.getHttpServer())
-      .get('/users/me')
-      .expect(200)
-      .expect(user);
+    await request(server()).get('/users/me').expect(200).expect(user);
 
     expect(usersServiceMock.findById).toHaveBeenCalledWith(id);
   });
@@ -120,30 +125,39 @@ describe('App (e2e)', () => {
   it('/users/me (PATCH) updates the current user', async () => {
     const id = '64e000000000000000000001';
     const updates = { displayName: 'Alice Updated' };
-    const updatedUser = { id, email: 'alice@example.com', displayName: 'Alice Updated', role: 'user' };
+    const updatedUser = {
+      id,
+      email: 'alice@example.com',
+      displayName: 'Alice Updated',
+      role: 'user',
+    };
     usersServiceMock.updateCurrentUser.mockResolvedValue(updatedUser);
 
-    await request(app.getHttpServer())
+    await request(server())
       .patch('/users/me')
       .send(updates)
       .expect(200)
       .expect(updatedUser);
 
-    expect(usersServiceMock.updateCurrentUser).toHaveBeenCalledWith(id, updates);
+    expect(usersServiceMock.updateCurrentUser).toHaveBeenCalledWith(
+      id,
+      updates,
+    );
   });
 
   it('/rooms (POST) validates request body', async () => {
-    await request(app.getHttpServer())
-      .post('/rooms')
-      .send({})
-      .expect(400);
+    await request(server()).post('/rooms').send({}).expect(400);
   });
 
   it('/rooms (POST) creates a room', async () => {
-    const room = { id: '64e000000000000000000010', name: 'My Room', status: 'pending' };
+    const room = {
+      id: '64e000000000000000000010',
+      name: 'My Room',
+      status: 'pending',
+    };
     roomsServiceMock.create.mockResolvedValue(room);
 
-    await request(app.getHttpServer())
+    await request(server())
       .post('/rooms')
       .send({ name: 'My Room' })
       .expect(201)
@@ -161,7 +175,7 @@ describe('App (e2e)', () => {
     const updatedRoom = { id, name: 'Updated Room Name', status: 'pending' };
     roomsServiceMock.editRoom.mockResolvedValue(updatedRoom);
 
-    await request(app.getHttpServer())
+    await request(server())
       .patch(`/rooms/${id}`)
       .send(updates)
       .expect(200)
@@ -178,9 +192,7 @@ describe('App (e2e)', () => {
     const id = '64e000000000000000000010';
     roomsServiceMock.deleteRoom.mockResolvedValue(undefined);
 
-    await request(app.getHttpServer())
-      .delete(`/rooms/${id}`)
-      .expect(204);
+    await request(server()).delete(`/rooms/${id}`).expect(204);
 
     expect(roomsServiceMock.deleteRoom).toHaveBeenCalledWith(
       id,
@@ -194,19 +206,21 @@ describe('App (e2e)', () => {
     const wishlist = { roomId, userId, items: ['book'] };
     wishlistServiceMock.set.mockResolvedValue(wishlist);
 
-    await request(app.getHttpServer())
+    await request(server())
       .put(`/rooms/${roomId}/wishlist`)
       .send({ items: ['book'] })
       .expect(200)
       .expect(wishlist);
 
-    expect(wishlistServiceMock.set).toHaveBeenCalledWith(roomId, userId, ['book']);
+    expect(wishlistServiceMock.set).toHaveBeenCalledWith(roomId, userId, [
+      'book',
+    ]);
   });
 
   it('/rooms/:roomId/wishlist (PUT) validates item structure', async () => {
     const roomId = new Types.ObjectId().toString();
 
-    await request(app.getHttpServer())
+    await request(server())
       .put(`/rooms/${roomId}/wishlist`)
       .send({ items: [{ notAString: true }] })
       .expect(400);
