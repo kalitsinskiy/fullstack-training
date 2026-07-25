@@ -126,25 +126,34 @@ export class RoomsService {
 
     const cacheKey = `room:${id}`;
     const cached = await this.redisService.get(cacheKey);
-    let doc: RoomDocument;
 
     if (cached) {
       this.logger.debug(`Room cache HIT: ${cacheKey}`);
-      doc = JSON.parse(cached) as RoomDocument;
-      const isMember = doc.participants.some(
-        (p) => p.userId.toString() === userId,
+      // The cached value is a plain JSON object — ObjectId fields are not real
+      // Mongoose instances after deserialisation, so we only use it for the fast
+      // membership check. We still fetch the real document to build the view.
+      const plain = JSON.parse(cached) as {
+        participants: Array<{ userId: { toString(): string } | string }>;
+      };
+      const isMember = plain.participants.some(
+        (p) =>
+          (typeof p.userId === 'string' ? p.userId : String(p.userId)) ===
+          userId,
       );
       if (!isMember) throw new NotFoundException('Room not found');
     } else {
       this.logger.debug(`Room cache MISS: ${cacheKey}`);
-      const found = await this.roomModel
-        .findOne({
-          _id: id,
-          'participants.userId': new Types.ObjectId(userId),
-        })
-        .exec();
-      if (!found) throw new NotFoundException('Room not found');
-      doc = found;
+    }
+
+    const doc = await this.roomModel
+      .findOne({
+        _id: id,
+        'participants.userId': new Types.ObjectId(userId),
+      })
+      .exec();
+    if (!doc) throw new NotFoundException('Room not found');
+
+    if (!cached) {
       await this.redisService.set(cacheKey, JSON.stringify(doc), ROOM_TTL);
     }
 
