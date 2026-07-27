@@ -9,6 +9,7 @@ import {
 } from '@nestjs/platform-fastify';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/configure-app';
+import { RedisService } from '../src/redis/redis.service';
 import { User } from '../src/users/schemas/user.schema';
 import { tokenFor } from './auth-token.helper';
 import { userFixture } from './factories';
@@ -486,5 +487,199 @@ describe('Rooms (HTTP)', () => {
       .set('Authorization', `Bearer ${members[0].token}`)
       .send({ items: ['Socks'] })
       .expect(200);
+  });
+
+  describe('Redis', () => {
+    const redis = () => app.get(RedisService);
+
+    it('POST /api/rooms/join → joins using ONLY the invite code', async () => {
+      const { token: ownerToken } = await seedUserWithToken();
+      const { user: joiner, token: joinerToken } = await seedUserWithToken({
+        displayName: 'Code Joiner',
+      });
+
+      const created = await request(app.getHttpServer())
+        .post('/api/rooms')
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({ name: 'Code Room' })
+        .expect(201);
+
+      const response = await request(app.getHttpServer())
+        .post('/api/rooms/join')
+        .set('Authorization', `Bearer ${joinerToken}`)
+        .send({ inviteCode: created.body.inviteCode })
+        .expect(201);
+
+      expect(response.body.id).toBe(created.body.id);
+      expect(response.body.participantCount).toBe(2);
+      expect(response.body.participants).toContainEqual({
+        id: joiner._id.toString(),
+        displayName: 'Code Joiner',
+        role: 'member',
+      });
+      expect(response.body.viewerPermissions).not.toContain('room:draw');
+    });
+
+    it('POST /api/rooms/join → 400 on an unknown invite code', async () => {
+      const { token } = await seedUserWithToken();
+
+      await request(app.getHttpServer())
+        .post('/api/rooms/join')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ inviteCode: 'ZZZZZZ' })
+        .expect(400);
+    });
+
+    it('stores invite:{code} -> roomId with a 48h TTL', async () => {
+      const { token } = await seedUserWithToken();
+
+      const created = await request(app.getHttpServer())
+        .post('/api/rooms')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ name: 'TTL Room' })
+        .expect(201);
+
+      const key = `invite:${created.body.inviteCode}`;
+      await expect(redis().get(key)).resolves.toBe(created.body.id);
+
+      const ttl = await redis().ttl(key);
+      expect(ttl).toBeGreaterThan(48 * 60 * 60 - 60);
+      expect(ttl).toBeLessThanOrEqual(48 * 60 * 60);
+    });
+
+    it('regenerating the invite code retires the previous one', async () => {
+      const { roomId, owner } = await seedRoomWithMembers(1);
+      const { token: joinerToken } = await seedUserWithToken();
+
+      const before = await request(app.getHttpServer())
+        .get(`/api/rooms/${roomId}`)
+        .set('Authorization', `Bearer ${owner.token}`)
+        .expect(200);
+
+      await request(app.getHttpServer())
+        .post(`/api/rooms/${roomId}/invite-code/regenerate`)
+        .set('Authorization', `Bearer ${owner.token}`)
+        .expect(200);
+
+      await expect(
+        redis().get(`invite:${before.body.inviteCode}`),
+      ).resolves.toBeNull();
+
+      await request(app.getHttpServer())
+        .post('/api/rooms/join')
+        .set('Authorization', `Bearer ${joinerToken}`)
+        .send({ inviteCode: before.body.inviteCode })
+        .expect(400);
+    });
+
+    it('caches room details under room:{id} with a 5-minute TTL', async () => {
+      const { roomId, owner } = await seedRoomWithMembers(1);
+
+      await request(app.getHttpServer())
+        .get(`/api/rooms/${roomId}`)
+        .set('Authorization', `Bearer ${owner.token}`)
+        .expect(200);
+
+      const cached = await redis().get(`room:${roomId}`);
+      expect(cached).not.toBeNull();
+      expect(JSON.parse(cached as string)).toMatchObject({
+        id: roomId,
+        name: 'Draw Room',
+      });
+
+      const ttl = await redis().ttl(`room:${roomId}`);
+      expect(ttl).toBeGreaterThan(240);
+      expect(ttl).toBeLessThanOrEqual(300);
+    });
+
+    it('never caches per-caller viewerPermissions', async () => {
+      const { roomId, owner, members } = await seedRoomWithMembers(1);
+
+      const ownerView = await request(app.getHttpServer())
+        .get(`/api/rooms/${roomId}`)
+        .set('Authorization', `Bearer ${owner.token}`)
+        .expect(200);
+      expect(ownerView.body.viewerPermissions).toContain('room:delete');
+
+      const cached = JSON.parse(
+        (await redis().get(`room:${roomId}`)) as string,
+      ) as Record<string, unknown>;
+      expect(cached).not.toHaveProperty('viewerPermissions');
+
+      const memberView = await request(app.getHttpServer())
+        .get(`/api/rooms/${roomId}`)
+        .set('Authorization', `Bearer ${members[0].token}`)
+        .expect(200);
+      expect(memberView.body.viewerPermissions).toEqual([
+        'room:view',
+        'wishlist:set',
+      ]);
+    });
+
+    it('invalidates room:{id} when the room is edited', async () => {
+      const { roomId, owner } = await seedRoomWithMembers(1);
+
+      await request(app.getHttpServer())
+        .get(`/api/rooms/${roomId}`)
+        .set('Authorization', `Bearer ${owner.token}`)
+        .expect(200);
+      await expect(redis().get(`room:${roomId}`)).resolves.not.toBeNull();
+
+      await request(app.getHttpServer())
+        .patch(`/api/rooms/${roomId}`)
+        .set('Authorization', `Bearer ${owner.token}`)
+        .send({ name: 'Cache Busted' })
+        .expect(200);
+
+      await expect(redis().get(`room:${roomId}`)).resolves.toBeNull();
+
+      const after = await request(app.getHttpServer())
+        .get(`/api/rooms/${roomId}`)
+        .set('Authorization', `Bearer ${owner.token}`)
+        .expect(200);
+      expect(after.body.name).toBe('Cache Busted');
+    });
+
+    it('invalidates the cache when a participant joins', async () => {
+      const { roomId, owner } = await seedRoomWithMembers(1);
+      const { token: joinerToken } = await seedUserWithToken();
+
+      const before = await request(app.getHttpServer())
+        .get(`/api/rooms/${roomId}`)
+        .set('Authorization', `Bearer ${owner.token}`)
+        .expect(200);
+      expect(before.body.participantCount).toBe(2);
+
+      await request(app.getHttpServer())
+        .post('/api/rooms/join')
+        .set('Authorization', `Bearer ${joinerToken}`)
+        .send({ inviteCode: before.body.inviteCode })
+        .expect(201);
+
+      const after = await request(app.getHttpServer())
+        .get(`/api/rooms/${roomId}`)
+        .set('Authorization', `Bearer ${owner.token}`)
+        .expect(200);
+      expect(after.body.participantCount).toBe(3);
+    });
+
+    it('drops the invite key when the room is deleted', async () => {
+      const { roomId, owner } = await seedRoomWithMembers(1);
+
+      const before = await request(app.getHttpServer())
+        .get(`/api/rooms/${roomId}`)
+        .set('Authorization', `Bearer ${owner.token}`)
+        .expect(200);
+
+      await request(app.getHttpServer())
+        .delete(`/api/rooms/${roomId}`)
+        .set('Authorization', `Bearer ${owner.token}`)
+        .expect(204);
+
+      await expect(redis().get(`room:${roomId}`)).resolves.toBeNull();
+      await expect(
+        redis().get(`invite:${before.body.inviteCode}`),
+      ).resolves.toBeNull();
+    });
   });
 });

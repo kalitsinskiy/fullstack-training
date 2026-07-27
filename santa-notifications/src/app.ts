@@ -5,8 +5,10 @@ import ajvFormats from 'ajv-formats';
 import configPlugin from './plugins/config';
 import { AppError, ValidationError } from './errors';
 import timingPlugin from './plugins/timing';
+import presencePlugin from './plugins/presence';
 import healthRoutes from './routes/health';
 import notificationRoutes from './routes/notifications';
+import userRoutes from './routes/users';
 
 export function buildApp() {
   const app = Fastify({
@@ -40,8 +42,10 @@ export function buildApp() {
     methods: ['GET', 'POST', 'PATCH', 'DELETE'],
   });
   app.register(configPlugin);
+  app.register(presencePlugin);
   app.register(timingPlugin);
   app.register(healthRoutes);
+  app.register(userRoutes);
   app.register(notificationRoutes, { prefix: '/api/notifications' });
 
   app.setErrorHandler((error: FastifyError, request, reply) => {

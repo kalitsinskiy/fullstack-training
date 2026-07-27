@@ -2,11 +2,12 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
-  NotImplementedException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import { RedisService } from '../redis/redis.service';
 import { UsersService } from '../users/users.service';
 import { WishlistService } from '../wishlist/wishlist.service';
 import { PaginatedResponse, PaginationQuery } from '../common/pagination';
@@ -22,16 +23,26 @@ const MIN_PARTICIPANTS_TO_DRAW = 3;
 
 const INVITE_CODE_ALPHABET = 'ABCDEFGHIJKLMNPQRSTUVWXYZ0123456789';
 const INVITE_CODE_LENGTH = 6;
+const ROOM_CACHE_TTL_SECONDS = 300;
+const INVITE_TTL_SECONDS = 48 * 60 * 60;
+
+const roomCacheKey = (roomId: string) => `room:${roomId}`;
+const inviteKey = (inviteCode: string) => `invite:${inviteCode}`;
 
 type PopulatedParticipant = { userId: UserDocument; role: RoomRole };
 
+type SharedRoom = Omit<Room, 'viewerPermissions'>;
+
 @Injectable()
 export class RoomsService {
+  private readonly logger = new Logger(RoomsService.name);
+
   constructor(
     @InjectModel(RoomModel.name)
     private readonly roomModel: Model<RoomModel>,
     private readonly usersService: UsersService,
     private readonly wishlistService: WishlistService,
+    private readonly redisService: RedisService,
   ) {}
 
   // NOTE: every room response uses the shape in docs/api-contract.md — map
@@ -52,6 +63,8 @@ export class RoomsService {
         ? { budget: dto.budget, currency: dto.currency ?? '$' }
         : {}),
     });
+
+    await this.indexInviteCode(room.inviteCode, room._id.toString());
 
     return this.toRoomResponse(room._id, creatorId);
   }
@@ -79,7 +92,9 @@ export class RoomsService {
     ]);
 
     return {
-      data: rooms.map((room) => this.mapRoom(room, userId)),
+      data: rooms.map((room) =>
+        this.withViewerPermissions(this.mapRoom(room), userId),
+      ),
       meta: {
         total,
         page,
@@ -94,19 +109,16 @@ export class RoomsService {
       throw new NotFoundException('Room not found');
     }
 
-    const room = await this.roomModel
-      .findOne({ _id: id, 'participants.userId': new Types.ObjectId(userId) })
-      .populate<{ participants: PopulatedParticipant[] }>(
-        'participants.userId',
-        'displayName',
-      )
-      .exec();
+    const room = await this.readRoomCached(id);
 
-    if (!room) {
+    const isParticipant = room.participants.some(
+      (participant) => participant.id === userId,
+    );
+    if (!isParticipant) {
       throw new NotFoundException('Room not found');
     }
 
-    return this.mapRoom(room, userId);
+    return this.withViewerPermissions(room, userId);
   }
 
   async join(id: string, inviteCode: string, userId: string): Promise<Room> {
@@ -134,19 +146,19 @@ export class RoomsService {
         role: 'member',
       });
       await room.save();
+      await this.invalidateRoom(id);
     }
 
     return this.toRoomResponse(room._id, userId);
   }
 
-  // TODO (Lesson 05): join using ONLY the invite code. Invitees have the code,
-  // not the room id (and a non-member can't open the room to find it). Resolve
-  // invite:{code} -> roomId from Redis (you store it in create()), then run the
-  // same join logic. 400 if the code is missing/expired.
-  joinByCode(inviteCode: string, userId: string): Promise<Room> {
-    throw new NotImplementedException(
-      'RoomsService.joinByCode is not implemented',
-    );
+  async joinByCode(inviteCode: string, userId: string): Promise<Room> {
+    const roomId = await this.redisService.get(inviteKey(inviteCode));
+    if (!roomId) {
+      throw new BadRequestException('Invalid or expired invite code');
+    }
+
+    return this.join(roomId, inviteCode, userId);
   }
 
   async draw(
@@ -204,6 +216,8 @@ export class RoomsService {
     if (!updated) {
       throw new NotFoundException('Room not found');
     }
+
+    await this.invalidateRoom(id);
 
     return this.toRoomResponse(updated._id, requesterId);
   }
@@ -282,6 +296,8 @@ export class RoomsService {
       throw new NotFoundException('Room not found');
     }
 
+    await this.invalidateRoom(id);
+
     return this.toRoomResponse(updated._id, userId);
   }
 
@@ -295,6 +311,9 @@ export class RoomsService {
     if (!deleted) {
       throw new NotFoundException('Room not found');
     }
+
+    await this.invalidateRoom(id);
+    await this.redisService.del(inviteKey(deleted.inviteCode));
   }
 
   async kickMember(
@@ -326,6 +345,7 @@ export class RoomsService {
       (participant) => participant.userId.toString() !== targetUserId,
     );
     await room.save();
+    await this.invalidateRoom(id);
   }
 
   async regenerateInviteCode(id: string, userId: string): Promise<Room> {
@@ -338,10 +358,58 @@ export class RoomsService {
       throw new NotFoundException('Room not found');
     }
 
+    const previousCode = room.inviteCode;
     room.inviteCode = await this.generateUniqueInviteCode();
     await room.save();
 
+    await this.redisService.del(inviteKey(previousCode));
+    await this.indexInviteCode(room.inviteCode, id);
+    await this.invalidateRoom(id);
+
     return this.toRoomResponse(room._id, userId);
+  }
+
+  private async readRoomCached(id: string): Promise<SharedRoom> {
+    const cacheKey = roomCacheKey(id);
+
+    const cached = await this.redisService.getJson<SharedRoom>(cacheKey);
+    if (cached) {
+      this.logger.debug(`Room cache HIT: ${cacheKey}`);
+      return cached;
+    }
+    this.logger.debug(`Room cache MISS: ${cacheKey}`);
+
+    const room = await this.roomModel
+      .findById(id)
+      .populate<{
+        participants: PopulatedParticipant[];
+      }>('participants.userId', 'displayName')
+      .exec();
+
+    if (!room) {
+      throw new NotFoundException('Room not found');
+    }
+
+    const shared = this.mapRoom(room);
+    await this.redisService.setJson(cacheKey, shared, ROOM_CACHE_TTL_SECONDS);
+
+    return shared;
+  }
+
+  private async invalidateRoom(roomId: string): Promise<void> {
+    await this.redisService.del(roomCacheKey(roomId));
+    this.logger.debug(`Room cache invalidated: ${roomCacheKey(roomId)}`);
+  }
+
+  private async indexInviteCode(
+    inviteCode: string,
+    roomId: string,
+  ): Promise<void> {
+    await this.redisService.set(
+      inviteKey(inviteCode),
+      roomId,
+      INVITE_TTL_SECONDS,
+    );
   }
 
   private async toRoomResponse(
@@ -359,7 +427,17 @@ export class RoomsService {
       throw new NotFoundException('Room not found');
     }
 
-    return this.mapRoom(room, viewerId);
+    return this.withViewerPermissions(this.mapRoom(room), viewerId);
+  }
+
+  private withViewerPermissions(room: SharedRoom, viewerId: string): Room {
+    const viewer = room.participants.find(
+      (participant) => participant.id === viewerId,
+    );
+
+    return viewer
+      ? { ...room, viewerPermissions: [...permissionsForRole(viewer.role)] }
+      : { ...room };
   }
 
   private mapRoom(
@@ -367,15 +445,14 @@ export class RoomsService {
       _id: Types.ObjectId;
       participants: PopulatedParticipant[];
     },
-    viewerId: string,
-  ): Room {
+  ): SharedRoom {
     const participants = room.participants.map((participant) => ({
       id: participant.userId._id.toString(),
       displayName: participant.userId.displayName,
       role: participant.role,
     }));
 
-    const result: Room = {
+    const result: SharedRoom = {
       id: room._id.toString(),
       name: room.name,
       creatorId: room.creatorId.toString(),
@@ -396,13 +473,6 @@ export class RoomsService {
     }
     if (room.exchangeDate) {
       result.exchangeDate = room.exchangeDate.toISOString();
-    }
-
-    const viewer = participants.find(
-      (participant) => participant.id === viewerId,
-    );
-    if (viewer) {
-      result.viewerPermissions = [...permissionsForRole(viewer.role)];
     }
 
     return result;

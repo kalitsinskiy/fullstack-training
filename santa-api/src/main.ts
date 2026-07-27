@@ -18,6 +18,8 @@ async function bootstrap() {
 
   await configureApp(app);
 
+  app.enableShutdownHooks();
+
   await app.listen(
     process.env.PORT ? Number(process.env.PORT) : 3001,
     '0.0.0.0',

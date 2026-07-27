@@ -41,13 +41,33 @@ describe('santa-notifications (HTTP)', () => {
     expect(res.json()).toEqual({ status: 'ok' });
   });
 
+  it('GET /users/online → 200 [] with nobody connected', async () => {
+    const res = await app.inject({ method: 'GET', url: '/users/online' });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual([]);
+  });
+
+  it('GET /users/online → lists users marked online, deduplicated', async () => {
+    await app.presence.markOnline('user-a');
+    await app.presence.markOnline('user-b');
+
+    await app.presence.markOnline('user-a');
+
+    const res = await app.inject({ method: 'GET', url: '/users/online' });
+    expect(res.statusCode).toBe(200);
+    expect((res.json() as string[]).sort()).toEqual(['user-a', 'user-b']);
+
+    await expect(app.presence.isOnline('user-a')).resolves.toBe(true);
+    await expect(app.presence.countOnline()).resolves.toBe(2);
+
+    await app.presence.markOffline('user-a');
+    const after = await app.inject({ method: 'GET', url: '/users/online' });
+    expect(after.json()).toEqual(['user-b']);
+  });
+
   // 👇 Cover the notification routes the same way.
-  it.todo(
-    'GET /api/notifications?userId=… → returns that user\'s notifications, newest first',
-  );
-  it.todo(
-    'POST /api/notifications → 201 creates a notification; 400 on an invalid body',
-  );
+  it.todo("GET /api/notifications?userId=… → returns that user's notifications, newest first");
+  it.todo('POST /api/notifications → 201 creates a notification; 400 on an invalid body');
   it.todo('GET /api/notifications/:id → 404 when it does not exist');
   it.todo('PATCH /api/notifications/:id/read → marks the notification read');
   it.todo('DELETE /api/notifications/:id → 204, then 404 on a second delete');

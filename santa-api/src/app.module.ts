@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
 import * as Joi from 'joi';
 import { LoggerModule } from 'nestjs-pino';
 import { AppController } from './app.controller';
@@ -23,6 +24,7 @@ import { WishlistModule } from './wishlist/wishlist.module';
           .valid('development', 'staging', 'production', 'test')
           .default('development'),
         MONGO_URL: Joi.string().required(),
+        REDIS_URL: Joi.string().default('redis://localhost:6379'),
         JWT_SECRET: Joi.string().required(),
         JWT_EXPIRATION: Joi.string().default('7d'),
       }),
@@ -33,10 +35,22 @@ import { WishlistModule } from './wishlist/wishlist.module';
         uri: configService.get<string>('MONGO_URL'),
       }),
     }),
-    ThrottlerModule.forRoot({
-      throttlers: [{ ttl: 60_000, limit: 100 }],
-      // Disable rate limiting under test so multi-user e2e scenarios don't 429.
-      skipIf: () => process.env.NODE_ENV === 'test',
+    ThrottlerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => {
+        const isTest = configService.get<string>('NODE_ENV') === 'test';
+        return {
+          throttlers: [{ ttl: 60_000, limit: 100 }],
+          skipIf: () => isTest,
+          ...(isTest
+            ? {}
+            : {
+                storage: new ThrottlerStorageRedisService(
+                  configService.getOrThrow<string>('REDIS_URL'),
+                ),
+              }),
+        };
+      },
     }),
     LoggerModule.forRoot({
       pinoHttp: {

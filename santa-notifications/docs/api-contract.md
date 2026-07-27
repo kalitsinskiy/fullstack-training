@@ -35,13 +35,13 @@ santa-api publishes domain events to RabbitMQ; this service consumes them and
 fans out **one notification per recipient**, then pushes each live over Socket.IO
 to the recipient's `user:{id}` room (`notification` event → bell badge + toast).
 
-| Event | Recipients | Excludes the actor? | Message |
-|-------|-----------|---------------------|---------|
-| `user.joined` | existing room members | **yes** — the person who joined | `"{name} joined \"{room}\""` |
-| `draw.completed` | **all** participants | no — everyone should check their giftee | `"The draw for \"{room}\" is complete — check your giftee!"` |
-| `wishlist.updated` | other participants | **yes** — the editor | `"A wishlist was updated in \"{room}\""` |
-| `room.date_changed` | **all** participants | **yes** — the owner who changed it | `"The gift exchange for \"{room}\" is now {date}"` |
-| `room.created` | — (none) | — | creator is the only member; the app's local toast is enough |
+| Event               | Recipients            | Excludes the actor?                     | Message                                                      |
+| ------------------- | --------------------- | --------------------------------------- | ------------------------------------------------------------ |
+| `user.joined`       | existing room members | **yes** — the person who joined         | `"{name} joined \"{room}\""`                                 |
+| `draw.completed`    | **all** participants  | no — everyone should check their giftee | `"The draw for \"{room}\" is complete — check your giftee!"` |
+| `wishlist.updated`  | other participants    | **yes** — the editor                    | `"A wishlist was updated in \"{room}\""`                     |
+| `room.date_changed` | **all** participants  | **yes** — the owner who changed it      | `"The gift exchange for \"{room}\" is now {date}"`           |
+| `room.created`      | — (none)              | —                                       | creator is the only member; the app's local toast is enough  |
 
 Rules:
 
@@ -98,6 +98,14 @@ Errors: `401`, `404`
 Deletes the caller's own notification. Response `204`: no body.
 
 Errors: `401`, `404`
+
+### `GET /users/online`
+
+Response `200`: `string[]` — the ids of currently connected users.
+
+### `GET /users/online/count`
+
+Response `200`: `{ "count": number }`
 
 ## Health
 
