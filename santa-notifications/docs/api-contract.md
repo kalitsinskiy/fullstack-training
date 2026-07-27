@@ -49,15 +49,15 @@ to the recipient's `user:{id}` room (`notification` event → bell badge + toast
 | `user.joined`       | existing room members | **yes** — the person who joined         | `"{name} joined \"{room}\""`                                 |
 | `draw.completed`    | **all** participants  | no — everyone should check their giftee | `"The draw for \"{room}\" is complete — check your giftee!"` |
 | `wishlist.updated`  | other participants    | **yes** — the editor                    | `"A wishlist was updated in \"{room}\""`                     |
-| `room.date_changed` | **all** participants  | **yes** — the owner who changed it      | `"The gift exchange for \"{room}\" is now {date}"`           |
-| `room.created`      | — (none)              | —                                       | creator is the only member; the app's local toast is enough  |
+| `room.created`      | room members (= the creator) | no                               | `"Room \"{room}\" was created"`                              |
+| `room.date_changed` | **all** participants  | **yes** — the owner who changed it      | `"The gift exchange for \"{room}\" is now {date}"` — **not implemented yet**; santa-api does not publish this event |
 
 Rules:
 
 - **Never self-notify on an action you just took.** The actor already gets local
   UI feedback (a toast), so exclude them from the fan-out (join, wishlist,
-  date-change, create). `draw.completed` is the deliberate exception — the owner
-  also wants the "check your giftee" nudge.
+  date-change). `draw.completed` is the deliberate exception — the owner also
+  wants the "check your giftee" nudge.
 - **Anonymous messages are not stored as notifications.** The recipient gets a
   live `message:received` socket push (Lesson 09) → the client shows a toast
   globally (not only on the open chat). The sender's identity is never included.
@@ -75,7 +75,10 @@ never trust a `userId` from the client.
 The **caller's own** notifications (derived from the JWT, not a query param),
 newest first, plus an unread count for the bell badge.
 
-Response `200`: `{ "data": Notification[], "unreadCount": number }`
+Query: `page` (default 1), `limit` (default 20, max 100), `unreadOnly` (default false).
+
+Response `200`: `{ "data": Notification[], "unreadCount": number }` — `unreadCount`
+is the caller's total unread, not the count on this page.
 
 Errors: `401`
 

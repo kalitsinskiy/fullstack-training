@@ -130,6 +130,27 @@ export class RoomsService {
     return this.withViewerPermissions(room, userId);
   }
 
+  async findInternalById(
+    id: string,
+  ): Promise<{ id: string; name: string; memberIds: string[] }> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new NotFoundException('Room not found');
+    }
+
+    const room = await this.roomModel.findById(id).exec();
+    if (!room) {
+      throw new NotFoundException('Room not found');
+    }
+
+    return {
+      id: room._id.toString(),
+      name: room.name,
+      memberIds: room.participants.map((participant) =>
+        participant.userId.toString(),
+      ),
+    };
+  }
+
   async join(id: string, inviteCode: string, userId: string): Promise<Room> {
     if (!Types.ObjectId.isValid(id)) {
       throw new NotFoundException('Room not found');

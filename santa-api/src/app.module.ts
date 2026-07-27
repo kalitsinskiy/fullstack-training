@@ -10,6 +10,7 @@ import { AppController } from './app.controller';
 import { AuthModule } from './auth/auth.module';
 import { AppService } from './app.service';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { InternalModule } from './internal/internal.module';
 import { RoomsModule } from './rooms/rooms.module';
 import { UsersModule } from './users/users.module';
 import { WishlistModule } from './wishlist/wishlist.module';
@@ -30,6 +31,9 @@ import { WishlistModule } from './wishlist/wishlist.module';
         ),
         JWT_SECRET: Joi.string().required(),
         JWT_EXPIRATION: Joi.string().default('7d'),
+        SERVICE_API_KEY: Joi.string().default(
+          'dev-service-key-change-in-production',
+        ),
       }),
     }),
     MongooseModule.forRootAsync({
@@ -81,6 +85,7 @@ import { WishlistModule } from './wishlist/wishlist.module';
     UsersModule,
     RoomsModule,
     WishlistModule,
+    InternalModule,
   ],
   controllers: [AppController],
   providers: [

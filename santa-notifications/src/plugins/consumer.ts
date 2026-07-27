@@ -2,6 +2,7 @@ import fp from 'fastify-plugin';
 import { FastifyInstance } from 'fastify';
 import { connect, type Channel, type ChannelModel, type ConsumeMessage } from 'amqplib';
 import { EventPayload, handleEvent } from '../events/handle-event';
+import { SantaApiClient } from '../services/santa-api-client';
 import {
   DEAD_LETTER_EXCHANGE,
   DEAD_LETTER_QUEUE,
@@ -32,6 +33,11 @@ async function consumerPlugin(fastify: FastifyInstance) {
     return;
   }
 
+  const api = new SantaApiClient({
+    baseUrl: fastify.config.santaApiUrl,
+    serviceKey: fastify.config.serviceApiKey,
+  });
+
   let connection: ChannelModel;
   let channel: Channel;
 
@@ -54,10 +60,13 @@ async function consumerPlugin(fastify: FastifyInstance) {
 
     try {
       const data = JSON.parse(message.content.toString()) as EventPayload;
-      const result = await handleEvent(routingKey, data, messageId);
+      const { status, created } = await handleEvent(routingKey, data, messageId, { api });
 
       channel.ack(message);
-      fastify.log.info({ routingKey, messageId, result }, 'Event processed');
+      fastify.log.info(
+        { routingKey, messageId, status, recipients: created },
+        'Event processed'
+      );
     } catch (error) {
       channel.nack(message, false, false);
       fastify.log.error({ err: error, routingKey, messageId }, 'Event failed — dead-lettered');

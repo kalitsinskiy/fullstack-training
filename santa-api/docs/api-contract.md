@@ -93,15 +93,15 @@ Access to room features is decided **by permission, never by role**. Each
 participant has a room-scoped role (`owner` or `member`); a role is just a named
 preset of permissions:
 
-| Permission | `owner` | `member` |
-|------------|:------:|:--------:|
-| `room:view` | ✅ | ✅ |
-| `wishlist:set` | ✅ | ✅ |
-| `room:draw` | ✅ | — |
-| `room:invite` | ✅ | — |
-| `room:kick` | ✅ | — |
-| `room:edit` | ✅ | — |
-| `room:delete` | ✅ | — |
+| Permission     | `owner` | `member` |
+| -------------- | :-----: | :------: |
+| `room:view`    |   ✅    |    ✅    |
+| `wishlist:set` |   ✅    |    ✅    |
+| `room:draw`    |   ✅    |    —     |
+| `room:invite`  |   ✅    |    —     |
+| `room:kick`    |   ✅    |    —     |
+| `room:edit`    |   ✅    |    —     |
+| `room:delete`  |   ✅    |    —     |
 
 The room creator is the `owner`; everyone who joins is a `member`. Every room
 object includes `viewerPermissions` — the calling user's effective permissions
@@ -124,7 +124,11 @@ to `{ id, displayName, role }`; `participantCount` is the number of members;
   "creatorId": "665f0c2ab7d13a5e8b1c4d1a",
   "inviteCode": "Q7X4LM",
   "participants": [
-    { "id": "665f0c2ab7d13a5e8b1c4d1a", "displayName": "Mariia", "role": "owner" }
+    {
+      "id": "665f0c2ab7d13a5e8b1c4d1a",
+      "displayName": "Mariia",
+      "role": "owner"
+    }
   ],
   "participantCount": 1,
   "status": "pending",
@@ -132,7 +136,15 @@ to `{ id, displayName, role }`; `participantCount` is the number of members;
   "budget": 500,
   "currency": "₴",
   "exchangeDate": null,
-  "viewerPermissions": ["room:view", "room:draw", "room:invite", "room:kick", "room:edit", "room:delete", "wishlist:set"]
+  "viewerPermissions": [
+    "room:view",
+    "room:draw",
+    "room:invite",
+    "room:kick",
+    "room:edit",
+    "room:delete",
+    "wishlist:set"
+  ]
 }
 ```
 
@@ -308,3 +320,32 @@ shape above. If the user has **no** wishlist yet, returns an **empty** one
 (`"items": []`) — not a `404`.
 
 Errors: `401`, `403` (missing `room:view`), `404` (room not found / caller is not a participant)
+
+### `GET /internal/users/:id`
+
+Response `200`:
+
+```json
+{
+  "id": "665f0c2ab7d13a5e8b1c4d9f",
+  "displayName": "Alice",
+  "email": "alice@example.com"
+}
+```
+
+Errors: `401` (missing/invalid service key), `404`
+
+### `GET /internal/rooms/:id`
+
+No membership check — the notifications service is not a participant. Returns only
+what a notification message needs; no invite code, no assignments.
+
+```json
+{
+  "id": "665f0c2ab7d13a5e8b1c4d2b",
+  "name": "Office Secret Santa",
+  "memberIds": ["665f0c2ab7d13a5e8b1c4d9f", "665f0c2ab7d13a5e8b1c4d1a"]
+}
+```
+
+Errors: `401` (missing/invalid service key), `404`

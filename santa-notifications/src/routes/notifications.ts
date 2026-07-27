@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { NotFoundError } from '../errors';
+import { currentUser } from '../plugins/auth';
 import { NotificationDocument, NotificationModel, NotificationType } from '../models/notification';
 
 interface Notification {
@@ -14,6 +15,9 @@ interface Notification {
 }
 
 const notificationTypeValues = ['room_invite', 'assignment', 'wishlist_update', 'system'] as const;
+
+const DEFAULT_LIMIT = 20;
+const MAX_LIMIT = 100;
 
 const idParamsSchema = {
   type: 'object',
@@ -38,46 +42,57 @@ function toNotification(notification: NotificationDocument): Notification {
   };
 }
 
-/**
- * ⚠️ SECURITY (intentional, until Lesson 07): these routes are NOT authenticated
- * and trust the `userId` from the query/body — a classic IDOR (anyone can read,
- * mark-read, or delete another user's notifications by id, or list them via
- * `?userId=`). This is deliberate kickoff scaffolding. Lesson 07 adds a JWT
- * `fastify.authenticate` preHandler and scopes every query to `request.user`,
- * which closes the IDOR. DO NOT deploy this service as-is (see Lesson 11).
- */
 export default async function notificationRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/',
     {
+      preHandler: [fastify.authenticate],
       schema: {
         querystring: {
           type: 'object',
           properties: {
-            userId: objectIdSchema,
+            page: { type: 'integer', minimum: 1, default: 1 },
+            limit: { type: 'integer', minimum: 1, maximum: MAX_LIMIT, default: DEFAULT_LIMIT },
+            unreadOnly: { type: 'boolean', default: false },
           },
         },
       },
     },
     async (request) => {
-      const { userId } = request.query as { userId?: string };
-      const query = userId ? { userId } : {};
-      const notifications = await NotificationModel.find(query).sort({ createdAt: -1 }).exec();
+      const { id: userId } = currentUser(request);
+      const {
+        page = 1,
+        limit = DEFAULT_LIMIT,
+        unreadOnly = false,
+      } = request.query as { page?: number; limit?: number; unreadOnly?: boolean };
 
-      return notifications.map((notification) => toNotification(notification));
+      const filter = { userId, ...(unreadOnly ? { read: false } : {}) };
+      const skip = (page - 1) * limit;
+
+      const [notifications, unreadCount] = await Promise.all([
+        NotificationModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).exec(),
+        NotificationModel.countDocuments({ userId, read: false }).exec(),
+      ]);
+
+      return {
+        data: notifications.map((notification) => toNotification(notification)),
+        unreadCount,
+      };
     }
   );
 
   fastify.get(
     '/:id',
     {
+      preHandler: [fastify.authenticate],
       schema: {
         params: idParamsSchema,
       },
     },
     async (request) => {
       const { id } = request.params as { id: string };
-      const notification = await NotificationModel.findById(id).exec();
+      const { id: userId } = currentUser(request);
+      const notification = await NotificationModel.findOne({ _id: id, userId }).exec();
 
       if (!notification) {
         throw new NotFoundError('Notification', id);
@@ -90,6 +105,7 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/',
     {
+      preHandler: [fastify.requireServiceKey],
       schema: {
         body: {
           type: 'object',
@@ -131,14 +147,16 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
   fastify.patch(
     '/:id/read',
     {
+      preHandler: [fastify.authenticate],
       schema: {
         params: idParamsSchema,
       },
     },
     async (request) => {
       const { id } = request.params as { id: string };
-      const notification = await NotificationModel.findByIdAndUpdate(
-        id,
+      const { id: userId } = currentUser(request);
+      const notification = await NotificationModel.findOneAndUpdate(
+        { _id: id, userId },
         { read: true },
         { new: true }
       ).exec();
@@ -158,13 +176,15 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
   fastify.delete(
     '/:id',
     {
+      preHandler: [fastify.authenticate],
       schema: {
         params: idParamsSchema,
       },
     },
     async (request, reply) => {
       const { id } = request.params as { id: string };
-      const notification = await NotificationModel.findByIdAndDelete(id).exec();
+      const { id: userId } = currentUser(request);
+      const notification = await NotificationModel.findOneAndDelete({ _id: id, userId }).exec();
 
       if (!notification) {
         throw new NotFoundError('Notification', id);

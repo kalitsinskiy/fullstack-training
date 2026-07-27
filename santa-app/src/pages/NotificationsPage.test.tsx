@@ -9,7 +9,7 @@ import type { Notification } from '@/types/api';
 function eventNotification(overrides: Partial<Notification> = {}): Notification {
   return {
     id: 'n1',
-    userId: null,
+    userId: '665f0c2ab7d13a5e8b1c4d01',
     roomId: '665f0c2ab7d13a5e8b1c4d9f',
     type: 'room.created',
     message: 'Room "Office Party" was created',
@@ -21,7 +21,12 @@ function eventNotification(overrides: Partial<Notification> = {}): Notification 
 
 function serveNotifications(notifications: Notification[]) {
   server.use(
-    http.get('/api/notifications', () => HttpResponse.json(notifications)),
+    http.get('/api/notifications', () =>
+      HttpResponse.json({
+        data: notifications,
+        unreadCount: notifications.filter((n) => !n.read).length,
+      }),
+    ),
   );
 }
 
@@ -41,7 +46,7 @@ describe('NotificationsPage', () => {
       eventNotification({
         id: 'n2',
         type: 'user.joined',
-        message: 'Alice joined the room',
+        message: 'Alice joined "Office Party"',
       }),
     ]);
     renderWithProviders(<NotificationsPage />);
@@ -49,15 +54,20 @@ describe('NotificationsPage', () => {
     expect(
       await screen.findByText('Room "Office Party" was created'),
     ).toBeInTheDocument();
-    expect(screen.getByText('Alice joined the room')).toBeInTheDocument();
-    expect(screen.getByText('2 unread.')).toBeInTheDocument();
+    expect(screen.getByText('Alice joined "Office Party"')).toBeInTheDocument();
+    expect(
+      screen.getByText('2 unread. Click an unread item to mark it read.'),
+    ).toBeInTheDocument();
   });
 
   it('marks a notification read', async () => {
     let marked = false;
     server.use(
       http.get('/api/notifications', () =>
-        HttpResponse.json([eventNotification({ read: marked })]),
+        HttpResponse.json({
+          data: [eventNotification({ read: marked })],
+          unreadCount: marked ? 0 : 1,
+        }),
       ),
       http.patch('/api/notifications/n1/read', () => {
         marked = true;
@@ -67,12 +77,14 @@ describe('NotificationsPage', () => {
 
     renderWithProviders(<NotificationsPage />);
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Mark read' }));
+    await userEvent.click(
+      await screen.findByRole('button', {
+        name: 'Mark "Room "Office Party" was created" as read',
+      }),
+    );
 
     await waitFor(() => {
-      expect(
-        screen.queryByRole('button', { name: 'Mark read' }),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /as read$/ })).not.toBeInTheDocument();
     });
   });
 

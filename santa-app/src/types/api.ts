@@ -87,3 +87,8 @@ export interface Notification {
   read: boolean;
   createdAt: string;
 }
+
+export interface NotificationList {
+  data: Notification[];
+  unreadCount: number;
+}

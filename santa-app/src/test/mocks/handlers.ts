@@ -25,5 +25,14 @@ export const handlers = [
     ),
   ),
 
-  http.get('/api/notifications', () => HttpResponse.json([])),
+  http.get('/api/notifications', () =>
+    HttpResponse.json({
+      data: [],
+      total: 0,
+      unreadCount: 0,
+      page: 1,
+      limit: 20,
+      totalPages: 1,
+    }),
+  ),
 ];

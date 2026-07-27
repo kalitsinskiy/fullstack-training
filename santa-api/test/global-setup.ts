@@ -20,6 +20,8 @@ export default async function globalSetup(): Promise<void> {
 
   process.env.MONGO_URL = mongo.getUri();
   process.env.JWT_SECRET = process.env.JWT_SECRET ?? 'test-secret';
+  process.env.SERVICE_API_KEY =
+    process.env.SERVICE_API_KEY ?? 'test-service-key';
   // Keeps the throttler on in-memory storage (no Redis needed in tests).
   process.env.NODE_ENV = 'test';
 }
