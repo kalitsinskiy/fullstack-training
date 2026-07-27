@@ -2,7 +2,6 @@ import fp from 'fastify-plugin';
 import { FastifyInstance } from 'fastify';
 import type { Server } from 'socket.io';
 import { createRealtimePublisher, noopRealtimePublisher, RealtimePublisher } from '../realtime';
-import { SantaApiClient } from '../services/santa-api-client';
 import { createSocketServer } from '../socket';
 import type { JwtPayload } from './auth';
 
@@ -27,11 +26,6 @@ async function socketPlugin(fastify: FastifyInstance) {
     return;
   }
 
-  const api = new SantaApiClient({
-    baseUrl: fastify.config.santaApiUrl,
-    serviceKey: fastify.config.serviceApiKey,
-  });
-
   const { io, close } = await createSocketServer({
     httpServer: fastify.server,
     corsOrigins: corsOrigins(),
@@ -39,7 +33,7 @@ async function socketPlugin(fastify: FastifyInstance) {
     useRedisAdapter: true,
     verifyToken: (token) => fastify.jwt.verify<JwtPayload>(token),
     presence: fastify.presence,
-    api,
+    api: fastify.santaApi,
     log: fastify.log,
   });
 
@@ -55,5 +49,5 @@ async function socketPlugin(fastify: FastifyInstance) {
 
 export default fp(socketPlugin, {
   name: 'socket',
-  dependencies: ['config', 'auth', 'presence'],
+  dependencies: ['config', 'auth', 'presence', 'santa-api'],
 });

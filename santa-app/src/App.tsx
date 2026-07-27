@@ -13,6 +13,7 @@ import { RegisterPage } from '@/pages/RegisterPage';
 import { RoomListPage } from '@/pages/RoomListPage';
 import { RoomDetailPage } from '@/pages/RoomDetailPage';
 import { MessagesPage } from '@/pages/MessagesPage';
+import { RoomMessagesPage } from '@/pages/RoomMessagesPage';
 import { NotificationsPage } from '@/pages/NotificationsPage';
 import { ProfilePage } from '@/pages/ProfilePage';
 
@@ -33,6 +34,10 @@ export default function App() {
                 <Route element={<AppLayout />}>
                   <Route path="/rooms" element={<RoomListPage />} />
                   <Route path="/rooms/:id" element={<RoomDetailPage />} />
+                  <Route
+                    path="/rooms/:id/messages"
+                    element={<RoomMessagesPage />}
+                  />
                   <Route path="/messages" element={<MessagesPage />} />
                   <Route path="/notifications" element={<NotificationsPage />} />
                   <Route path="/profile" element={<ProfilePage />} />

@@ -2,7 +2,6 @@ import fp from 'fastify-plugin';
 import { FastifyInstance } from 'fastify';
 import { connect, type Channel, type ChannelModel, type ConsumeMessage } from 'amqplib';
 import { EventPayload, handleEvent } from '../events/handle-event';
-import { SantaApiClient } from '../services/santa-api-client';
 import {
   DEAD_LETTER_EXCHANGE,
   DEAD_LETTER_QUEUE,
@@ -33,11 +32,6 @@ async function consumerPlugin(fastify: FastifyInstance) {
     return;
   }
 
-  const api = new SantaApiClient({
-    baseUrl: fastify.config.santaApiUrl,
-    serviceKey: fastify.config.serviceApiKey,
-  });
-
   let connection: ChannelModel;
   let channel: Channel;
 
@@ -61,7 +55,7 @@ async function consumerPlugin(fastify: FastifyInstance) {
     try {
       const data = JSON.parse(message.content.toString()) as EventPayload;
       const { status, created } = await handleEvent(routingKey, data, messageId, {
-        api,
+        api: fastify.santaApi,
         realtime: fastify.realtime,
       });
 
@@ -91,4 +85,7 @@ async function consumerPlugin(fastify: FastifyInstance) {
   });
 }
 
-export default fp(consumerPlugin, { name: 'consumer', dependencies: ['config', 'socket'] });
+export default fp(consumerPlugin, {
+  name: 'consumer',
+  dependencies: ['config', 'socket', 'santa-api'],
+});

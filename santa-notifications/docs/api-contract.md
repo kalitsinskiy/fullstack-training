@@ -5,6 +5,7 @@ A **separate service** from santa-api (different process, different base URL).
 Base URL: `http://localhost:3002`
 
 - Notification endpoints are under the `/api/notifications` prefix.
+- Anonymous messaging is under the `/api/messages` prefix.
 - `GET /health` is at the root (no `/api` prefix).
 
 > This service is built up over Lessons 06–08 (notifications, WebSocket push,
@@ -110,6 +111,107 @@ Errors: `401`, `404`
 Deletes the caller's own notification. Response `204`: no body.
 
 Errors: `401`, `404`
+
+## Anonymous messaging
+
+Each participant of a drawn room has **two** relationships, so the Messages
+screen is **two separate, named chats**, each two-way:
+
+| Thread   | Titled                | Who the other party is                            |
+| -------- | --------------------- | ------------------------------------------------- |
+| `giftee` | the giftee's name     | the person the caller drew — knowing them is fine |
+| `santa`  | "Your Secret Santa"   | whoever drew the caller — **never** identified    |
+
+The same A→B conversation appears in A's `giftee` thread and B's `santa` thread —
+one stored conversation, two views of it.
+
+### Message shape (the only client-facing form)
+
+```json
+{
+  "id": "665f0c2ab7d13a5e8b1c4d7e",
+  "roomId": "665f0c2ab7d13a5e8b1c4d2b",
+  "text": "hope you like puzzles!",
+  "createdAt": "2025-12-20T10:00:00.000Z",
+  "direction": "out"
+}
+```
+
+`direction` is `"out"` when the caller sent it (right bubble) and `"in"` when they
+received it (left bubble) — which is all a client needs, so `senderId` never has
+to be returned. It **is** stored, for moderation, rate limiting and auditing.
+
+### `POST /api/messages`
+
+Sends a message to one of the caller's two relationships. Requires the caller's JWT.
+
+Request:
+
+```json
+{ "roomId": "665f0c2ab7d13a5e8b1c4d2b", "to": "santa", "text": "thanks, santa!" }
+```
+
+- `to` is `"giftee" | "santa"`. **There is no `recipientId`** — the service resolves
+  the recipient from santa-api's assignment graph
+  (`GET /api/internal/rooms/:roomId/relations/:userId`), so a client can only ever
+  reach its own two chats. A smuggled `recipientId` is stripped and ignored.
+- `text` is 1–500 characters and must contain a non-whitespace character; it is
+  stored trimmed.
+
+Response `201`: the message shape above with `"direction": "out"` and `"thread"`
+echoing the `to` you sent.
+
+Side effects:
+
+1. The recipient is pushed a `message:received` socket event (below).
+2. A `message.sent` event `{ type, roomId, recipientId }` is published to the
+   `santa.events` exchange for moderation/analytics. Nothing consumes it yet, and
+   a broker outage never fails the request.
+
+Errors: `400` (validation), `401`, `403` — a single generic
+`"You cannot send a message in this room yet"` covering *not drawn yet*, *not a
+participant* and *santa-api unreachable* alike. A more specific message would let
+a sender probe the assignment graph.
+
+### `GET /api/messages/:roomId`
+
+The caller's **two** conversations for the room, each in full (both directions),
+oldest first.
+
+```jsonc
+{
+  // named — the caller is allowed to know their giftee
+  "giftee": { "id": "665f…", "name": "Bob", "messages": [ /* … */ ] },
+  // anonymous — no id, no name, ever
+  "santa": { "messages": [ /* … */ ] }
+}
+```
+
+Each side is `null` until the draw is done (reading is not a refusal — the page
+renders that state). The giftee's name comes from an internal user lookup and
+falls back to `"Your giftee"` if santa-api is unreachable, so the thread stays
+readable.
+
+Errors: `400` (malformed room id), `401`
+
+### Socket event `message:received`
+
+Pushed to the recipient's `user:{id}` room:
+
+```json
+{
+  "id": "665f0c2ab7d13a5e8b1c4d7e",
+  "roomId": "665f0c2ab7d13a5e8b1c4d2b",
+  "text": "thanks, santa!",
+  "createdAt": "2025-12-20T10:00:00.000Z",
+  "direction": "in",
+  "thread": "giftee"
+}
+```
+
+`thread` is the **mirror** of the sender's `to`: messaging your *giftee* arrives in
+their *santa* thread, and messaging your *santa* arrives in their *giftee* thread.
+The payload carries **no** `senderId` and never the Secret Santa's id or name.
 
 ### `GET /users/online`
 

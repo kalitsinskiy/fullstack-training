@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import {
   CalendarDays,
   Gift,
+  MessageCircle,
   RefreshCw,
   Sparkles,
   Trash2,
@@ -311,6 +312,11 @@ function GifteeCard({ roomId, enabled }: { roomId: string; enabled: boolean }) {
                 {assignmentQuery.data.receiver.displayName}
               </span>
             </p>
+            <Button asChild variant="outline" size="sm">
+              <Link to={`/rooms/${roomId}/messages`}>
+                <MessageCircle /> Messages
+              </Link>
+            </Button>
             <div>
               <p className="text-sm font-medium text-foreground">
                 Their wishlist

@@ -8,12 +8,21 @@ import { AppError, ValidationError } from './errors';
 import timingPlugin from './plugins/timing';
 import consumerPlugin from './plugins/consumer';
 import presencePlugin from './plugins/presence';
+import publisherPlugin from './plugins/publisher';
+import santaApiPlugin from './plugins/santa-api';
 import socketPlugin from './plugins/socket';
 import healthRoutes from './routes/health';
+import messageRoutes from './routes/messages';
 import notificationRoutes from './routes/notifications';
 import userRoutes from './routes/users';
+import type { SantaApi } from './services/santa-api-client';
 
-export function buildApp() {
+export interface BuildAppOptions {
+  /** Swap in a fake santa-api client — used by the component tests. */
+  santaApi?: SantaApi;
+}
+
+export function buildApp(options: BuildAppOptions = {}) {
   const app = Fastify({
     logger: {
       level:
@@ -46,13 +55,16 @@ export function buildApp() {
   });
   app.register(configPlugin);
   app.register(authPlugin);
+  app.register(santaApiPlugin, { santaApi: options.santaApi });
   app.register(presencePlugin);
   app.register(socketPlugin);
+  app.register(publisherPlugin);
   app.register(consumerPlugin);
   app.register(timingPlugin);
   app.register(healthRoutes);
   app.register(userRoutes);
   app.register(notificationRoutes, { prefix: '/api/notifications' });
+  app.register(messageRoutes, { prefix: '/api/messages' });
 
   app.setErrorHandler((error: FastifyError, request, reply) => {
     if (error instanceof AppError) {

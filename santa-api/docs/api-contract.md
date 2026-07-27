@@ -349,3 +349,25 @@ what a notification message needs; no invite code, no assignments.
 ```
 
 Errors: `401` (missing/invalid service key), `404`
+
+### `GET /internal/rooms/:roomId/relations/:userId`
+
+The user's **two relationships** in the room, read off the assignment graph. Used
+by santa-notifications to resolve the recipient of an anonymous message, so a
+client never has to name one.
+
+```json
+{
+  "gifteeId": "665f0c2ab7d13a5e8b1c4d1a",
+  "santaId": "665f0c2ab7d13a5e8b1c4d3c"
+}
+```
+
+- `gifteeId` — whom this user draws (the user is allowed to know this).
+- `santaId` — who drew this user. **Routing only.** It must never be forwarded to
+  a browser, directly or in an error message.
+- Both are `null` before the draw, or when the user isn't a participant — a
+  missing relationship is not an error, so callers can refuse generically without
+  revealing whether the room is drawn or who is in it.
+
+Errors: `401` (missing/invalid service key), `404` (room not found)

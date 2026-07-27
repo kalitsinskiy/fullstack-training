@@ -14,9 +14,19 @@ export interface RoomDetails {
   memberIds: string[];
 }
 
+/**
+ * A user's two relationships in a room. Both are null before the draw.
+ * `santaId` is for routing only — it must never reach a client.
+ */
+export interface RoomRelations {
+  gifteeId: string | null;
+  santaId: string | null;
+}
+
 export interface SantaApi {
   getUserById(userId: string): Promise<UserDetails>;
   getRoomById(roomId: string): Promise<RoomDetails>;
+  getRelations(roomId: string, userId: string): Promise<RoomRelations>;
 }
 
 export interface SantaApiClientOptions {
@@ -55,6 +65,10 @@ export class SantaApiClient implements SantaApi {
 
   getRoomById(roomId: string): Promise<RoomDetails> {
     return this.get<RoomDetails>(`/api/internal/rooms/${roomId}`);
+  }
+
+  getRelations(roomId: string, userId: string): Promise<RoomRelations> {
+    return this.get<RoomRelations>(`/api/internal/rooms/${roomId}/relations/${userId}`);
   }
 
   private get<T>(path: string): Promise<T> {

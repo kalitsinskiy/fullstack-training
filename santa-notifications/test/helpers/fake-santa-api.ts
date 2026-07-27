@@ -1,14 +1,31 @@
-import type { RoomDetails, SantaApi, UserDetails } from '../../src/services/santa-api-client';
+import type {
+  RoomDetails,
+  RoomRelations,
+  SantaApi,
+  UserDetails,
+} from '../../src/services/santa-api-client';
+
+const NO_RELATIONS: RoomRelations = { gifteeId: null, santaId: null };
 
 export class FakeSantaApi implements SantaApi {
   readonly roomCalls: string[] = [];
   readonly userCalls: string[] = [];
+  readonly relationCalls: { roomId: string; userId: string }[] = [];
   failWith?: Error;
+
+  relations: Record<string, RoomRelations> = {};
 
   constructor(
     private readonly rooms: Record<string, RoomDetails> = {},
     private readonly users: Record<string, UserDetails> = {}
   ) {}
+
+  getRelations(roomId: string, userId: string): Promise<RoomRelations> {
+    this.relationCalls.push({ roomId, userId });
+    if (this.failWith) return Promise.reject(this.failWith);
+
+    return Promise.resolve(this.relations[`${roomId}:${userId}`] ?? NO_RELATIONS);
+  }
 
   getRoomById(roomId: string): Promise<RoomDetails> {
     this.roomCalls.push(roomId);

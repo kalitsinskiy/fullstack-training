@@ -8,6 +8,9 @@ module.exports = {
   // is closed in afterEach, so the work is done — forceExit just stops Jest from
   // hanging on that timer. Run `jest --detectOpenHandles` if you suspect a leak.
   forceExit: true,
+  // Each suite boots its own in-memory mongod; several at once crash it
+  // (`fassert() failure`). Same reason santa-api runs its e2e suite --runInBand.
+  maxWorkers: 1,
   // The app uses module: "nodenext"; tsconfig.test.json switches the Jest
   // transform to CommonJS (and node resolution) so ts-jest runs without ESM
   // gymnastics, while still extending the base config.

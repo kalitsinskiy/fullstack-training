@@ -1,4 +1,5 @@
 import { Outlet } from 'react-router-dom';
+import { SocketMessages } from '@/features/realtime/SocketMessages';
 import { SocketNotifications } from '@/features/realtime/SocketNotifications';
 import { Sidebar } from './Sidebar';
 import { BottomNav } from './BottomNav';
@@ -9,6 +10,7 @@ export function AppLayout() {
   return (
     <div className="flex min-h-screen">
       <SocketNotifications />
+      <SocketMessages />
       <Sidebar />
       <main className="flex min-w-0 flex-1 flex-col pb-20 md:pb-0">
         <header className="flex h-14 shrink-0 items-center justify-end border-b border-border px-4">

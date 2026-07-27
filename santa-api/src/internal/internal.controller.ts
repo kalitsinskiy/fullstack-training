@@ -4,6 +4,7 @@ import { ApiExcludeController } from '@nestjs/swagger';
 import { ServiceKeyGuard } from '../auth/guards/service-key.guard';
 import { RoomsService } from '../rooms/rooms.service';
 import { UsersService } from '../users/users.service';
+import { InternalRelationsResponseDto } from './dto/internal-relations-response.dto';
 import { InternalRoomResponseDto } from './dto/internal-room-response.dto';
 import { InternalUserResponseDto } from './dto/internal-user-response.dto';
 
@@ -26,5 +27,13 @@ export class InternalController {
   @Get('rooms/:id')
   findRoom(@Param('id') id: string): Promise<InternalRoomResponseDto> {
     return this.roomsService.findInternalById(id);
+  }
+
+  @Get('rooms/:roomId/relations/:userId')
+  findRelations(
+    @Param('roomId') roomId: string,
+    @Param('userId') userId: string,
+  ): Promise<InternalRelationsResponseDto> {
+    return this.roomsService.findRelations(roomId, userId);
   }
 }

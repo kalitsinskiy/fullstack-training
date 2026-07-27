@@ -11,3 +11,5 @@ export const EVENT_ROUTING_KEYS = [
   'draw.completed',
   'wishlist.updated',
 ] as const;
+
+export const MESSAGE_SENT_ROUTING_KEY = 'message.sent';

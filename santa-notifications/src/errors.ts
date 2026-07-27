@@ -30,6 +30,12 @@ export class UnauthorizedError extends AppError {
   }
 }
 
+export class ForbiddenError extends AppError {
+  constructor(message = 'Not allowed') {
+    super(message, 403, 'FORBIDDEN');
+  }
+}
+
 export class ConflictError extends AppError {
   constructor(message: string) {
     super(message, 409, 'CONFLICT');

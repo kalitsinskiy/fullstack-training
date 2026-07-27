@@ -17,7 +17,7 @@ import { UserDocument } from '../users/schemas/user.schema';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
 import { permissionsForRole, RoomRole } from './permissions';
-import { AssignmentView, Room } from './room.types';
+import { AssignmentView, Room, RoomRelations } from './room.types';
 import { Room as RoomModel } from './schemas/room.schema';
 import { generateAssignments } from '../utils/derangement';
 
@@ -148,6 +148,29 @@ export class RoomsService {
       memberIds: room.participants.map((participant) =>
         participant.userId.toString(),
       ),
+    };
+  }
+
+  async findRelations(roomId: string, userId: string): Promise<RoomRelations> {
+    if (!Types.ObjectId.isValid(roomId)) {
+      throw new NotFoundException('Room not found');
+    }
+
+    const room = await this.roomModel.findById(roomId).exec();
+    if (!room) {
+      throw new NotFoundException('Room not found');
+    }
+
+    const giftee = room.assignments.find(
+      (assignment) => assignment.giverId.toString() === userId,
+    );
+    const santa = room.assignments.find(
+      (assignment) => assignment.receiverId.toString() === userId,
+    );
+
+    return {
+      gifteeId: giftee ? giftee.receiverId.toString() : null,
+      santaId: santa ? santa.giverId.toString() : null,
     };
   }
 

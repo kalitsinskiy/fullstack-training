@@ -92,3 +92,22 @@ export interface NotificationList {
   data: Notification[];
   unreadCount: number;
 }
+
+export type MessageThread = 'giftee' | 'santa';
+
+export interface ChatMessage {
+  id: string;
+  roomId: string;
+  text: string;
+  createdAt: string;
+  direction: 'in' | 'out';
+}
+
+export interface IncomingChatMessage extends ChatMessage {
+  thread: MessageThread;
+}
+
+export interface MessageThreads {
+  giftee: { id: string; name: string; messages: ChatMessage[] } | null;
+  santa: { messages: ChatMessage[] } | null;
+}

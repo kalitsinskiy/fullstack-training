@@ -179,4 +179,123 @@ describe('Internal (HTTP)', () => {
         .expect(404);
     });
   });
+
+  describe('GET /api/internal/rooms/:roomId/relations/:userId', () => {
+    it('401s without the service key', async () => {
+      const room = await seedRoom();
+
+      await request(app.getHttpServer())
+        .get(
+          `/api/internal/rooms/${room._id.toString()}/relations/665f0c2ab7d13a5e8b1c4d9f`,
+        )
+        .expect(401);
+    });
+
+    it('returns nulls before the draw', async () => {
+      const alice = await seedUser({ displayName: 'Alice' });
+      const room = await seedRoom({
+        creatorId: alice._id,
+        participants: [{ userId: alice._id, role: 'owner' }],
+      });
+
+      const response = await request(app.getHttpServer())
+        .get(
+          `/api/internal/rooms/${room._id.toString()}/relations/${alice._id.toString()}`,
+        )
+        .set('X-Service-Key', SERVICE_KEY)
+        .expect(200);
+
+      expect(response.body).toEqual({ gifteeId: null, santaId: null });
+    });
+
+    it('resolves both sides of the cycle after the draw', async () => {
+      const alice = await seedUser({ displayName: 'Alice' });
+      const bob = await seedUser({ displayName: 'Bob' });
+      const carol = await seedUser({ displayName: 'Carol' });
+      const room = await seedRoom({
+        creatorId: alice._id,
+        status: 'drawn',
+        participants: [
+          { userId: alice._id, role: 'owner' },
+          { userId: bob._id, role: 'member' },
+          { userId: carol._id, role: 'member' },
+        ],
+        assignments: [
+          { giverId: alice._id, receiverId: bob._id },
+          { giverId: bob._id, receiverId: carol._id },
+          { giverId: carol._id, receiverId: alice._id },
+        ],
+      });
+
+      const alicesRelations = await request(app.getHttpServer())
+        .get(
+          `/api/internal/rooms/${room._id.toString()}/relations/${alice._id.toString()}`,
+        )
+        .set('X-Service-Key', SERVICE_KEY)
+        .expect(200);
+
+      expect(alicesRelations.body).toEqual({
+        gifteeId: bob._id.toString(),
+        santaId: carol._id.toString(),
+      });
+
+      const bobsRelations = await request(app.getHttpServer())
+        .get(
+          `/api/internal/rooms/${room._id.toString()}/relations/${bob._id.toString()}`,
+        )
+        .set('X-Service-Key', SERVICE_KEY)
+        .expect(200);
+
+      expect(bobsRelations.body).toEqual({
+        gifteeId: carol._id.toString(),
+        santaId: alice._id.toString(),
+      });
+    });
+
+    it('returns nulls for a user who is not in the room', async () => {
+      const alice = await seedUser();
+      const bob = await seedUser();
+      const carol = await seedUser();
+      const outsider = await seedUser();
+      const room = await seedRoom({
+        creatorId: alice._id,
+        status: 'drawn',
+        participants: [
+          { userId: alice._id, role: 'owner' },
+          { userId: bob._id, role: 'member' },
+          { userId: carol._id, role: 'member' },
+        ],
+        assignments: [
+          { giverId: alice._id, receiverId: bob._id },
+          { giverId: bob._id, receiverId: carol._id },
+          { giverId: carol._id, receiverId: alice._id },
+        ],
+      });
+
+      const response = await request(app.getHttpServer())
+        .get(
+          `/api/internal/rooms/${room._id.toString()}/relations/${outsider._id.toString()}`,
+        )
+        .set('X-Service-Key', SERVICE_KEY)
+        .expect(200);
+
+      expect(response.body).toEqual({ gifteeId: null, santaId: null });
+    });
+
+    it('404s on a malformed or unknown room id', async () => {
+      await request(app.getHttpServer())
+        .get(
+          '/api/internal/rooms/not-an-object-id/relations/665f0c2ab7d13a5e8b1c4d9f',
+        )
+        .set('X-Service-Key', SERVICE_KEY)
+        .expect(404);
+
+      await request(app.getHttpServer())
+        .get(
+          '/api/internal/rooms/665f0c2ab7d13a5e8b1c4d9f/relations/665f0c2ab7d13a5e8b1c4d1a',
+        )
+        .set('X-Service-Key', SERVICE_KEY)
+        .expect(404);
+    });
+  });
 });

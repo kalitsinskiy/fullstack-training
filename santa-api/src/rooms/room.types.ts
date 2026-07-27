@@ -41,3 +41,8 @@ export interface AssignmentView {
     wishlist: string[];
   };
 }
+
+export interface RoomRelations {
+  gifteeId: string | null;
+  santaId: string | null;
+}

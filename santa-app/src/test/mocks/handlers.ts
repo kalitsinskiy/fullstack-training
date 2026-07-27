@@ -35,4 +35,8 @@ export const handlers = [
       totalPages: 1,
     }),
   ),
+
+  http.get('/api/messages/:roomId', () =>
+    HttpResponse.json({ giftee: null, santa: null }),
+  ),
 ];
