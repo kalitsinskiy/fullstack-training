@@ -2,7 +2,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import type { AxiosError } from 'axios';
 import { getApiErrorMessage } from '@/lib/api';
 import { joinRoomSchema, type JoinRoomFormInput } from '@/schemas/rooms';
 import { normalizeInviteCode } from '@/features/rooms/helpers';

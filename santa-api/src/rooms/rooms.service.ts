@@ -13,6 +13,7 @@ import { randomBytes } from 'node:crypto';
 import { UsersService } from '../users/users.service';
 import { WishlistService } from '../wishlist/wishlist.service';
 import { RedisService } from '../redis/redis.service';
+import { EventPublisherService } from '../events/event-publisher.service';
 import { withViewerPermissions } from './room-veiw';
 import {
   PaginatedResponse,
@@ -36,6 +37,7 @@ export class RoomsService {
     private readonly usersService: UsersService,
     private readonly wishlistService: WishlistService,
     private readonly redis: RedisService,
+    private readonly events: EventPublisherService,
   ) {}
 
   private readonly ROOM_CACHE_TTL = 300; // 5 minutes
@@ -71,6 +73,12 @@ export class RoomsService {
         created._id.toString(),
         this.INVITE_TTL,
       );
+
+      this.events.publish('room.created', {
+        roomId: created._id.toString(),
+        roomName: created.name,
+        createdBy: creatorId,
+      });
 
       return this.toRoomResponse(created, creatorId);
     } catch (err) {
@@ -154,6 +162,14 @@ export class RoomsService {
       });
       await room.save();
       await this.invalidateRoom(id);
+
+      const joiner = await this.usersService.findById(userId);
+
+      this.events.publish('user.joined', {
+        roomId: id,
+        userId,
+        userName: joiner.displayName,
+      });
     }
 
     await room.populate('participants.userId', 'displayName');
@@ -230,6 +246,12 @@ export class RoomsService {
       .exec();
 
     await this.invalidateRoom(id);
+
+    this.events.publish('draw.completed', {
+      roomId: id,
+      participantCount: room.participants.length,
+      requesterId,
+    });
 
     return this.toRoomResponse(updated as RoomDocument, requesterId);
   }

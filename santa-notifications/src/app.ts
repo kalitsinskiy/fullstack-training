@@ -8,6 +8,7 @@ import timingPlugin from './plugins/timing';
 import healthRoutes from './routes/health';
 import notificationRoutes from './routes/notifications';
 import redisPlugin from './plugins/redis';
+import rabbitmqPlugin from './plugins/rabbitmq';
 import usersRoutes from './routes/users';
 
 export function buildApp() {
@@ -40,6 +41,7 @@ export function buildApp() {
   });
   app.register(configPlugin);
   app.register(redisPlugin);
+  app.register(rabbitmqPlugin);
   app.register(timingPlugin);
   app.register(healthRoutes);
   app.register(usersRoutes);

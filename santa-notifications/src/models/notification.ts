@@ -1,30 +1,39 @@
 import { HydratedDocument, Schema, Types, model } from 'mongoose';
 
-export type NotificationType = 'room_invite' | 'assignment' | 'wishlist_update' | 'system';
+export type NotificationType =
+  | 'room.created'
+  | 'user.joined'
+  | 'draw.completed'
+  | 'wishlist.updated';
 
 interface NotificationRecord {
-  userId: Types.ObjectId;
+  userId?: Types.ObjectId;
+  roomId?: Types.ObjectId;
   type: NotificationType;
   payload?: unknown;
   message: string;
   read: boolean;
+  messageId: string;
   createdAt: Date;
 }
 
 const notificationSchema = new Schema<NotificationRecord>({
-  userId: { type: Types.ObjectId, ref: 'User', required: true, index: true },
+  userId: { type: Types.ObjectId, ref: 'User', required: false, index: true },
+  roomId: { type: Types.ObjectId, ref: 'Room' },
   type: {
     type: String,
-    enum: ['room_invite', 'assignment', 'wishlist_update', 'system'],
+    enum: ['room.created', 'user.joined', 'draw.completed', 'wishlist.updated'],
     required: true,
   },
   payload: { type: Schema.Types.Mixed },
   message: { type: String, required: true },
   read: { type: Boolean, default: false },
+  messageId: { type: String },
   createdAt: { type: Date, default: Date.now },
 });
 
 notificationSchema.index({ userId: 1, createdAt: -1 });
+notificationSchema.index({ messageId: 1 }, { unique: true, sparse: true });
 
 export type NotificationDocument = HydratedDocument<NotificationRecord>;
 

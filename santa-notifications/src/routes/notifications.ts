@@ -4,7 +4,7 @@ import { NotificationDocument, NotificationModel, NotificationType } from '../mo
 
 interface Notification {
   id: string;
-  userId: string;
+  userId: string | null;
   type: string;
   message: string;
   payload?: unknown;
@@ -12,7 +12,12 @@ interface Notification {
   createdAt: string;
 }
 
-const notificationTypeValues = ['room_invite', 'assignment', 'wishlist_update', 'system'] as const;
+const notificationTypeValues = [
+  'room.created',
+  'user.joined',
+  'draw.completed',
+  'wishlist.updated',
+] as const;
 
 const idParamsSchema = {
   type: 'object',
@@ -27,7 +32,7 @@ const objectIdSchema = { type: 'string', pattern: '^[a-fA-F0-9]{24}$' };
 function toNotification(notification: NotificationDocument): Notification {
   return {
     id: notification._id.toString(),
-    userId: notification.userId.toString(),
+    userId: notification.userId?.toString() ?? null,
     type: notification.type,
     message: notification.message,
     payload: notification.payload,

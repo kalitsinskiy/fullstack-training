@@ -20,6 +20,21 @@ import {
   stopInMemoryMongo,
 } from './setup-mongo';
 
+jest.mock('amqplib', () => {
+  const publish = jest.fn();
+  return {
+    connect: jest.fn().mockResolvedValue({
+      createChannel: jest.fn().mockResolvedValue({
+        assertExchange: jest.fn().mockResolvedValue(undefined),
+        publish,
+        close: jest.fn(),
+      }),
+      on: jest.fn(),
+      close: jest.fn(),
+    }),
+  };
+});
+
 jest.mock('ioredis', () => require('ioredis-mock'));
 
 /**
@@ -723,5 +738,41 @@ describe('Rooms (HTTP)', () => {
       .set('Authorization', `Bearer ${other.token}`)
       .send({ inviteCode: newCode })
       .expect(201);
+  });
+
+  it('publishes room.created after a room is created', async () => {
+    const { connect } = jest.requireMock('amqplib');
+    const channel = await (await connect.mock.results[0].value).createChannel();
+    const amqpPublish = channel.publish as jest.Mock;
+
+    amqpPublish.mockClear();
+
+    const { token } = await seedUser();
+
+    await request(app.getHttpServer())
+      .post('/api/rooms')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Evented Room' })
+      .expect(201);
+
+    expect(amqpPublish.mock.calls.map((c) => c[1])).toContain('room.created');
+  });
+
+  it('publishes draw.completed when the draw runs', async () => {
+    const { connect } = jest.requireMock('amqplib');
+    const channel = await (await connect.mock.results[0].value).createChannel();
+    const amqpPublish = channel.publish as jest.Mock;
+
+    amqpPublish.mockClear();
+
+    const { owner, room } = await seedDrawableRoom();
+
+    await request(app.getHttpServer())
+      .post(`/api/rooms/${room._id.toString()}/draw`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ exchangeDate: '2026-12-24' })
+      .expect(200);
+
+    expect(amqpPublish.mock.calls.map((c) => c[1])).toContain('draw.completed');
   });
 });

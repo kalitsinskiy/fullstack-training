@@ -14,6 +14,7 @@ import { RoomsModule } from './rooms/rooms.module';
 import { UsersModule } from './users/users.module';
 import { WishlistModule } from './wishlist/wishlist.module';
 import { RedisModule } from './redis/redis.module';
+import { EventsModule } from './events/events.module';
 
 @Module({
   imports: [
@@ -25,7 +26,8 @@ import { RedisModule } from './redis/redis.module';
           .valid('development', 'staging', 'production', 'test')
           .default('development'),
         MONGO_URL: Joi.string().required(),
-        REDIS_URL: Joi.string().default('redis://localhost:6379'),
+        REDIS_URL: Joi.string().required(),
+        RABBITMQ_URL: Joi.string().required(),
         JWT_SECRET: Joi.string().required(),
         JWT_EXPIRATION: Joi.string().default('7d'),
       }),
@@ -71,6 +73,7 @@ import { RedisModule } from './redis/redis.module';
     RoomsModule,
     WishlistModule,
     RedisModule,
+    EventsModule,
   ],
   controllers: [AppController],
   providers: [

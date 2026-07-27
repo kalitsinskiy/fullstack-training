@@ -6,6 +6,7 @@ export interface AppConfig {
   env: string;
   mongoUrl: string;
   redisUrl: string;
+  rabbitmqUrl: string;
 }
 
 declare module 'fastify' {
@@ -19,6 +20,7 @@ async function configPlugin(fastify: FastifyInstance) {
   const env = process.env.NODE_ENV ?? 'development';
   const mongoUrl = process.env.MONGO_URL ?? '';
   const redisUrl = process.env.REDIS_URL ?? '';
+  const rabbitmqUrl = process.env.RABBITMQ_URL ?? '';
 
   const missing: string[] = [];
 
@@ -28,7 +30,7 @@ async function configPlugin(fastify: FastifyInstance) {
     throw new Error(`Missing required env varialbles: ${missing.join(', ')}`);
   }
 
-  fastify.decorate('config', { port, env, mongoUrl, redisUrl });
+  fastify.decorate('config', { port, env, mongoUrl, redisUrl, rabbitmqUrl });
 }
 
 export default fp(configPlugin, { name: 'config' });

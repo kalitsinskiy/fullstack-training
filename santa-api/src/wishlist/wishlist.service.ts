@@ -6,12 +6,14 @@ import {
   Wishlist as WishlistModel,
   WishlistDocument,
 } from './schemas/wishlist.schema';
+import { EventPublisherService } from '../events/event-publisher.service';
 
 @Injectable()
 export class WishlistService {
   constructor(
     @InjectModel(WishlistModel.name)
     private readonly wishlistModel: Model<WishlistModel>,
+    private readonly events: EventPublisherService,
   ) {}
 
   // TODO (Lesson: Wishlist) — upsert the wishlist for {userId, roomId} with `items`.
@@ -30,6 +32,8 @@ export class WishlistService {
         { upsert: true, new: true, setDefaultsOnInsert: true },
       )
       .exec();
+
+    this.events.publish('wishlist.updated', { roomId, userId });
 
     return this.toWishlist(doc);
   }
