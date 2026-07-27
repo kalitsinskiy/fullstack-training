@@ -12,6 +12,9 @@ WORKDIR /app
 ARG VITE_API_URL=
 ENV VITE_API_URL=$VITE_API_URL
 
+ARG VITE_NOTIFICATIONS_URL=
+ENV VITE_NOTIFICATIONS_URL=$VITE_NOTIFICATIONS_URL
+
 # Install deps first (layer caching): this layer only rebuilds when the
 # manifests change, not on every source edit.
 COPY package.json package-lock.json ./

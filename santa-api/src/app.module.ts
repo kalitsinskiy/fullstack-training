@@ -25,6 +25,9 @@ import { WishlistModule } from './wishlist/wishlist.module';
           .default('development'),
         MONGO_URL: Joi.string().required(),
         REDIS_URL: Joi.string().default('redis://localhost:6379'),
+        RABBITMQ_URL: Joi.string().default(
+          'amqp://santa:santa123@localhost:5672',
+        ),
         JWT_SECRET: Joi.string().required(),
         JWT_EXPIRATION: Joi.string().default('7d'),
       }),

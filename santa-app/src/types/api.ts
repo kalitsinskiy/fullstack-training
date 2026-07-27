@@ -79,7 +79,8 @@ export interface Assignment {
 
 export interface Notification {
   id: string;
-  userId: string;
+  userId: string | null;
+  roomId: string | null;
   type: string;
   message: string;
   payload?: unknown;

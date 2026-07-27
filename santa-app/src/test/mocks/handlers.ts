@@ -24,4 +24,6 @@ export const handlers = [
       { status: 201 },
     ),
   ),
+
+  http.get('/api/notifications', () => HttpResponse.json([])),
 ];

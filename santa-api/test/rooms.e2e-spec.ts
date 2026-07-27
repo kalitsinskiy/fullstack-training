@@ -9,6 +9,7 @@ import {
 } from '@nestjs/platform-fastify';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/configure-app';
+import { EventPublisherService } from '../src/events/event-publisher.service';
 import { RedisService } from '../src/redis/redis.service';
 import { User } from '../src/users/schemas/user.schema';
 import { tokenFor } from './auth-token.helper';
@@ -680,6 +681,124 @@ describe('Rooms (HTTP)', () => {
       await expect(
         redis().get(`invite:${before.body.inviteCode}`),
       ).resolves.toBeNull();
+    });
+  });
+
+  describe('RabbitMQ events', () => {
+    const published = () => app.get(EventPublisherService).recordedEvents;
+    const keysOf = (routingKey: string) =>
+      published().filter((event) => event.routingKey === routingKey);
+
+    it('publishes room.created after the room is saved', async () => {
+      const { user, token } = await seedUserWithToken();
+
+      const created = await request(app.getHttpServer())
+        .post('/api/rooms')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ name: 'Event Room' })
+        .expect(201);
+
+      const events = keysOf('room.created');
+      expect(events).toHaveLength(1);
+      expect(events[0].payload).toEqual({
+        roomId: created.body.id,
+        roomName: 'Event Room',
+        createdBy: user._id.toString(),
+      });
+      expect(events[0].messageId).toMatch(/^[0-9a-f-]{36}$/);
+    });
+
+    it('publishes user.joined once per real join, not on a repeat', async () => {
+      const { token: ownerToken } = await seedUserWithToken();
+      const { user: joiner, token: joinerToken } = await seedUserWithToken({
+        displayName: 'Event Joiner',
+      });
+
+      const created = await request(app.getHttpServer())
+        .post('/api/rooms')
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({ name: 'Join Event Room' })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .post(`/api/rooms/${created.body.id}/join`)
+        .set('Authorization', `Bearer ${joinerToken}`)
+        .send({ inviteCode: created.body.inviteCode })
+        .expect(201);
+
+      expect(keysOf('user.joined')).toHaveLength(1);
+      expect(keysOf('user.joined')[0].payload).toEqual({
+        roomId: created.body.id,
+        userId: joiner._id.toString(),
+        userName: 'Event Joiner',
+      });
+
+      await request(app.getHttpServer())
+        .post(`/api/rooms/${created.body.id}/join`)
+        .set('Authorization', `Bearer ${joinerToken}`)
+        .send({ inviteCode: created.body.inviteCode })
+        .expect(201);
+
+      expect(keysOf('user.joined')).toHaveLength(1);
+    });
+
+    it('publishes user.joined when joining by code only', async () => {
+      const { token: ownerToken } = await seedUserWithToken();
+      const { token: joinerToken } = await seedUserWithToken();
+
+      const created = await request(app.getHttpServer())
+        .post('/api/rooms')
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({ name: 'Code Event Room' })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .post('/api/rooms/join')
+        .set('Authorization', `Bearer ${joinerToken}`)
+        .send({ inviteCode: created.body.inviteCode })
+        .expect(201);
+
+      expect(keysOf('user.joined')).toHaveLength(1);
+    });
+
+    it('publishes draw.completed with the participant count', async () => {
+      const { roomId, owner } = await seedRoomWithMembers(2);
+
+      await request(app.getHttpServer())
+        .post(`/api/rooms/${roomId}/draw`)
+        .set('Authorization', `Bearer ${owner.token}`)
+        .send({ exchangeDate: '2026-12-24' })
+        .expect(200);
+
+      const events = keysOf('draw.completed');
+      expect(events).toHaveLength(1);
+      expect(events[0].payload).toEqual({ roomId, participantCount: 3 });
+    });
+
+    it('publishes wishlist.updated when a wishlist is set', async () => {
+      const { roomId, members } = await seedRoomWithMembers(1);
+
+      await request(app.getHttpServer())
+        .put(`/api/rooms/${roomId}/wishlist`)
+        .set('Authorization', `Bearer ${members[0].token}`)
+        .send({ items: ['Socks'] })
+        .expect(200);
+
+      const events = keysOf('wishlist.updated');
+      expect(events).toHaveLength(1);
+      expect(events[0].payload).toEqual({ roomId, userId: members[0].id });
+    });
+
+    it('does not publish anything when the operation fails', async () => {
+      const { roomId, owner } = await seedRoomWithMembers(1);
+
+      await request(app.getHttpServer())
+        .post(`/api/rooms/${roomId}/draw`)
+        .set('Authorization', `Bearer ${owner.token}`)
+        .send({ exchangeDate: '2026-12-24' })
+        .expect(400);
+
+      expect(keysOf('draw.completed')).toHaveLength(0);
     });
   });
 });

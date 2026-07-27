@@ -9,36 +9,46 @@ export const tokenStore = {
 };
 
 /**
- * Pre-configured axios instance for santa-api.
+ * Builds an axios instance for one of our backends.
  * - Attaches the JWT bearer token on every request.
  * - On 401, clears the token and bounces to /login (handled by AuthGuard
  *   once the store is empty).
  */
-export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
-  headers: { 'Content-Type': 'application/json' },
-});
+function createClient(baseURL: string | undefined) {
+  const client = axios.create({
+    baseURL,
+    headers: { 'Content-Type': 'application/json' },
+  });
 
-api.interceptors.request.use((config) => {
-  const token = tokenStore.get();
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-api.interceptors.response.use(
-  (response) => response,
-  (error: AxiosError) => {
-    if (error.response?.status === 401) {
-      tokenStore.clear();
-      // Hard-redirect avoids a stale auth state lingering in memory.
-      if (window.location.pathname !== '/login') {
-        window.location.assign('/login');
-      }
+  client.interceptors.request.use((config) => {
+    const token = tokenStore.get();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
-    return Promise.reject(error);
-  },
+    return config;
+  });
+
+  client.interceptors.response.use(
+    (response) => response,
+    (error: AxiosError) => {
+      if (error.response?.status === 401) {
+        tokenStore.clear();
+        // Hard-redirect avoids a stale auth state lingering in memory.
+        if (window.location.pathname !== '/login') {
+          window.location.assign('/login');
+        }
+      }
+      return Promise.reject(error);
+    },
+  );
+
+  return client;
+}
+
+export const api = createClient(import.meta.env.VITE_API_URL);
+
+export const notificationsApi = createClient(
+  import.meta.env.VITE_NOTIFICATIONS_URL,
 );
 
 /** Narrow an unknown error into a user-facing message. */

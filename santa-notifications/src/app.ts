@@ -5,6 +5,7 @@ import ajvFormats from 'ajv-formats';
 import configPlugin from './plugins/config';
 import { AppError, ValidationError } from './errors';
 import timingPlugin from './plugins/timing';
+import consumerPlugin from './plugins/consumer';
 import presencePlugin from './plugins/presence';
 import healthRoutes from './routes/health';
 import notificationRoutes from './routes/notifications';
@@ -43,6 +44,7 @@ export function buildApp() {
   });
   app.register(configPlugin);
   app.register(presencePlugin);
+  app.register(consumerPlugin);
   app.register(timingPlugin);
   app.register(healthRoutes);
   app.register(userRoutes);

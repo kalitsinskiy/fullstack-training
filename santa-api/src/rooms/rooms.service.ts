@@ -7,6 +7,8 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import { EventPublisherService } from '../events/event-publisher.service';
+import { EVENT_KEYS } from '../events/event-transport';
 import { RedisService } from '../redis/redis.service';
 import { UsersService } from '../users/users.service';
 import { WishlistService } from '../wishlist/wishlist.service';
@@ -43,6 +45,7 @@ export class RoomsService {
     private readonly usersService: UsersService,
     private readonly wishlistService: WishlistService,
     private readonly redisService: RedisService,
+    private readonly eventPublisher: EventPublisherService,
   ) {}
 
   // NOTE: every room response uses the shape in docs/api-contract.md — map
@@ -65,6 +68,12 @@ export class RoomsService {
     });
 
     await this.indexInviteCode(room.inviteCode, room._id.toString());
+
+    await this.eventPublisher.publish(EVENT_KEYS.roomCreated, {
+      roomId: room._id.toString(),
+      roomName: room.name,
+      createdBy: creatorId,
+    });
 
     return this.toRoomResponse(room._id, creatorId);
   }
@@ -149,7 +158,20 @@ export class RoomsService {
       await this.invalidateRoom(id);
     }
 
-    return this.toRoomResponse(room._id, userId);
+    const response = await this.toRoomResponse(room._id, userId);
+
+    if (!alreadyMember) {
+      const joiner = response.participants.find(
+        (participant) => participant.id === userId,
+      );
+      await this.eventPublisher.publish(EVENT_KEYS.userJoined, {
+        roomId: response.id,
+        userId,
+        userName: joiner?.displayName ?? 'Someone',
+      });
+    }
+
+    return response;
   }
 
   async joinByCode(inviteCode: string, userId: string): Promise<Room> {
@@ -218,6 +240,11 @@ export class RoomsService {
     }
 
     await this.invalidateRoom(id);
+
+    await this.eventPublisher.publish(EVENT_KEYS.drawCompleted, {
+      roomId: id,
+      participantCount: updated.participants.length,
+    });
 
     return this.toRoomResponse(updated._id, requesterId);
   }

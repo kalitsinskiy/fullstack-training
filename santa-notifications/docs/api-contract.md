@@ -25,9 +25,18 @@ Base URL: `http://localhost:3002`
 }
 ```
 
-- `type` is one of: `room_invite` | `assignment` | `wishlist_update` | `system`
+- `type` is one of the per-user types `room_invite` | `assignment` |
+  `wishlist_update` | `system`, **or** a RabbitMQ routing key (Lesson 06):
+  `room.created` | `user.joined` | `draw.completed` | `wishlist.updated`
 - `message` is 1–500 characters
 - `payload` is optional, free-form
+- `userId` is **nullable**: notifications created from consumed events are
+  room-scoped and have no single recipient yet (Lesson 07 fans each event out to
+  one notification per participant, which fills it in). Such notifications carry
+  `roomId` and a `messageId` (the RabbitMQ message id, unique — this is what makes
+  redelivery idempotent).
+- `POST /api/notifications` still accepts only the four per-user types; the events
+  consumer writes through the model directly, not over HTTP.
 
 ## When notifications are created — and who sees them
 
