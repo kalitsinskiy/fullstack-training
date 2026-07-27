@@ -1,14 +1,67 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import type { Assignment, RoomDetail, Wishlist } from '@/types/api';
+import type {
+  Assignment,
+  Paginated,
+  RoomDetail,
+  RoomSummary,
+  Wishlist,
+} from '@/types/api';
 
-/** Query keys — one place so mutations can invalidate precisely. */
 export const roomKeys = {
+  lists: () => ['rooms'] as const,
+  list: (page: number) => ['rooms', { page }] as const,
   detail: (id: string) => ['room', id] as const,
   assignment: (id: string) => ['room', id, 'assignment'] as const,
   wishlist: (id: string, userId: string) =>
     ['room', id, 'wishlist', userId] as const,
 };
+
+export interface CreateRoomInput {
+  name: string;
+  budget?: number;
+  currency?: string;
+}
+
+export function useRooms(page = 1) {
+  return useQuery({
+    queryKey: roomKeys.list(page),
+    queryFn: async () => {
+      const { data } = await api.get<Paginated<RoomSummary>>('/api/rooms', {
+        params: { page },
+      });
+      return data;
+    },
+  });
+}
+
+export function useCreateRoom() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: CreateRoomInput) => {
+      const { data } = await api.post<RoomDetail>('/api/rooms', input);
+      return data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: roomKeys.lists() });
+    },
+  });
+}
+
+export function useJoinRoom() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (inviteCode: string) => {
+      const { data } = await api.post<RoomDetail>('/api/rooms/join', {
+        inviteCode,
+      });
+      return data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: roomKeys.lists() });
+    },
+  });
+}
 
 export function useRoom(id: string) {
   return useQuery({

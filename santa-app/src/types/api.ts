@@ -40,6 +40,16 @@ export interface RoomSummary {
   participantCount: number;
 }
 
+export interface Paginated<T> {
+  data: T[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
 export type RoomMember = Pick<User, 'id' | 'displayName'> & { role: RoomRole };
 
 export interface RoomDetail {
