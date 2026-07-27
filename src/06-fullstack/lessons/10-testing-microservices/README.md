@@ -657,6 +657,20 @@ test('create → join → wishlist → draw → assignment', async ({ browser })
 > (invite code, assignment receiver) — role/label selectors cover the rest.
 > Keep the suite to the one or two journeys that must never break.
 
+> **Three gotchas that will bite this E2E:**
+> 1. **Vitest sweeps `e2e/`.** With Playwright specs under `e2e/`, plain `npm test`
+>    (Vitest) tries to run them and fails. Exclude them in `vite.config.ts`:
+>    `test: { exclude: ['**/node_modules/**', 'e2e/**'] }`. Playwright runs via
+>    `npm run test:e2e` only.
+> 2. **Registration is rate-limited (3/min per IP).** A 3-participant journey sits
+>    *exactly* at the register throttle, so any nearby signup makes it 429. Run the
+>    backend for E2E with rate limiting relaxed (the same `skipIf: NODE_ENV==='test'`
+>    switch, a dedicated flag, or a higher limit), or seed the extra participants via
+>    the API before the browser part.
+> 3. **Match selectors to *your* UI.** The snippet assumes a "New room" button that
+>    opens a dialog; if you built the mockup's inline "Create a room" form, query
+>    that instead (`getByPlaceholder('Room name')`) — the snippet is illustrative.
+
 ## Verification
 
 Run each test suite independently:
