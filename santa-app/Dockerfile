@@ -15,6 +15,11 @@ ENV VITE_API_URL=$VITE_API_URL
 ARG VITE_NOTIFICATIONS_URL=
 ENV VITE_NOTIFICATIONS_URL=$VITE_NOTIFICATIONS_URL
 
+# Socket.IO endpoint (santa-notifications). nginx here serves static files only
+# and does not proxy /socket.io, so this must be absolute in the image.
+ARG VITE_WS_URL=
+ENV VITE_WS_URL=$VITE_WS_URL
+
 # Install deps first (layer caching): this layer only rebuilds when the
 # manifests change, not on every source edit.
 COPY package.json package-lock.json ./

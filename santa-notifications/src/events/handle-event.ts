@@ -1,4 +1,11 @@
-import { NotificationModel, NotificationType, notificationTypes } from '../models/notification';
+import {
+  NotificationDocument,
+  NotificationModel,
+  NotificationType,
+  notificationTypes,
+  toNotificationDto,
+} from '../models/notification';
+import type { RealtimePublisher } from '../realtime';
 import type { RoomDetails, SantaApi } from '../services/santa-api-client';
 
 export interface EventPayload {
@@ -19,7 +26,13 @@ interface PlannedNotification {
 
 export interface HandleEventDeps {
   api: SantaApi;
+  realtime?: RealtimePublisher;
 }
+
+const ROOM_EVENT_BY_TYPE: Partial<Record<NotificationType, string>> = {
+  'user.joined': 'room:member-joined',
+  'draw.completed': 'room:draw-completed',
+};
 
 export interface HandleEventResult {
   status: 'created' | 'duplicate' | 'skipped';
@@ -124,15 +137,42 @@ export async function handleEvent(
       })),
       { ordered: false }
     );
+    publish(routingKey, data, inserted, deps.realtime);
     return { status: 'created', created: inserted.length };
   } catch (error) {
     if (isDuplicateKeyError(error)) {
-      const inserted = (error as { insertedDocs?: unknown[] }).insertedDocs ?? [];
+      const inserted = ((error as { insertedDocs?: NotificationDocument[] }).insertedDocs ??
+        []) as NotificationDocument[];
+      publish(routingKey, data, inserted, deps.realtime);
       return {
         status: inserted.length > 0 ? 'created' : 'duplicate',
         created: inserted.length,
       };
     }
     throw error;
+  }
+}
+
+function publish(
+  routingKey: NotificationType,
+  data: EventPayload,
+  notifications: NotificationDocument[],
+  realtime: RealtimePublisher | undefined
+): void {
+  if (!realtime) return;
+
+  for (const notification of notifications) {
+    const userId = notification.userId?.toString();
+    if (userId) {
+      realtime.toUser(userId, 'notification', toNotificationDto(notification));
+    }
+  }
+
+  const roomEvent = ROOM_EVENT_BY_TYPE[routingKey];
+  if (roomEvent && data.roomId) {
+    realtime.toRoom(data.roomId, roomEvent, {
+      roomId: data.roomId,
+      userId: data.userId,
+    });
   }
 }

@@ -57,3 +57,27 @@ notificationSchema.index(
 export type NotificationDocument = HydratedDocument<NotificationRecord>;
 
 export const NotificationModel = model<NotificationRecord>('Notification', notificationSchema);
+
+export interface NotificationDto {
+  id: string;
+  userId: string | null;
+  roomId: string | null;
+  type: string;
+  message: string;
+  payload?: unknown;
+  read: boolean;
+  createdAt: string;
+}
+
+export function toNotificationDto(notification: NotificationDocument): NotificationDto {
+  return {
+    id: notification._id.toString(),
+    userId: notification.userId?.toString() ?? null,
+    roomId: notification.roomId?.toString() ?? null,
+    type: notification.type,
+    message: notification.message,
+    payload: notification.payload,
+    read: notification.read,
+    createdAt: notification.createdAt.toISOString(),
+  };
+}

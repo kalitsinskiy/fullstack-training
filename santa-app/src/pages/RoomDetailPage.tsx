@@ -24,6 +24,7 @@ import {
   useSaveWishlist,
 } from '@/features/rooms/api';
 import { usePermissions } from '@/features/rooms/usePermissions';
+import { useRoomRealtime } from '@/features/realtime/useRoomRealtime';
 import { getApiErrorMessage } from '@/lib/api';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -51,6 +52,8 @@ export function RoomDetailPage() {
 
   const { can } = usePermissions(room);
   const isDrawn = room?.status === 'drawn';
+
+  useRoomRealtime(id);
 
   if (roomQuery.isLoading) {
     return <PageHeader title="Room" description="Loading…" />;

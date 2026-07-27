@@ -1,18 +1,11 @@
 import { FastifyInstance } from 'fastify';
 import { NotFoundError } from '../errors';
 import { currentUser } from '../plugins/auth';
-import { NotificationDocument, NotificationModel, NotificationType } from '../models/notification';
-
-interface Notification {
-  id: string;
-  userId: string | null;
-  roomId: string | null;
-  type: string;
-  message: string;
-  payload?: unknown;
-  read: boolean;
-  createdAt: string;
-}
+import {
+  NotificationModel,
+  NotificationType,
+  toNotificationDto as toNotification,
+} from '../models/notification';
 
 const notificationTypeValues = ['room_invite', 'assignment', 'wishlist_update', 'system'] as const;
 
@@ -28,19 +21,6 @@ const idParamsSchema = {
 };
 
 const objectIdSchema = { type: 'string', pattern: '^[a-fA-F0-9]{24}$' };
-
-function toNotification(notification: NotificationDocument): Notification {
-  return {
-    id: notification._id.toString(),
-    userId: notification.userId?.toString() ?? null,
-    roomId: notification.roomId?.toString() ?? null,
-    type: notification.type,
-    message: notification.message,
-    payload: notification.payload,
-    read: notification.read,
-    createdAt: notification.createdAt.toISOString(),
-  };
-}
 
 export default async function notificationRoutes(fastify: FastifyInstance) {
   fastify.get(

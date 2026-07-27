@@ -3,6 +3,7 @@ import { render, type RenderOptions } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/features/auth/AuthContext';
+import { SocketProvider } from '@/features/realtime/SocketContext';
 
 interface Options extends Omit<RenderOptions, 'wrapper'> {
   /** Initial router entry, e.g. '/rooms/123'. Defaults to '/'. */
@@ -11,8 +12,9 @@ interface Options extends Omit<RenderOptions, 'wrapper'> {
 
 /**
  * Render a component inside the same providers the real app uses — Query client,
- * Auth context and a router. Use this for every component/page test instead of
- * RTL's bare `render`, so hooks like `useAuth` / `useQuery` / `useNavigate` work.
+ * Auth context, Socket context and a router. Use this for every component/page
+ * test instead of RTL's bare `render`, so hooks like `useAuth` / `useQuery` /
+ * `useSocket` / `useNavigate` work.
  */
 export function renderWithProviders(ui: ReactElement, options: Options = {}) {
   const { route = '/', ...rtlOptions } = options;
@@ -24,7 +26,9 @@ export function renderWithProviders(ui: ReactElement, options: Options = {}) {
     return (
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <MemoryRouter initialEntries={[route]}>{children}</MemoryRouter>
+          <SocketProvider>
+            <MemoryRouter initialEntries={[route]}>{children}</MemoryRouter>
+          </SocketProvider>
         </AuthProvider>
       </QueryClientProvider>
     );

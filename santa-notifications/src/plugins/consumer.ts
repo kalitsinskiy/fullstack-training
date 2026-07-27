@@ -60,7 +60,10 @@ async function consumerPlugin(fastify: FastifyInstance) {
 
     try {
       const data = JSON.parse(message.content.toString()) as EventPayload;
-      const { status, created } = await handleEvent(routingKey, data, messageId, { api });
+      const { status, created } = await handleEvent(routingKey, data, messageId, {
+        api,
+        realtime: fastify.realtime,
+      });
 
       channel.ack(message);
       fastify.log.info(
@@ -88,4 +91,4 @@ async function consumerPlugin(fastify: FastifyInstance) {
   });
 }
 
-export default fp(consumerPlugin, { name: 'consumer', dependencies: ['config'] });
+export default fp(consumerPlugin, { name: 'consumer', dependencies: ['config', 'socket'] });
