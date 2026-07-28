@@ -15,5 +15,6 @@ import { RoomPermissionsGuard } from './guards/room-permissions.guard';
   ],
   controllers: [RoomsController],
   providers: [RoomsService, RoomPermissionsGuard],
+  exports: [RoomsService],
 })
 export class RoomsModule {}

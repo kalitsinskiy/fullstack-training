@@ -15,6 +15,7 @@ import { UsersModule } from './users/users.module';
 import { WishlistModule } from './wishlist/wishlist.module';
 import { RedisModule } from './redis/redis.module';
 import { EventsModule } from './events/events.module';
+import { InternalModule } from './internal/internal.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { EventsModule } from './events/events.module';
         MONGO_URL: Joi.string().required(),
         REDIS_URL: Joi.string().required(),
         RABBITMQ_URL: Joi.string().required(),
+        SERVICE_API_KEY: Joi.string().required(),
         JWT_SECRET: Joi.string().required(),
         JWT_EXPIRATION: Joi.string().default('7d'),
       }),
@@ -74,6 +76,7 @@ import { EventsModule } from './events/events.module';
     WishlistModule,
     RedisModule,
     EventsModule,
+    InternalModule,
   ],
   controllers: [AppController],
   providers: [

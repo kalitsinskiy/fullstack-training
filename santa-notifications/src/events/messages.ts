@@ -1,22 +1,23 @@
 export function buildNotificationMessage(
   routingKey: string,
-  data: Record<string, unknown>
+  data: Record<string, unknown>,
+  roomName: string
 ): string {
   switch (routingKey) {
     case 'room.created': {
-      return `Room "${String(data.roomName ?? 'a room')}" was created`;
+      return `Room "${roomName}" was created`;
     }
 
     case 'user.joined': {
-      return `${String(data.userName ?? 'Someone')} joined the room`;
+      return `${String(data.userName ?? 'Someone')} joined "${roomName}"`;
     }
 
     case 'draw.completed': {
-      return 'The draw is complete! Check your assignment';
+      return `The draw for "${roomName}" is complete! Check your assignment`;
     }
 
     case 'wishlist.updated': {
-      return 'A wishlist was updated in your room';
+      return `A wishlist was updated in "${roomName}"`;
     }
 
     default: {

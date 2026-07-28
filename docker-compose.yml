@@ -129,8 +129,8 @@ services:
       RABBITMQ_URL: amqp://santa:santa123@rabbitmq:5672
       CORS_ORIGIN: http://localhost:5173
       SANTA_API_URL: http://santa-api:3001
-      JWT_SECRET: dev-secret-change-in-production
-      SERVICE_API_KEY: dev-service-key-change-in-production
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in the repo-root .env}
+      SERVICE_API_KEY: ${SERVICE_API_KEY:?set SERVICE_API_KEY in the repo-root .env}
     depends_on:
       mongodb:
         condition: service_healthy

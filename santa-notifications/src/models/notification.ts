@@ -13,7 +13,7 @@ interface NotificationRecord {
   payload?: unknown;
   message: string;
   read: boolean;
-  messageId: string;
+  messageId?: string;
   createdAt: Date;
 }
 
@@ -32,8 +32,8 @@ const notificationSchema = new Schema<NotificationRecord>({
   createdAt: { type: Date, default: Date.now },
 });
 
-notificationSchema.index({ userId: 1, createdAt: -1 });
-notificationSchema.index({ messageId: 1 }, { unique: true, sparse: true });
+notificationSchema.index({ userId: 1, read: 1, createdAt: -1 });
+notificationSchema.index({ messageId: 1 });
 
 export type NotificationDocument = HydratedDocument<NotificationRecord>;
 

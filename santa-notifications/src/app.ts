@@ -10,6 +10,8 @@ import notificationRoutes from './routes/notifications';
 import redisPlugin from './plugins/redis';
 import rabbitmqPlugin from './plugins/rabbitmq';
 import usersRoutes from './routes/users';
+import authPlugin from './plugins/auth';
+import santaApiPlugin from './plugins/santa-api';
 
 export function buildApp() {
   const app = Fastify({
@@ -40,6 +42,8 @@ export function buildApp() {
     methods: ['GET', 'POST', 'PATCH', 'DELETE'],
   });
   app.register(configPlugin);
+  app.register(authPlugin);
+  app.register(santaApiPlugin);
   app.register(redisPlugin);
   app.register(rabbitmqPlugin);
   app.register(timingPlugin);

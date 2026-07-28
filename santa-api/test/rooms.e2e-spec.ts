@@ -1,24 +1,12 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { getConnectionToken, getModelToken } from '@nestjs/mongoose';
-import { Connection, Model } from 'mongoose';
+import { getModelToken } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import request from 'supertest';
-import {
-  FastifyAdapter,
-  NestFastifyApplication,
-} from '@nestjs/platform-fastify';
-import { JwtService } from '@nestjs/jwt';
-import { User } from '../src/users/schemas/user.schema';
-import { userFixture, roomFixture } from './factories';
+import { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Room } from '../src/rooms/schemas/room.schema';
 import { Wishlist } from '../src/wishlist/schemas/wishlist.schema';
-import { tokenFor } from './auth-token.helper';
-import { AppModule } from '../src/app.module';
-import { configureApp } from '../src/configure-app';
-import {
-  clearAllCollections,
-  startInMemoryMongo,
-  stopInMemoryMongo,
-} from './setup-mongo';
+import { roomFixture } from './factories';
+import { useTestApp } from './helpers/e2e-app';
+import { makeSeeders } from './helpers/seed';
 
 jest.mock('amqplib', () => {
   const publish = jest.fn();
@@ -38,106 +26,16 @@ jest.mock('amqplib', () => {
 jest.mock('ioredis', () => require('ioredis-mock'));
 
 /**
- * COMPONENT TEST (HTTP slice) for Rooms. Same approach as auth.e2e-spec.ts.
- *
- * For the authenticated scenarios below you'll want a logged-in user. Two
- * provided helpers make that easy (import them when you implement the todos):
- *   - `userFixture` / `roomFixture` from './factories' — seed the DB directly.
- *   - `tokenFor(jwtService, user)` from './auth-token.helper' — mint a JWT.
- * Grab the models/JwtService from the app, e.g.
- *   const userModel = app.get(getModelToken(User.name));
- *   const jwt = app.get(JwtService);
- * then `Authorization: Bearer ${token}` on the request.
+ * COMPONENT TEST (HTTP slice) for Rooms. Boots the real AppModule on in-memory
+ * Mongo via the shared `useTestApp()` harness; seeds via `makeSeeders`.
  */
 describe('Rooms (HTTP)', () => {
+  const { getApp } = useTestApp();
   let app: NestFastifyApplication;
-  const originalJwtSecret = process.env.JWT_SECRET;
-  const originalMongoUrl = process.env.MONGO_URL;
-
-  beforeAll(async () => {
-    process.env.JWT_SECRET = process.env.JWT_SECRET ?? 'test-secret';
-    process.env.MONGO_URL = await startInMemoryMongo();
+  beforeEach(() => {
+    app = getApp();
   });
-
-  beforeEach(async () => {
-    const moduleRef: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    app = moduleRef.createNestApplication<NestFastifyApplication>(
-      new FastifyAdapter(),
-    );
-    await configureApp(app);
-    await app.init();
-    await app.getHttpAdapter().getInstance().ready();
-    await app.get<Model<Room>>(getModelToken(Room.name)).syncIndexes();
-  });
-
-  afterEach(async () => {
-    if (app) {
-      const connection = app.get<Connection>(getConnectionToken());
-      await clearAllCollections(connection);
-      await app.close();
-    }
-  });
-
-  afterAll(async () => {
-    if (originalJwtSecret === undefined) {
-      delete process.env.JWT_SECRET;
-    } else {
-      process.env.JWT_SECRET = originalJwtSecret;
-    }
-    if (originalMongoUrl === undefined) {
-      delete process.env.MONGO_URL;
-    } else {
-      process.env.MONGO_URL = originalMongoUrl;
-    }
-    await stopInMemoryMongo();
-  });
-
-  async function seedUser(overrides: Record<string, unknown> = {}) {
-    const userModel = app.get<Model<User>>(getModelToken(User.name));
-    const jwt = app.get(JwtService);
-    const user = await userModel.create(userFixture(overrides));
-
-    return { user, token: tokenFor(jwt, user) };
-  }
-
-  async function seedDrawableRoom() {
-    const owner = await seedUser({ displayName: 'Alice' });
-    const m1 = await seedUser({ displayName: 'Bob' });
-    const m2 = await seedUser({ displayName: 'Alex' });
-    const roomModel = app.get<Model<Room>>(getModelToken(Room.name));
-    const room = await roomModel.create(
-      roomFixture({
-        creatorId: owner.user.id,
-        participants: [
-          { userId: owner.user._id, role: 'owner' },
-          { userId: m1.user._id, role: 'member' },
-          { userId: m2.user._id, role: 'member' },
-        ],
-      }),
-    );
-
-    return { owner, m1, m2, room, roomModel };
-  }
-
-  async function seedOwnerAndMember() {
-    const owner = await seedUser({ displayName: 'Owner' });
-    const member = await seedUser({ displayName: 'Member' });
-    const roomModel = app.get<Model<Room>>(getModelToken(Room.name));
-    const room = await roomModel.create(
-      roomFixture({
-        creatorId: owner.user._id,
-        participants: [
-          { userId: owner.user._id, role: 'owner' },
-          { userId: member.user._id, role: 'member' },
-        ],
-      }),
-    );
-
-    return { owner, member, room, roomModel };
-  }
+  const { seedUser, seedDrawableRoom, seedOwnerAndMember } = makeSeeders(getApp);
 
   // ✅ WORKED EXAMPLE — green against the skeleton: the JWT guard rejects the
   // request before RoomsService runs. Implement the service, then fill in below.

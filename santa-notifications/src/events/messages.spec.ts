@@ -2,26 +2,32 @@ import { buildNotificationMessage } from './messages';
 
 describe('buildNotificationMessage', () => {
   it('room.created includes the room name', () => {
-    expect(buildNotificationMessage('room.created', { roomName: 'Office Party' })).toBe(
+    expect(buildNotificationMessage('room.created', {}, 'Office Party')).toBe(
       'Room "Office Party" was created'
     );
   });
 
-  it('user.joined includes the user name', () => {
-    expect(buildNotificationMessage('user.joined', { userName: 'Alice' })).toBe(
-      'Alice joined the room'
+  it('user.joined includes the user name and room name', () => {
+    expect(
+      buildNotificationMessage('user.joined', { userName: 'Alice' }, 'Office Party')
+    ).toBe('Alice joined "Office Party"');
+  });
+
+  it('draw.completed names the room', () => {
+    expect(buildNotificationMessage('draw.completed', {}, 'Office Party')).toBe(
+      'The draw for "Office Party" is complete! Check your assignment'
     );
   });
 
-  it('draw.completed have fixed copy', () => {
-    expect(buildNotificationMessage('draw.completed', {})).toMatch(/draw is complete/i);
-  });
-
-  it('wishlist.updated have fixed copy', () => {
-    expect(buildNotificationMessage('wishlist.updated', {})).toMatch(/wishlist was updated/i);
+  it('wishlist.updated names the room', () => {
+    expect(buildNotificationMessage('wishlist.updated', {}, 'Office Party')).toBe(
+      'A wishlist was updated in "Office Party"'
+    );
   });
 
   it('falls back for an unknown routing key', () => {
-    expect(buildNotificationMessage('unknown.event', {})).toBe('New event: unknown.event');
+    expect(buildNotificationMessage('unknown.event', {}, 'Office Party')).toBe(
+      'New event: unknown.event'
+    );
   });
 });

@@ -35,7 +35,7 @@ async function rabbitmqPlugin(fastify: FastifyInstance): Promise<void> {
       await channel.bindQueue(QUEUE, EXCHANGE, key);
     }
 
-    await channel.consume(QUEUE, (msg) => void handleMessage(channel, msg));
+    await channel.consume(QUEUE, (msg) => void handleMessage(channel, msg, fastify.santaApi));
 
     fastify.decorate('rabbit', { connection, channel });
     fastify.log.info(`RabbitMQ consumer bound to "${QUEUE}"`);
@@ -49,4 +49,4 @@ async function rabbitmqPlugin(fastify: FastifyInstance): Promise<void> {
   }
 }
 
-export default fp(rabbitmqPlugin, { name: 'rabbitmq', dependencies: ['config'] });
+export default fp(rabbitmqPlugin, { name: 'rabbitmq', dependencies: ['config', 'santa-api'] });

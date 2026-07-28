@@ -115,4 +115,47 @@ export const handlers = [
       role: 'user',
     });
   }),
+
+  http.get('/api/notifications', ({ request }) => {
+    const limit = new URL(request.url).searchParams.get('limit');
+    const data = [
+      {
+        id: 'n1',
+        userId: 'u1',
+        roomId: 'r1',
+        type: 'user.joined',
+        message: 'Bob joined "Office Party"',
+        read: false,
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: 'n2',
+        userId: 'u1',
+        roomId: 'r1',
+        type: 'draw.completed',
+        message: 'The draw for "Office Party" is complete!',
+        read: true,
+        createdAt: new Date().toISOString(),
+      },
+    ];
+
+    return HttpResponse.json({
+      data: limit === '1' ? data.slice(0, 1) : data,
+      total: 2,
+      unreadCount: 1,
+      page: 1,
+      limit: Number(limit ?? 20),
+    });
+  }),
+
+  http.patch('/api/notifications/:id/read', ({ params }) =>
+    HttpResponse.json({
+      id: params.id,
+      userId: 'u1',
+      type: 'user.joined',
+      message: 'Bob joined the room',
+      read: true,
+      createdAt: new Date().toISOString(),
+    }),
+  ),
 ];

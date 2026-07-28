@@ -494,4 +494,28 @@ export class RoomsService {
   private async invalidateRoom(id: string): Promise<void> {
     await this.redis.del(`room:${id}`);
   }
+
+  async getParticipantIds(
+    id: string,
+  ): Promise<{ id: string; name: string; memberIds: string[] }> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new NotFoundException('Room not found');
+    }
+
+    const room = await this.roomModel
+      .findById(id)
+      .select('name participants')
+      .lean()
+      .exec();
+
+    if (!room) {
+      throw new NotFoundException('Room not found');
+    }
+
+    return {
+      id: room._id.toString(),
+      name: room.name,
+      memberIds: room.participants.map((p) => p.userId.toString()),
+    };
+  }
 }

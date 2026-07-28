@@ -5,6 +5,7 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/features/auth/useAuth';
 import { navItems } from './navItems';
+import { UnreadBadge } from '@/features/notifications/UnreadBadge';
 
 /** Desktop navigation rail (hidden on mobile, where BottomNav takes over). */
 export function Sidebar() {
@@ -31,7 +32,13 @@ export function Sidebar() {
               )
             }
           >
-            <Icon className="size-4" />
+            <span className="relative">
+              {to === '/notifications' ? (
+                <UnreadBadge />
+              ) : (
+                <Icon className="size-4" />
+              )}
+            </span>
             {label}
           </NavLink>
         ))}

@@ -90,9 +90,18 @@ export interface Assignment {
 export interface Notification {
   id: string;
   userId: string;
+  roomId?: string | null;
   type: string;
   message: string;
   payload?: unknown;
   read: boolean;
   createdAt: string;
+}
+
+export interface NotificationList {
+  data: Notification[];
+  total: number;
+  unreadCount: number;
+  page: number;
+  limit: number;
 }
