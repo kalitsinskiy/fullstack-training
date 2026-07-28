@@ -20,6 +20,9 @@ export function buildNotificationMessage(
       return `A wishlist was updated in "${roomName}"`;
     }
 
+    case 'room.date_changed':
+      return `The gift exchange for "${roomName}" has a new date`;
+
     default: {
       return `New event: ${routingKey}`;
     }

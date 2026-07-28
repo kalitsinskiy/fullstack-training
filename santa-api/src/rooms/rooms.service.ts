@@ -324,6 +324,13 @@ export class RoomsService {
         .exec();
 
       await this.invalidateRoom(id);
+
+      if (room && dto.exchangeDate !== undefined) {
+        this.events.publish('room.date_changed', {
+          roomId: id,
+          exchangeDate: room.exchangeDate?.toISOString(),
+        });
+      }
     } catch (err) {
       if (err instanceof MongoServerError && err.code === 11000) {
         throw new ConflictException('You already have a room with this name');

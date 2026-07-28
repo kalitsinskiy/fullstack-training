@@ -3,6 +3,7 @@ import { render, type RenderOptions } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/features/auth/AuthContext';
+import { SocketProvider } from '@/features/socket/SocketProvider';
 
 interface Options extends Omit<RenderOptions, 'wrapper'> {
   /** Initial router entry, e.g. '/rooms/123'. Defaults to '/'. */
@@ -24,7 +25,9 @@ export function renderWithProviders(ui: ReactElement, options: Options = {}) {
     return (
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <MemoryRouter initialEntries={[route]}>{children}</MemoryRouter>
+          <SocketProvider>
+            <MemoryRouter initialEntries={[route]}>{children}</MemoryRouter>
+          </SocketProvider>
         </AuthProvider>
       </QueryClientProvider>
     );

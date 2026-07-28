@@ -73,6 +73,15 @@ describe('RoomDetailPage', () => {
           status: 'pending',
           participantCount: 2,
           participants: [{ id: 'u1', displayName: 'Alice', role: 'owner' }],
+          viewerPermissions: [
+            'room:view',
+            'room:draw',
+            'room:invite',
+            'room:kick',
+            'room:edit',
+            'room:delete',
+            'wishlist:set',
+          ],
         }),
       ),
     );

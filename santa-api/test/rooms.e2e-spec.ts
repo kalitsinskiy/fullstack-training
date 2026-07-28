@@ -35,7 +35,8 @@ describe('Rooms (HTTP)', () => {
   beforeEach(() => {
     app = getApp();
   });
-  const { seedUser, seedDrawableRoom, seedOwnerAndMember } = makeSeeders(getApp);
+  const { seedUser, seedDrawableRoom, seedOwnerAndMember } =
+    makeSeeders(getApp);
 
   // ✅ WORKED EXAMPLE — green against the skeleton: the JWT guard rejects the
   // request before RoomsService runs. Implement the service, then fill in below.
@@ -672,5 +673,31 @@ describe('Rooms (HTTP)', () => {
       .expect(200);
 
     expect(amqpPublish.mock.calls.map((c) => c[1])).toContain('draw.completed');
+  });
+
+  it('PATCH /api/rooms/:id publishes room.date_changed when exchangeDate changes', async () => {
+    const { connect } = jest.requireMock('amqplib');
+    const channel = await (await connect.mock.results[0].value).createChannel();
+    const publish = channel.publish as jest.Mock;
+    const { owner, room } = await seedOwnerAndMember();
+
+    publish.mockClear();
+    await request(app.getHttpServer())
+      .patch(`/api/rooms/${room._id.toString()}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ exchangeDate: '2026-12-26' })
+      .expect(200);
+
+    expect(publish.mock.calls.map((c) => c[1])).toContain('room.date_changed');
+
+    publish.mockClear();
+    await request(app.getHttpServer())
+      .patch(`/api/rooms/${room._id.toString()}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ name: 'Renamed' })
+      .expect(200);
+    expect(publish.mock.calls.map((c) => c[1])).not.toContain(
+      'room.date_changed',
+    );
   });
 });

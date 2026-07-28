@@ -12,6 +12,7 @@ import rabbitmqPlugin from './plugins/rabbitmq';
 import usersRoutes from './routes/users';
 import authPlugin from './plugins/auth';
 import santaApiPlugin from './plugins/santa-api';
+import ioPlugin from './plugins/io';
 
 export function buildApp() {
   const app = Fastify({
@@ -44,6 +45,7 @@ export function buildApp() {
   app.register(configPlugin);
   app.register(authPlugin);
   app.register(santaApiPlugin);
+  app.register(ioPlugin);
   app.register(redisPlugin);
   app.register(rabbitmqPlugin);
   app.register(timingPlugin);

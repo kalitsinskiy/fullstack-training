@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useSocket } from '@/features/socket/SocketContext';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Users,
@@ -61,6 +63,38 @@ export function RoomDetailPage() {
   const regen = useRegenerateInvite(id ?? '');
   const isDraw = room?.status === 'drawn';
   const assignment = useAssignment(id ?? '', !!id && isDraw);
+  const queryClient = useQueryClient();
+  const { socket, joinRoom, leaveRoom } = useSocket();
+
+  useEffect(() => {
+    if (!socket || !id) return;
+
+    joinRoom(id);
+
+    const onMemberJoined = () =>
+      void queryClient.invalidateQueries({ queryKey: ['rooms', id] });
+
+    const onDrawCompleted = () => {
+      void queryClient.invalidateQueries({ queryKey: ['rooms', id] });
+      void queryClient.invalidateQueries({
+        queryKey: ['rooms', id, 'assignment'],
+      });
+    };
+
+    const onDateChanged = () =>
+      void queryClient.invalidateQueries({ queryKey: ['rooms', id] });
+
+    socket.on('room:member-joined', onMemberJoined);
+    socket.on('room:draw-completed', onDrawCompleted);
+    socket.on('room:date-changed', onDateChanged);
+
+    return () => {
+      leaveRoom(id);
+      socket.off('room:member-joined', onMemberJoined);
+      socket.off('room:draw-completed', onDrawCompleted);
+      socket.off('room:date-changed', onDateChanged);
+    };
+  }, [socket, id, joinRoom, leaveRoom, queryClient]);
 
   if (isLoading)
     return <p className="text-sm text-muted-foreground">Loading room…</p>;

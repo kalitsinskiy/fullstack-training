@@ -10,6 +10,7 @@ export interface AppConfig {
   jwtSecret: string;
   santaApiUrl: string;
   serviceKey: string;
+  corsOrigin: string;
 }
 
 declare module 'fastify' {
@@ -27,6 +28,7 @@ async function configPlugin(fastify: FastifyInstance) {
   const jwtSecret = process.env.JWT_SECRET ?? '';
   const santaApiUrl = process.env.SANTA_API_URL ?? 'http://localhost:3001';
   const serviceKey = process.env.SERVICE_API_KEY ?? '';
+  const corsOrigin = process.env.CORS_ORIGIN ?? '';
 
   const missing: string[] = [];
 
@@ -48,6 +50,7 @@ async function configPlugin(fastify: FastifyInstance) {
     jwtSecret,
     santaApiUrl,
     serviceKey,
+    corsOrigin,
   });
 }
 

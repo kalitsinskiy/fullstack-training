@@ -7,7 +7,13 @@ const EXCHANGE = 'santa.events';
 const QUEUE = 'notifications.events';
 const DLX = 'santa.dlx';
 const DLQ = 'santa.dlq';
-const ROUTING_KEYS = ['room.created', 'user.joined', 'draw.completed', 'wishlist.updated'];
+const ROUTING_KEYS = [
+  'room.created',
+  'user.joined',
+  'draw.completed',
+  'wishlist.updated',
+  'room.date_changed',
+];
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -35,7 +41,10 @@ async function rabbitmqPlugin(fastify: FastifyInstance): Promise<void> {
       await channel.bindQueue(QUEUE, EXCHANGE, key);
     }
 
-    await channel.consume(QUEUE, (msg) => void handleMessage(channel, msg, fastify.santaApi));
+    await channel.consume(
+      QUEUE,
+      (msg) => void handleMessage(channel, msg, fastify.santaApi, fastify.io)
+    );
 
     fastify.decorate('rabbit', { connection, channel });
     fastify.log.info(`RabbitMQ consumer bound to "${QUEUE}"`);

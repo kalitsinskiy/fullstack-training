@@ -4,7 +4,8 @@ export type NotificationType =
   | 'room.created'
   | 'user.joined'
   | 'draw.completed'
-  | 'wishlist.updated';
+  | 'wishlist.updated'
+  | 'room.date_changed';
 
 interface NotificationRecord {
   userId?: Types.ObjectId;
@@ -22,7 +23,13 @@ const notificationSchema = new Schema<NotificationRecord>({
   roomId: { type: Types.ObjectId, ref: 'Room' },
   type: {
     type: String,
-    enum: ['room.created', 'user.joined', 'draw.completed', 'wishlist.updated'],
+    enum: [
+      'room.created',
+      'user.joined',
+      'draw.completed',
+      'wishlist.updated',
+      'room.date_changed',
+    ],
     required: true,
   },
   payload: { type: Schema.Types.Mixed },

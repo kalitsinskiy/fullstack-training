@@ -31,6 +31,13 @@ function fakeChannel() {
   return { ack: jest.fn(), nack: jest.fn() };
 }
 
+function fakeIo() {
+  const emit = jest.fn();
+  const to = jest.fn(() => ({ emit }));
+
+  return { io: { to } as unknown as import('socket.io').Server, to, emit };
+}
+
 describe('handleMessage - fan-out', () => {
   beforeAll(async () => await setupTestDb());
   afterAll(async () => await teardownTestDb());
@@ -45,7 +52,8 @@ describe('handleMessage - fan-out', () => {
     await handleMessage(
       channel as never,
       makeMsg('user.joined', { roomId, userId: joiner }),
-      client
+      client,
+      fakeIo().io
     );
 
     const docs = await NotificationModel.find().lean();
@@ -59,7 +67,12 @@ describe('handleMessage - fan-out', () => {
   it('draw.completed => redelivering the same messageId creates no duplcates', async () => {
     const channel = fakeChannel();
 
-    await handleMessage(channel as never, makeMsg('draw.completed', { roomId }), client);
+    await handleMessage(
+      channel as never,
+      makeMsg('draw.completed', { roomId }),
+      client,
+      fakeIo().io
+    );
 
     expect(await NotificationModel.countDocuments()).toBe(3);
   });
@@ -68,8 +81,8 @@ describe('handleMessage - fan-out', () => {
     const channel = fakeChannel();
     const msg = makeMsg('draw.completed', { roomId }, 'dup-1');
 
-    await handleMessage(channel as never, msg, client);
-    await handleMessage(channel as never, msg, client);
+    await handleMessage(channel as never, msg, client, fakeIo().io);
+    await handleMessage(channel as never, msg, client, fakeIo().io);
 
     expect(await NotificationModel.countDocuments()).toBe(3);
     expect(channel.ack).toHaveBeenCalledTimes(2);
@@ -83,9 +96,45 @@ describe('handleMessage - fan-out', () => {
     } as unknown as SantaApiClient;
     const channel = fakeChannel();
 
-    await handleMessage(channel as never, makeMsg('draw.completed', { roomId }), failing);
+    await handleMessage(
+      channel as never,
+      makeMsg('draw.completed', { roomId }),
+      failing,
+      fakeIo().io
+    );
 
     expect(await NotificationModel.countDocuments()).toBe(0);
     expect(channel.nack).toHaveBeenCalledWith(expect.anything(), false, false);
+  });
+
+  it('user.joined -> emits a notification to each recipient AND room:member-joined', async () => {
+    const channel = fakeChannel();
+    const { io, to, emit } = fakeIo();
+
+    await handleMessage(
+      channel as never,
+      makeMsg('user.joined', { roomId, userId: joiner }),
+      client,
+      io
+    );
+
+    expect(to).toHaveBeenCalledWith(`user:${owner}`);
+    expect(to).toHaveBeenCalledWith(`user:${third}`);
+    expect(to).toHaveBeenCalledWith(`room:${roomId}`);
+    expect(emit).toHaveBeenCalledWith(
+      'notification',
+      expect.objectContaining({ type: 'user.joined', roomId })
+    );
+    expect(emit).toHaveBeenCalledWith('room:member-joined', { roomId, userId: joiner });
+  });
+
+  it('draw.completed -> emits room:draw-completed to the room', async () => {
+    const channel = fakeChannel();
+    const { io, to, emit } = fakeIo();
+
+    await handleMessage(channel as never, makeMsg('draw.completed', { roomId }), client, io);
+
+    expect(to).toHaveBeenCalledWith(`room:${roomId}`);
+    expect(emit).toHaveBeenCalledWith('room:draw-completed', { roomId });
   });
 });

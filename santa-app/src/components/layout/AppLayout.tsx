@@ -1,5 +1,6 @@
 import { ErrorBoundary } from 'react-error-boundary';
 import { Outlet, useLocation } from 'react-router-dom';
+import { SocketNotifications } from '@/features/socket/SocketNotifications';
 import { ErrorFallback } from '../ErrorFallback';
 import { Sidebar } from './Sidebar';
 import { BottomNav } from './BottomNav';
@@ -11,6 +12,7 @@ export function AppLayout() {
   return (
     <div className="flex min-h-screen">
       <Sidebar />
+      <SocketNotifications />
       <main className="flex-1 pb-20 md:pb-0">
         <div className="container max-w-4xl py-6">
           <ErrorBoundary
