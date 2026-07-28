@@ -189,7 +189,10 @@ function InviteSettingsCard({ room, can }: { room: RoomDetail; can: Can }) {
         <div className="space-y-1">
           <p className="text-sm font-medium text-foreground">Invite code</p>
           <div className="flex items-center gap-2">
-            <code className="inline-block rounded-md bg-muted px-3 py-1.5 font-mono text-foreground">
+            <code
+              data-testid="invite-code"
+              className="inline-block rounded-md bg-muted px-3 py-1.5 font-mono text-foreground"
+            >
               {room.inviteCode}
             </code>
             {canInvite && (
@@ -308,7 +311,10 @@ function GifteeCard({ roomId, enabled }: { roomId: string; enabled: boolean }) {
           <>
             <p className="text-foreground">
               You&apos;re gifting{' '}
-              <span className="font-semibold text-primary">
+              <span
+                data-testid="assignment-receiver"
+                className="font-semibold text-primary"
+              >
                 {assignmentQuery.data.receiver.displayName}
               </span>
             </p>

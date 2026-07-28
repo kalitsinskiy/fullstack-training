@@ -121,9 +121,40 @@ describe('Rooms (HTTP)', () => {
     );
   });
 
-  it.todo(
-    'POST /api/rooms → 409 when the SAME creator reuses a room name (stretch); a different user may reuse it',
-  );
+  it('POST /api/rooms → 409 when the SAME creator reuses a room name; a different user may reuse it', async () => {
+    const { token } = await seedUserWithToken({ displayName: 'Owner' });
+
+    await request(app.getHttpServer())
+      .post('/api/rooms')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Office Secret Santa' })
+      .expect(201);
+
+    // Same owner, same name → rejected.
+    await request(app.getHttpServer())
+      .post('/api/rooms')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Office Secret Santa' })
+      .expect(409);
+
+    // The name is only taken for *that* owner — someone else may reuse it.
+    const { token: otherToken } = await seedUserWithToken({
+      displayName: 'Other',
+    });
+
+    await request(app.getHttpServer())
+      .post('/api/rooms')
+      .set('Authorization', `Bearer ${otherToken}`)
+      .send({ name: 'Office Secret Santa' })
+      .expect(201);
+
+    // A different name for the original owner is still fine.
+    await request(app.getHttpServer())
+      .post('/api/rooms')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Family Secret Santa' })
+      .expect(201);
+  });
 
   it("GET /api/rooms?page=1&limit=2 → returns the caller's rooms, paginated", async () => {
     const { token } = await seedUserWithToken();

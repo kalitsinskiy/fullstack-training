@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   Logger,
@@ -55,6 +56,14 @@ export class RoomsService {
 
   async create(dto: CreateRoomDto, creatorId: string): Promise<Room> {
     const creatorObjectId = new Types.ObjectId(creatorId);
+
+    const existing = await this.roomModel
+      .findOne({ creatorId: creatorObjectId, name: dto.name })
+      .exec();
+    if (existing) {
+      throw new ConflictException('You already have a room with that name');
+    }
+
     const room = await this.roomModel.create({
       name: dto.name,
       creatorId: creatorObjectId,
