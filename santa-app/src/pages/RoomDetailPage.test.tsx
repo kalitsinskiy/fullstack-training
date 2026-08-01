@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { Routes, Route } from 'react-router-dom';
 import { server } from '@/test/mocks/server';
-import { renderWithProviders, screen, waitFor } from '@/test/render';
+import { renderWithProviders, screen, waitFor, within } from '@/test/render';
 import { RoomDetailPage } from './RoomDetailPage';
 
 const TOKEN_KEY = 'santa.accessToken';
@@ -88,6 +88,16 @@ describe('RoomDetailPage', () => {
     expect(screen.getByText('Bob')).toBeInTheDocument();
   });
 
+  it('renders role badges for each participant', async () => {
+    server.use(
+      http.get('/api/rooms/:id', () => HttpResponse.json(PENDING_ROOM)),
+    );
+    renderRoom();
+    await screen.findByText('Office Party');
+    expect(screen.getByText('owner')).toBeInTheDocument();
+    expect(screen.getAllByText('member')).toHaveLength(2);
+  });
+
   it('renders status in description', async () => {
     server.use(
       http.get('/api/rooms/:id', () => HttpResponse.json(PENDING_ROOM)),
@@ -107,14 +117,124 @@ describe('RoomDetailPage', () => {
     ).toBeInTheDocument();
   });
 
-  it('shows existing wishlist items', async () => {
+  it('shows existing wishlist items as prefilled inputs', async () => {
     server.use(
       http.get('/api/rooms/:id', () => HttpResponse.json(PENDING_ROOM)),
     );
     renderRoom();
     await screen.findByText('Office Party');
-    expect(await screen.findByText('Bicycle')).toBeInTheDocument();
-    expect(screen.getByText('Book')).toBeInTheDocument();
+    expect(await screen.findByDisplayValue('Bicycle')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Book')).toBeInTheDocument();
+  });
+
+  it('adds a new wishlist input row when "Add item" is clicked', async () => {
+    server.use(
+      http.get('/api/rooms/:id', () => HttpResponse.json(PENDING_ROOM)),
+    );
+    renderRoom();
+    await screen.findByDisplayValue('Bicycle');
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /add item/i }));
+
+    expect(screen.getByPlaceholderText('Gift idea 3')).toBeInTheDocument();
+  });
+
+  it('removes a wishlist item row when X is clicked', async () => {
+    server.use(
+      http.get('/api/rooms/:id', () => HttpResponse.json(PENDING_ROOM)),
+    );
+    renderRoom();
+    await screen.findByDisplayValue('Bicycle');
+
+    const user = userEvent.setup();
+    const removeButtons = screen.getAllByRole('button', {
+      name: /remove item/i,
+    });
+    await user.click(removeButtons[0]);
+
+    expect(screen.queryByDisplayValue('Bicycle')).not.toBeInTheDocument();
+    expect(screen.getByDisplayValue('Book')).toBeInTheDocument();
+  });
+
+  it('Save wishlist button fires PUT /api/rooms/:id/wishlist and shows toast', async () => {
+    let savedItems: unknown = null;
+    server.use(
+      http.get('/api/rooms/:id', () => HttpResponse.json(PENDING_ROOM)),
+      http.put('/api/rooms/:id/wishlist', async ({ request }) => {
+        savedItems = await request.json();
+        return HttpResponse.json({
+          userId: 'user-1',
+          roomId: 'room-1',
+          items: ['Bicycle', 'Book'],
+        });
+      }),
+    );
+    renderRoom();
+    await screen.findByText('Office Party');
+
+    const user = userEvent.setup();
+    await screen.findByDisplayValue('Bicycle');
+    await user.click(screen.getByRole('button', { name: /save wishlist/i }));
+
+    await waitFor(() => expect(savedItems).not.toBeNull());
+    expect(await screen.findByText(/wishlist updated/i)).toBeInTheDocument();
+  });
+
+  it('draw dialog shows budget input and currency select defaulting to UAH', async () => {
+    server.use(
+      http.get('/api/rooms/:id', () => HttpResponse.json(PENDING_ROOM)),
+    );
+    renderRoom();
+
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole('button', { name: /draw names/i }),
+    );
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByPlaceholderText(/amount/i)).toBeInTheDocument();
+    const currencySelect = within(dialog).getByRole('combobox');
+    expect(currencySelect).toBeInTheDocument();
+    expect((currencySelect as HTMLSelectElement).value).toBe('UAH');
+  });
+
+  it('draw sends budget and currency to the API when provided', async () => {
+    let drawBody: unknown = null;
+    server.use(
+      http.get('/api/rooms/:id', () => HttpResponse.json(PENDING_ROOM)),
+      http.post('/api/rooms/:id/draw', async ({ request }) => {
+        drawBody = await request.json();
+        return HttpResponse.json({ ...DRAWN_ROOM });
+      }),
+    );
+    renderRoom();
+
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole('button', { name: /draw names/i }),
+    );
+
+    const dialog = await screen.findByRole('dialog');
+    await user.type(within(dialog).getByPlaceholderText(/amount/i), '50');
+    await user.selectOptions(within(dialog).getByRole('combobox'), 'USD');
+
+    // Pick the first enabled day in the calendar
+    const allButtons = within(dialog).getAllByRole('button');
+    const dayButton = allButtons.find(
+      (btn) =>
+        /^\d{1,2}$/.test(btn.textContent?.trim() ?? '') &&
+        !(btn as HTMLButtonElement).disabled,
+    );
+    expect(dayButton).toBeTruthy();
+    await user.click(dayButton!);
+
+    await user.click(
+      within(dialog).getByRole('button', { name: /draw names/i }),
+    );
+
+    await waitFor(() => expect(drawBody).not.toBeNull());
+    expect(drawBody).toMatchObject({ budget: 50, currency: 'USD' });
   });
 
   it('shows exchange date for drawn room', async () => {
@@ -145,31 +265,6 @@ describe('RoomDetailPage', () => {
     expect(await screen.findByText(/room not found/i)).toBeInTheDocument();
   });
 
-  it('Save wishlist button fires PUT /api/rooms/:id/wishlist and shows toast', async () => {
-    let savedItems: unknown = null;
-    server.use(
-      http.get('/api/rooms/:id', () => HttpResponse.json(PENDING_ROOM)),
-      http.put('/api/rooms/:id/wishlist', async ({ request }) => {
-        savedItems = await request.json();
-        return HttpResponse.json({
-          userId: 'user-1',
-          roomId: 'room-1',
-          items: ['Bicycle'],
-        });
-      }),
-    );
-    renderRoom();
-    await screen.findByText('Office Party');
-
-    const user = userEvent.setup();
-    const input = await screen.findByPlaceholderText(/one gift idea per line/i);
-    await user.type(input, 'Bicycle');
-    await user.click(screen.getByRole('button', { name: /save wishlist/i }));
-
-    await waitFor(() => expect(savedItems).not.toBeNull());
-    expect(await screen.findByText(/wishlist updated/i)).toBeInTheDocument();
-  });
-
   it('shows giftee card for drawn room', async () => {
     server.use(
       http.get('/api/rooms/:id', () => HttpResponse.json(DRAWN_ROOM)),
@@ -187,7 +282,6 @@ describe('RoomDetailPage', () => {
     await screen.findByText('Office Party');
     expect(await screen.findByText(/you're gifting/i)).toBeInTheDocument();
     expect(await screen.findByText('Chocolate')).toBeInTheDocument();
-    // Giftee name is rendered inside a <strong> in "You're gifting Bob" sentence
     expect(
       await screen.findByText(
         (_, el) => el?.tagName === 'STRONG' && el.textContent === 'Bob',

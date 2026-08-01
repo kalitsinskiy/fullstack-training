@@ -147,6 +147,7 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_API_URL: ""
+        VITE_WS_URL: ""
     container_name: santa-app
     ports:
       - '5173:80'

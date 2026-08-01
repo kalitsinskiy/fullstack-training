@@ -5,7 +5,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { DayPicker } from 'react-day-picker';
-import { Gift, CalendarDays, MessageCircle, RefreshCw, Trash2 } from 'lucide-react';
+import {
+  Gift,
+  CalendarDays,
+  MessageCircle,
+  RefreshCw,
+  Trash2,
+  Plus,
+  X,
+} from 'lucide-react';
 import { api, getApiErrorMessage } from '@/lib/api';
 import { useAuth } from '@/features/auth/useAuth';
 import { usePermissions } from '@/features/rooms/usePermissions';
@@ -25,13 +33,23 @@ import { Link } from 'react-router-dom';
 import { useSocket } from '@/hooks/useSocket';
 import type { RoomDetail, Wishlist, Assignment } from '@/types/api';
 
+const CURRENCIES = [
+  { code: 'UAH', symbol: '₴', label: 'UAH' },
+  { code: 'USD', symbol: '$', label: 'USD' },
+  { code: 'EUR', symbol: '€', label: 'EUR' },
+  { code: 'GBP', symbol: '£', label: 'GBP' },
+  { code: 'PLN', symbol: 'zł', label: 'PLN' },
+];
+
 export function RoomDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [wishlistInput, setWishlistInput] = useState('');
+  const [wishlistItems, setWishlistItems] = useState<string[]>(['']);
   const [drawDialogOpen, setDrawDialogOpen] = useState(false);
   const [exchangeDate, setExchangeDate] = useState<Date | undefined>(undefined);
+  const [drawBudget, setDrawBudget] = useState('');
+  const [drawCurrency, setDrawCurrency] = useState('UAH');
   const [changeDateOpen, setChangeDateOpen] = useState(false);
   const [changeDate, setChangeDate] = useState<Date | undefined>(undefined);
 
@@ -105,13 +123,21 @@ export function RoomDetailPage() {
   const drawMutation = useMutation({
     mutationFn: async (date: string) => {
       if (!can('room:draw')) return;
-      await api.post(`/api/rooms/${id}/draw`, { exchangeDate: date });
+      const budget = drawBudget ? Number(drawBudget) : undefined;
+      const currency = drawCurrency.trim() || undefined;
+      await api.post(`/api/rooms/${id}/draw`, {
+        exchangeDate: date,
+        ...(budget !== undefined && { budget }),
+        ...(currency !== undefined && { currency }),
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['rooms', id] });
       queryClient.invalidateQueries({ queryKey: ['rooms', id, 'assignment'] });
       setDrawDialogOpen(false);
       setExchangeDate(undefined);
+      setDrawBudget('');
+      setDrawCurrency('USD');
       toast.success('Names have been drawn!');
     },
     onError: (error) => {
@@ -177,13 +203,32 @@ export function RoomDetailPage() {
     },
   });
 
+  useEffect(() => {
+    if (wishlist) {
+      setWishlistItems(wishlist.items.length > 0 ? wishlist.items : ['']);
+    }
+  }, [wishlist]);
+
   function handleWishlistSubmit(e: FormEvent) {
     e.preventDefault();
-    const items = wishlistInput
-      .split('\n')
-      .map((item) => item.trim())
-      .filter(Boolean);
+    const items = wishlistItems.map((i) => i.trim()).filter(Boolean);
     updateWishlistMutation.mutate(items);
+  }
+
+  function updateWishlistItem(index: number, value: string) {
+    setWishlistItems((prev) =>
+      prev.map((item, i) => (i === index ? value : item)),
+    );
+  }
+
+  function addWishlistItem() {
+    setWishlistItems((prev) => [...prev, '']);
+  }
+
+  function removeWishlistItem(index: number) {
+    setWishlistItems((prev) =>
+      prev.length === 1 ? [''] : prev.filter((_, i) => i !== index),
+    );
   }
 
   const today = new Date();
@@ -253,6 +298,33 @@ export function RoomDetailPage() {
                       disabled={{ before: today }}
                     />
                   </div>
+                  <div className="space-y-2 text-sm">
+                    <p className="text-muted-foreground">
+                      Budget per person{' '}
+                      <span className="italic">(optional)</span>
+                    </p>
+                    <div className="flex gap-2">
+                      <Input
+                        type="number"
+                        min={1}
+                        placeholder="Amount"
+                        value={drawBudget}
+                        onChange={(e) => setDrawBudget(e.target.value)}
+                        className="flex-1"
+                      />
+                      <select
+                        value={drawCurrency}
+                        onChange={(e) => setDrawCurrency(e.target.value)}
+                        className="w-32 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                      >
+                        {CURRENCIES.map(({ code, symbol, label }) => (
+                          <option key={code} value={code}>
+                            {symbol} {label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
                   <div className="flex justify-end gap-2 pt-1">
                     <Button
                       variant="outline"
@@ -303,7 +375,13 @@ export function RoomDetailPage() {
                 >
                   <div className="flex items-center gap-2 text-sm">
                     <span>{p.displayName}</span>
-                    <span className="rounded border border-border px-1.5 py-0.5 text-xs text-muted-foreground">
+                    <span
+                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                        p.role === 'owner'
+                          ? 'bg-primary/15 text-primary'
+                          : 'bg-muted text-muted-foreground'
+                      }`}
+                    >
                       {p.role}
                     </span>
                   </div>
@@ -454,30 +532,59 @@ export function RoomDetailPage() {
             <CardTitle>Your wishlist</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {wishlist && wishlist.items.length > 0 && (
+            {can('wishlist:set') ? (
+              <form onSubmit={handleWishlistSubmit} className="space-y-3">
+                <div className="space-y-2">
+                  {wishlistItems.map((item, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <Input
+                        placeholder={`Gift idea ${i + 1}`}
+                        value={item}
+                        onChange={(e) => updateWishlistItem(i, e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="outline"
+                        className="shrink-0 size-9 text-muted-foreground hover:text-destructive hover:border-destructive/50"
+                        onClick={() => removeWishlistItem(i)}
+                        aria-label="Remove item"
+                      >
+                        <X className="size-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={addWishlistItem}
+                  >
+                    <Plus className="size-3.5" />
+                    Add item
+                  </Button>
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={updateWishlistMutation.isPending}
+                  >
+                    {updateWishlistMutation.isPending
+                      ? 'Saving...'
+                      : 'Save wishlist'}
+                  </Button>
+                </div>
+              </form>
+            ) : wishlist && wishlist.items.length > 0 ? (
               <ul className="list-inside list-disc text-sm">
                 {wishlist.items.map((item, i) => (
                   <li key={i}>{item}</li>
                 ))}
               </ul>
-            )}
-            {can('wishlist:set') && (
-              <form onSubmit={handleWishlistSubmit} className="space-y-2">
-                <Input
-                  placeholder="One gift idea per line"
-                  value={wishlistInput}
-                  onChange={(e) => setWishlistInput(e.target.value)}
-                />
-                <Button
-                  type="submit"
-                  size="sm"
-                  disabled={updateWishlistMutation.isPending}
-                >
-                  {updateWishlistMutation.isPending
-                    ? 'Saving...'
-                    : 'Save wishlist'}
-                </Button>
-              </form>
+            ) : (
+              <p className="text-sm text-muted-foreground">No wishlist yet.</p>
             )}
           </CardContent>
         </Card>

@@ -2,7 +2,7 @@ import { Bell } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { api, getApiErrorMessage } from '@/lib/api';
+import { notificationsApi, getApiErrorMessage } from '@/lib/api';
 import { PageHeader } from '@/components/PageHeader';
 import { EmptyState } from '@/components/EmptyState';
 import { Button } from '@/components/ui/button';
@@ -61,7 +61,7 @@ export function NotificationsPage() {
   const { data, isLoading, isError, error } = useQuery<NotificationsResponse>({
     queryKey: ['notifications', 'list'],
     queryFn: async () => {
-      const { data } = await api.get<NotificationsResponse>(
+      const { data } = await notificationsApi.get<NotificationsResponse>(
         `/api/notifications?page=1&limit=${PAGE_LIMIT}`,
       );
       return data;
@@ -69,7 +69,7 @@ export function NotificationsPage() {
   });
 
   const markReadMutation = useMutation({
-    mutationFn: (id: string) => api.patch(`/api/notifications/${id}/read`),
+    mutationFn: (id: string) => notificationsApi.patch(`/api/notifications/${id}/read`),
     onSuccess: (_, id) => {
       queryClient.setQueryData<NotificationsResponse>(
         ['notifications', 'list'],
@@ -97,7 +97,7 @@ export function NotificationsPage() {
   });
 
   const markAllReadMutation = useMutation({
-    mutationFn: () => api.patch('/api/notifications/read-all'),
+    mutationFn: () => notificationsApi.patch('/api/notifications/read-all'),
     onSuccess: () => {
       queryClient.setQueryData<NotificationsResponse>(
         ['notifications', 'list'],

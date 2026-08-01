@@ -8,37 +8,45 @@ export const tokenStore = {
   clear: () => localStorage.removeItem(TOKEN_KEY),
 };
 
-/**
- * Pre-configured axios instance for santa-api.
- * - Attaches the JWT bearer token on every request.
- * - On 401, clears the token and bounces to /login (handled by AuthGuard
- *   once the store is empty).
- */
-export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
-  headers: { 'Content-Type': 'application/json' },
-});
-
-api.interceptors.request.use((config) => {
-  const token = tokenStore.get();
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-api.interceptors.response.use(
-  (response) => response,
-  (error: AxiosError) => {
-    if (error.response?.status === 401) {
-      tokenStore.clear();
-      // Hard-redirect avoids a stale auth state lingering in memory.
-      if (window.location.pathname !== '/login') {
-        window.location.assign('/login');
-      }
+function addInterceptors(instance: ReturnType<typeof axios.create>) {
+  instance.interceptors.request.use((config) => {
+    const token = tokenStore.get();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
-    return Promise.reject(error);
-  },
+    return config;
+  });
+
+  instance.interceptors.response.use(
+    (response) => response,
+    (error: AxiosError) => {
+      if (error.response?.status === 401) {
+        tokenStore.clear();
+        if (window.location.pathname !== '/login') {
+          window.location.assign('/login');
+        }
+      }
+      return Promise.reject(error);
+    },
+  );
+
+  return instance;
+}
+
+/** HTTP client for santa-api (auth, rooms, users). */
+export const api = addInterceptors(
+  axios.create({
+    baseURL: import.meta.env.VITE_API_URL,
+    headers: { 'Content-Type': 'application/json' },
+  }),
+);
+
+/** HTTP client for santa-notifications (notifications, messages). */
+export const notificationsApi = addInterceptors(
+  axios.create({
+    baseURL: import.meta.env.VITE_WS_URL,
+    headers: { 'Content-Type': 'application/json' },
+  }),
 );
 
 /** Narrow an unknown error into a user-facing message. */

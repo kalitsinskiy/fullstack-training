@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { MessageCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { api, getApiErrorMessage } from '@/lib/api';
+import { notificationsApi, getApiErrorMessage } from '@/lib/api';
 import { useSocket } from '@/hooks/useSocket';
 import { useUnreadMessages } from '@/features/messages/useUnreadMessages';
 import { ChatPanel } from '@/features/messages/ChatPanel';
@@ -29,7 +29,7 @@ export function MessagesPage() {
   const { data, isLoading, isError, error } = useQuery<MessagesResponse>({
     queryKey: ['messages', roomId],
     queryFn: async () => {
-      const { data } = await api.get<MessagesResponse>(
+      const { data } = await notificationsApi.get<MessagesResponse>(
         `/api/messages/${roomId}`,
       );
       return data;
@@ -76,7 +76,7 @@ export function MessagesPage() {
     if (!roomId) return;
     setSending(true);
     try {
-      const { data: sent } = await api.post<ChatMessage>('/api/messages', {
+      const { data: sent } = await notificationsApi.post<ChatMessage>('/api/messages', {
         roomId,
         to: activeThread,
         text,
