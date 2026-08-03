@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { tokenStore } from '@/lib/api';
+import { useAuth } from '@/features/auth/useAuth';
 
 interface SocketContextValue {
   socket: Socket | null;
@@ -17,6 +18,7 @@ const SocketContext = createContext<SocketContextValue>({
 });
 
 export function SocketProvider({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated } = useAuth();
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
@@ -47,7 +49,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       s.disconnect();
       setSocket(null);
     };
-  }, []);
+  }, [isAuthenticated]);
 
   const joinRoom = useCallback((roomId: string) => {
     socket?.emit('join-room', roomId);

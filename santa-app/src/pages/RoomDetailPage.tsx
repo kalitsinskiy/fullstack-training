@@ -194,7 +194,7 @@ export function RoomDetailPage() {
             <div>
               <p className="mb-1.5 text-sm font-medium">Invite code</p>
               <div className="flex gap-2">
-                <Input readOnly value={room.inviteCode} className="font-mono" />
+                <Input readOnly value={room.inviteCode} className="font-mono" data-testid="invite-code" />
                 {canInvite && (
                   <Button
                     type="button"

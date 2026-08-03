@@ -8,7 +8,13 @@ const DLX = 'santa.dlx';
 const DLQ = 'santa.dlq';
 const QUEUE = 'notifications.events';
 
-const ROUTING_KEYS = ['user.joined', 'draw.completed', 'wishlist.updated'];
+const ROUTING_KEYS = ['room.created', 'user.joined', 'draw.completed', 'wishlist.updated'];
+
+interface RoomCreatedEvent {
+  roomId: string;
+  roomName: string;
+  createdBy: string;
+}
 
 interface UserJoinedEvent {
   roomId: string;
@@ -24,6 +30,35 @@ interface DrawCompletedEvent {
 interface WishlistUpdatedEvent {
   roomId: string;
   userId: string;
+}
+
+async function handleRoomCreated(
+  data: RoomCreatedEvent,
+  io: SocketServer,
+  messageId?: string,
+): Promise<void> {
+  const key = messageId ? `${messageId}:${data.createdBy}` : undefined;
+  if (key) {
+    const exists = await NotificationModel.findOne({ messageId: key }).lean().exec();
+    if (exists) return;
+  }
+
+  const notification = await NotificationModel.create({
+    userId: data.createdBy,
+    type: 'room.created' as NotificationType,
+    roomId: data.roomId,
+    message: `Your room "${data.roomName}" was created successfully`,
+    messageId: key,
+    read: false,
+  });
+
+  io.to(`user:${data.createdBy}`).emit('notification', {
+    id: notification._id,
+    type: notification.type,
+    message: notification.message,
+    roomId: notification.roomId,
+    createdAt: notification.createdAt,
+  });
 }
 
 async function handleUserJoined(
@@ -184,6 +219,9 @@ export async function startConsumer(
       const messageId = msg.properties.messageId as string | undefined;
 
       switch (routingKey) {
+        case 'room.created':
+          await handleRoomCreated(data as unknown as RoomCreatedEvent, io, messageId);
+          break;
         case 'user.joined':
           await handleUserJoined(data as unknown as UserJoinedEvent, io, messageId);
           break;

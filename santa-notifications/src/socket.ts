@@ -3,6 +3,7 @@ import { createAdapter } from '@socket.io/redis-adapter';
 import { createHmac } from 'crypto';
 import type { Server as HttpServer } from 'http';
 import type Redis from 'ioredis';
+import { getSantaApiClient } from './services/santa-api-client';
 
 interface JwtPayload {
   sub: string;
@@ -66,10 +67,16 @@ export async function createSocketServer(
   io.on('connection', (socket) => {
     const userId = socket.data.user.sub as string;
     socket.join(`user:${userId}`);
+    void redisClient.sadd('online:users', userId);
 
-    socket.on('join-room', (roomId: string) => {
-      if (typeof roomId === 'string' && roomId.length > 0) {
+    socket.on('join-room', async (roomId: string) => {
+      if (typeof roomId !== 'string' || !roomId.length) return;
+      try {
+        const room = await getSantaApiClient().getRoomById(roomId);
+        if (!room.memberIds.includes(userId)) return;
         socket.join(`room:${roomId}`);
+      } catch {
+        // room not found or internal API unavailable — deny silently
       }
     });
 
@@ -79,7 +86,13 @@ export async function createSocketServer(
       }
     });
 
-    socket.on('disconnect', () => {
+    socket.on('disconnect', async () => {
+      // Only remove from the set when the user has no remaining open sockets
+      // (multi-tab safe: socket rooms use the user:{id} room to count active connections)
+      const remainingSockets = await io.in(`user:${userId}`).fetchSockets();
+      if (remainingSockets.length === 0) {
+        await redisClient.srem('online:users', userId);
+      }
       console.log(`User ${userId} disconnected`);
     });
   });
