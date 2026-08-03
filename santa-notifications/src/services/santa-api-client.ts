@@ -1,10 +1,10 @@
-export interface UserDetails {
+interface UserDetails {
   id: string;
   displayName: string;
   email: string;
 }
 
-export interface RoomDetails {
+interface RoomDetails {
   id: string;
   name: string;
   memberIds: string[];
@@ -92,14 +92,14 @@ class SantaApiClient {
 
   async getRelations(
     roomId: string,
-    userId: string,
+    userId: string
   ): Promise<{ gifteeId: string | null; santaId: string | null }> {
     return this.circuitBreaker.call(() =>
       withRetry(() =>
         this.get<{ gifteeId: string | null; santaId: string | null }>(
-          `/api/internal/rooms/${roomId}/relations/${userId}`,
-        ),
-      ),
+          `/api/internal/rooms/${roomId}/relations/${userId}`
+        )
+      )
     );
   }
 

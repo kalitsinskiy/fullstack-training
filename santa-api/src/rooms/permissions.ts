@@ -18,7 +18,7 @@ export type Permission =
  * To add a new role, add ONE entry here (and to the `RoomRole` union). Nothing
  * else — guard, routes, decorators, frontend — needs to change.
  */
-export const ROLE_PERMISSIONS: Record<RoomRole, readonly Permission[]> = {
+const ROLE_PERMISSIONS: Record<RoomRole, readonly Permission[]> = {
   owner: [
     'room:view',
     'room:draw',
@@ -34,12 +34,4 @@ export const ROLE_PERMISSIONS: Record<RoomRole, readonly Permission[]> = {
 /** Resolve a role to its permission set. The single source of role → permissions. */
 export function permissionsForRole(role: RoomRole): readonly Permission[] {
   return ROLE_PERMISSIONS[role] ?? [];
-}
-
-/** True if the role's preset grants the given permission. */
-export function roleHasPermission(
-  role: RoomRole,
-  permission: Permission,
-): boolean {
-  return permissionsForRole(role).includes(permission);
 }

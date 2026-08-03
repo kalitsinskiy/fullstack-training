@@ -216,6 +216,8 @@ export class RoomsService {
     id: string,
     requesterId: string,
     exchangeDate: string,
+    budget?: number,
+    currency?: string,
   ): Promise<Room> {
     if (!Types.ObjectId.isValid(id))
       throw new NotFoundException('Room not found');
@@ -244,6 +246,8 @@ export class RoomsService {
           drawDate: new Date(),
           exchangeDate: new Date(exchangeDate),
           assignments,
+          ...(budget !== undefined && { budget }),
+          ...(currency !== undefined && { currency }),
         },
         { new: true },
       )

@@ -2,7 +2,7 @@ import fp from 'fastify-plugin';
 import jwt from '@fastify/jwt';
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 
-export interface JwtUser {
+interface JwtUser {
   sub: string;
   email: string;
   role: 'user' | 'admin';

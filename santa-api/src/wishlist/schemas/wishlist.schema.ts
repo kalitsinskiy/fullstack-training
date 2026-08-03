@@ -1,7 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument, Types } from 'mongoose';
-
-export type WishlistDocument = HydratedDocument<Wishlist>;
+import { Types } from 'mongoose';
 
 @Schema({ timestamps: true })
 export class Wishlist {

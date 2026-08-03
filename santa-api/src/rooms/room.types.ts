@@ -27,12 +27,6 @@ export interface Room {
   viewerPermissions?: Permission[];
 }
 
-/** Persisted giver -> receiver pairing produced by the draw. */
-export interface Assignment {
-  giverId: string;
-  receiverId: string;
-}
-
 /** Shape returned by GET /rooms/:id/assignment (your giftee). */
 export interface AssignmentView {
   receiver: {

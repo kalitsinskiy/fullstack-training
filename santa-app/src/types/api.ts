@@ -18,10 +18,10 @@ export interface AuthResponse {
   displayName?: string;
 }
 
-export type RoomStatus = 'pending' | 'drawn';
+type RoomStatus = 'pending' | 'drawn';
 
 /** A participant's role within a single room. */
-export type RoomRole = 'owner' | 'member';
+type RoomRole = 'owner' | 'member';
 
 /** Room capabilities. Gate UI on these permissions, never on the role. */
 export type Permission =
@@ -33,14 +33,7 @@ export type Permission =
   | 'room:delete'
   | 'wishlist:set';
 
-export interface RoomSummary {
-  id: string;
-  name: string;
-  status: RoomStatus;
-  participantCount: number;
-}
-
-export type RoomMember = Pick<User, 'id' | 'displayName'> & { role: RoomRole };
+type RoomMember = Pick<User, 'id' | 'displayName'> & { role: RoomRole };
 
 export interface RoomDetail {
   id: string;
@@ -97,13 +90,13 @@ export interface ChatMessage {
   direction: 'in' | 'out';
 }
 
-export interface GifteeThread {
+interface GifteeThread {
   id: string;
   name: string | null;
   messages: ChatMessage[];
 }
 
-export interface SantaThread {
+interface SantaThread {
   messages: ChatMessage[];
 }
 

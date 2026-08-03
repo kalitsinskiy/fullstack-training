@@ -141,6 +141,8 @@ describe('RoomsController', () => {
         'room-id',
         'user-id',
         '2026-12-24',
+        undefined,
+        undefined,
       );
       expect(result).toEqual(fakeRoom);
     });

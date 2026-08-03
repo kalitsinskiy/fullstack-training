@@ -167,7 +167,13 @@ export class RoomsController {
     @Body() body: DrawRoomDto,
     @CurrentUser('id') userId: string,
   ): Promise<Room> {
-    return this.roomsService.draw(id, userId, body.exchangeDate);
+    return this.roomsService.draw(
+      id,
+      userId,
+      body.exchangeDate,
+      body.budget,
+      body.currency,
+    );
   }
 
   @Get(':id/assignment')

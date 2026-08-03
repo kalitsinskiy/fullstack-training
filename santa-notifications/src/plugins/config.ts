@@ -1,7 +1,7 @@
 import fp from 'fastify-plugin';
 import { FastifyInstance } from 'fastify';
 
-export interface AppConfig {
+interface AppConfig {
   port: number;
   env: string;
   mongoUrl: string;
