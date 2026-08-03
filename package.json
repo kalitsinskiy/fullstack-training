@@ -4,6 +4,8 @@
   "description": "Fullstack JavaScript/TypeScript training repository with practical examples and test-driven exercises",
   "main": "index.js",
   "scripts": {
+    "prepare": "husky",
+    "ci": "for app in santa-api santa-notifications santa-app; do echo \"▶ CI: $app\"; ( cd \"$app\" && npm run lint && npm run type-check && npm test ) || exit 1; done",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:module": "jest",
@@ -25,6 +27,10 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "@commitlint/cli": "^19.6.0",
+    "@commitlint/config-conventional": "^19.6.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.10",
     "@babel/core": "^7.24.0",
     "@babel/preset-env": "^7.24.0",
     "@babel/preset-react": "^7.23.3",
