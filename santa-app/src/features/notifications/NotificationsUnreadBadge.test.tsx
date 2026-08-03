@@ -2,11 +2,11 @@ import { describe, it, expect } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { renderWithProviders, screen, waitFor } from '@/test/render';
 import { server } from '@/test/mocks/server';
-import { UnreadBadge } from './UnreadBadge';
+import { NotificationsUnreadBadge } from './NotificationsUnreadBadge';
 
 describe('UnreadBadge', () => {
   it('shows the unread count when > 0', async () => {
-    renderWithProviders(<UnreadBadge />);
+    renderWithProviders(<NotificationsUnreadBadge />);
 
     expect(
       await screen.findByLabelText(/1 unread notifications/i),
@@ -26,7 +26,7 @@ describe('UnreadBadge', () => {
       ),
     );
 
-    const { container } = renderWithProviders(<UnreadBadge />);
+    const { container } = renderWithProviders(<NotificationsUnreadBadge />);
 
     await waitFor(() => expect(container.querySelector('span')).toBeNull());
   });

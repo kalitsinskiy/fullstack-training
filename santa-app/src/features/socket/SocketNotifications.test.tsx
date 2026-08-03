@@ -42,4 +42,38 @@ describe('SocketNotifications', () => {
     expect(toast).toHaveBeenCalledWith('The draw is complete!', { icon: '🎉' });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['notifications'] });
   });
+
+  it('toasts on an incoming anonymous message', () => {
+    const { socket, server: fire } = createMockSocket();
+    const qc = new QueryClient();
+
+    render(
+      <QueryClientProvider client={qc}>
+        <SocketContext.Provider
+          value={{
+            socket: socket as never,
+            isConnected: true,
+            joinRoom: () => {},
+            leaveRoom: () => {},
+          }}
+        >
+          <SocketNotifications />
+        </SocketContext.Provider>
+      </QueryClientProvider>,
+    );
+
+    fire('message:received', {
+      id: 'm1',
+      roomId: 'r1',
+      text: 'test',
+      createdAt: new Date().toISOString(),
+      direction: 'in',
+      thread: 'giftee',
+    });
+
+    expect(toast).toHaveBeenCalledWith(
+      'New anonymous message 💬',
+      expect.objectContaining({ description: 'test' }),
+    );
+  });
 });

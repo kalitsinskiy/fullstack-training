@@ -27,6 +27,11 @@ export interface Room {
   viewerPermissions?: Permission[];
 }
 
+export interface RoomRelations {
+  gifteeId: string | null;
+  santaId: string | null;
+}
+
 /** Persisted giver -> receiver pairing produced by the draw. */
 export interface Assignment {
   giverId: string;

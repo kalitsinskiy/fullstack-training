@@ -1,12 +1,9 @@
 import { RoomDetail } from '@/types/api';
 import { useEditRoom } from './hooks';
 import { useForm } from 'react-hook-form';
-import {
-  CreateRoomFormInput,
-  createRoomSchema,
-  CURRENCIES,
-} from '@/schemas/rooms';
+import { EditRoomFormInput, editRoomSchema, CURRENCIES } from '@/schemas/rooms';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { getApiErrorMessage } from '@/lib/api';
 import {
@@ -19,6 +16,7 @@ import {
 } from '@/components/ui/dialog';
 import { FormField } from '@/components/ui/form-field';
 import { SelectField } from '@/components/ui/select-field';
+import { DateField } from '@/components/ui/date-field';
 import { Button } from '@/components/ui/button';
 
 interface Props {
@@ -29,26 +27,34 @@ interface Props {
 
 export function EditRoomDialog({ room, open, onOpenChange }: Props) {
   const edit = useEditRoom(room.id);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
   const {
     register,
     handleSubmit,
     control,
     formState: { errors },
-  } = useForm<CreateRoomFormInput>({
-    resolver: zodResolver(createRoomSchema),
+  } = useForm<EditRoomFormInput>({
+    resolver: zodResolver(editRoomSchema),
     defaultValues: {
       name: room.name,
       budget: room.budget,
       currency: room.currency ?? '$',
+      exchangeDate: room.exchangeDate ? new Date(room.exchangeDate) : undefined,
     },
   });
 
-  async function onSubmit(values: CreateRoomFormInput) {
+  async function onSubmit(values: EditRoomFormInput) {
     try {
       await edit.mutateAsync({
         name: values.name.trim(),
         ...(values.budget
           ? { budget: values.budget, currency: values.currency ?? '$' }
+          : {}),
+        ...(values.exchangeDate
+          ? { exchangeDate: format(values.exchangeDate, 'yyyy-MM-dd') }
           : {}),
       });
 
@@ -61,11 +67,11 @@ export function EditRoomDialog({ room, open, onOpenChange }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit room</DialogTitle>
           <DialogDescription>
-            Update the room name and gift budget.
+            Update the room name, gift budget and exchange date.
           </DialogDescription>
         </DialogHeader>
         <form
@@ -94,6 +100,16 @@ export function EditRoomDialog({ room, open, onOpenChange }: Props) {
               error={errors.currency?.message}
             />
           </div>
+
+          <DateField
+            control={control}
+            name="exchangeDate"
+            label="Gift exchange date"
+            minDate={today}
+            placeholder="No date set yet"
+            error={errors.exchangeDate?.message}
+          />
+
           <DialogFooter>
             <Button
               type="button"

@@ -24,6 +24,12 @@ export const createRoomSchema = z.object({
 
 export type CreateRoomFormInput = z.infer<typeof createRoomSchema>;
 
+export const editRoomSchema = createRoomSchema.extend({
+  exchangeDate: z.date().optional(),
+});
+
+export type EditRoomFormInput = z.infer<typeof editRoomSchema>;
+
 export const joinRoomSchema = z.object({
   inviteCode: z
     .string()

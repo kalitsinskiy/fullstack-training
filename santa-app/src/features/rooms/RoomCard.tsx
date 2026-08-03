@@ -9,7 +9,7 @@ export function RoomCard({ room }: { room: RoomSummary }) {
 
   return (
     <Link to={`/rooms/${room.id}`} className="block focus-visible:outline-none">
-      <Card className="p-5 transition-colors hover:border-primary/40">
+      <Card className="p-5 transition-colors hover:border-primary/40 min-h-full">
         <div className="flex items-start justify-between gap-2">
           <h3 className="font-display text-lg font-semibold">{room.name}</h3>
           <Badge variant={room.status === 'drawn' ? 'drawn' : 'pending'}>

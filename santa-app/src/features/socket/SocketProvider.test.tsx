@@ -12,7 +12,8 @@ const ioMock = vi.fn(() => ({
   disconnect,
   removeAllListeners: vi.fn(),
 }));
-vi.mock('socket.io-client', () => ({ io: (...a: unknown[]) => ioMock(...a) }));
+
+vi.mock('socket.io-client', () => ({ io: () => ioMock() }));
 
 describe('SocketProvider', () => {
   beforeEach(() => {

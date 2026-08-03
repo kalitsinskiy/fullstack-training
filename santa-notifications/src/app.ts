@@ -13,6 +13,7 @@ import usersRoutes from './routes/users';
 import authPlugin from './plugins/auth';
 import santaApiPlugin from './plugins/santa-api';
 import ioPlugin from './plugins/io';
+import messageRoutes from './routes/messages';
 
 export function buildApp() {
   const app = Fastify({
@@ -52,6 +53,7 @@ export function buildApp() {
   app.register(healthRoutes);
   app.register(usersRoutes);
   app.register(notificationRoutes, { prefix: '/api/notifications' });
+  app.register(messageRoutes, { prefix: '/api/messages' });
 
   app.setErrorHandler((error: FastifyError, request, reply) => {
     if (error instanceof AppError) {

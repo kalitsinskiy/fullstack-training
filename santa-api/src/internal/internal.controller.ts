@@ -3,6 +3,7 @@ import { ApiExcludeController } from '@nestjs/swagger';
 import { ServiceKeyGuard } from './service-key.guard';
 import { UsersService } from '../users/users.service';
 import { RoomsService } from '../rooms/rooms.service';
+import type { RoomRelations } from '../rooms/room.types';
 
 @ApiExcludeController()
 @Controller('internal')
@@ -31,5 +32,13 @@ export class InternalController {
     @Param('id') id: string,
   ): Promise<{ id: string; name: string; memberIds: string[] }> {
     return this.roomsService.getParticipantIds(id);
+  }
+
+  @Get('rooms/:roomId/relations/:userId')
+  getRelations(
+    @Param('roomId') roomId: string,
+    @Param('userId') userId: string,
+  ): Promise<RoomRelations> {
+    return this.roomsService.getRelations(roomId, userId);
   }
 }

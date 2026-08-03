@@ -1,7 +1,8 @@
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { navItems } from './navItems';
-import { UnreadBadge } from '@/features/notifications/UnreadBadge';
+import { NotificationsUnreadBadge } from '@/features/notifications/NotificationsUnreadBadge';
+import { MessagesUnreadBadge } from '@/features/messages/MessagesUnreadBadge';
 
 /** Mobile bottom tab bar (hidden on desktop, where Sidebar takes over). */
 export function BottomNav() {
@@ -20,9 +21,8 @@ export function BottomNav() {
         >
           <span className="relative">
             <Icon className="size-5" />
-            {to === '/notifications' && (
-              <UnreadBadge variant="absoluteRightTop" />
-            )}
+            {to === '/notifications' && <NotificationsUnreadBadge />}
+            {to === '/messages' && <MessagesUnreadBadge />}
           </span>
           {label}
         </NavLink>

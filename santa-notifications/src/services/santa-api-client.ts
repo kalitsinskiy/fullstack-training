@@ -13,6 +13,11 @@ export interface RoomDetails {
   memberIds: string[];
 }
 
+export interface RoomRelations {
+  gifteeId: string | null;
+  santaId: string | null;
+}
+
 export class SantaApiClient {
   private readonly breaker = new CircuitBreaker(5, 30_000);
 
@@ -28,6 +33,10 @@ export class SantaApiClient {
 
   getRoomById(id: string): Promise<RoomDetails> {
     return this.request<RoomDetails>(`/api/internal/rooms/${id}`);
+  }
+
+  getRelations(roomId: string, userId: string): Promise<RoomRelations> {
+    return this.request<RoomRelations>(`/api/internal/rooms/${roomId}/relations/${userId}`);
   }
 
   private request<T>(path: string): Promise<T> {

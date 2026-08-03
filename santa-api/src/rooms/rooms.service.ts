@@ -22,7 +22,7 @@ import {
 } from '../common/pagination';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
-import { AssignmentView, Room } from './room.types';
+import { AssignmentView, Room, RoomRelations } from './room.types';
 import { Room as RoomModel, RoomDocument } from './schemas/room.schema';
 import { permissionsForRole } from './permissions';
 import { derange } from './derangement';
@@ -524,5 +524,33 @@ export class RoomsService {
       name: room.name,
       memberIds: room.participants.map((p) => p.userId.toString()),
     };
+  }
+
+  async getRelations(roomId: string, userId: string): Promise<RoomRelations> {
+    if (!Types.ObjectId.isValid(roomId) || !Types.ObjectId.isValid(userId)) {
+      throw new NotFoundException('Room not found');
+    }
+
+    const room = await this.roomModel
+      .findById(roomId)
+      .select('assignments')
+      .lean()
+      .exec();
+
+    if (!room) {
+      throw new NotFoundException('Room not found');
+    }
+
+    const gifteeId =
+      room.assignments
+        .find((a) => a.giverId.toString() === userId)
+        ?.receiverId.toString() ?? null;
+
+    const santaId =
+      room.assignments
+        .find((a) => a.receiverId.toString() === userId)
+        ?.giverId.toString() ?? null;
+
+    return { gifteeId, santaId };
   }
 }

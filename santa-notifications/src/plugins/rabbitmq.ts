@@ -18,10 +18,25 @@ const ROUTING_KEYS = [
 declare module 'fastify' {
   interface FastifyInstance {
     rabbit?: { connection: amqp.ChannelModel; channel: amqp.Channel };
+    publishEvent: (routingKey: string, payload: Record<string, unknown>) => void;
   }
 }
 
 async function rabbitmqPlugin(fastify: FastifyInstance): Promise<void> {
+  fastify.decorate('publishEvent', (routingKey: string, payload: Record<string, unknown>) => {
+    const channel = fastify.rabbit?.channel;
+
+    if (!channel) {
+      fastify.log.debug({ routingKey }, 'publishEvent skipped — no RabbitMQ channel');
+      return;
+    }
+
+    channel.publish(EXCHANGE, routingKey, Buffer.from(JSON.stringify(payload)), {
+      persistent: true,
+      contentType: 'application/json',
+    });
+  });
+
   if (fastify.config.env === 'test') return;
 
   try {

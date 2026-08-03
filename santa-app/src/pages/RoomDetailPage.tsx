@@ -10,6 +10,7 @@ import {
   Trash2,
   RefreshCw,
   X,
+  MessageCircle,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useAuth } from '@/features/auth/useAuth';
@@ -281,6 +282,14 @@ export function RoomDetailPage() {
                   )}
                 </div>
               )}
+
+              <Button
+                variant="outline"
+                className="mt-2"
+                onClick={() => navigate(`/rooms/${room.id}/messages`)}
+              >
+                <MessageCircle className="size-4" /> Send an anonymous message
+              </Button>
             </CardContent>
           </Card>
         )}

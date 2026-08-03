@@ -18,7 +18,8 @@ jest.mock('amqplib', () => ({
 
 describe('Internal Service', () => {
   const { getApp, serviceKey } = useTestApp();
-  const { seedUser, seedOwnerAndMember } = makeSeeders(getApp);
+  const { seedUser, seedOwnerAndMember, seedDrawableRoom } =
+    makeSeeders(getApp);
 
   it('GET /api/internal/users/:id -> 200 with a valid service key', async () => {
     const { user } = await seedUser({
@@ -64,5 +65,52 @@ describe('Internal Service', () => {
     expect([...res.body.memberIds].sort()).toEqual(
       [owner.user._id.toString(), member.user._id.toString()].sort(),
     );
+  });
+
+  it('GET /api/internal/rooms/:roomId/relations/:userId -> both edges for a drawn room', async () => {
+    const { owner, m1, m2, room } = await seedDrawableRoom();
+    const id = room._id.toString();
+
+    await request(getApp().getHttpServer())
+      .post(`/api/rooms/${id}/draw`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ exchangeDate: '2026-12-24' })
+      .expect(200);
+
+    const me = owner.user._id.toString();
+    const res = await request(getApp().getHttpServer())
+      .get(`/api/internal/rooms/${id}/relations/${me}`)
+      .set('X-Service-Key', serviceKey)
+      .expect(200);
+
+    const others = [m1.user._id.toString(), m2.user._id.toString()];
+
+    expect(others).toContain(res.body.gifteeId);
+    expect(others).toContain(res.body.santaId);
+    expect(res.body.gifteeId).not.toBe(me);
+    expect(res.body.santaId).not.toBe(me);
+  });
+
+  it('GET /api/internal/rooms/:roomId/relations/:userId -> both relations are null when the room has not been drawn', async () => {
+    const { owner, room } = await seedOwnerAndMember();
+    const res = await request(getApp().getHttpServer())
+      .get(
+        `/api/internal/rooms/${room._id.toString()}/relations/${owner.user._id.toString()}`,
+      )
+      .set('X-Service-Key', serviceKey)
+      .expect(200);
+
+    expect(res.body).toEqual({ gifteeId: null, santaId: null });
+  });
+
+  it('GET /api/internal/rooms/:roomId/relations/:userId -> 401 without OR with a wrong service key', async () => {
+    const { owner, room } = await seedOwnerAndMember();
+    const url = `/api/internal/rooms/${room._id.toString()}/relations/${owner.user._id.toString()}`;
+
+    await request(getApp().getHttpServer()).get(url).expect(401);
+    await request(getApp().getHttpServer())
+      .get(url)
+      .set('X-Service-Key', 'wrong')
+      .expect(401);
   });
 });

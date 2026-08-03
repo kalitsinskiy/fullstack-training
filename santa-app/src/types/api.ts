@@ -105,3 +105,33 @@ export interface NotificationList {
   page: number;
   limit: number;
 }
+
+export type MessageThreadKey = 'giftee' | 'santa';
+
+export interface ChatMessage {
+  id: string;
+  text: string;
+  createdAt: string;
+  direction: 'in' | 'out';
+}
+
+export interface MessageThreads {
+  giftee: { id: string; name: string; messages: ChatMessage[] } | null;
+  santa: { messages: ChatMessage[] } | null;
+}
+
+export interface SendMessageInput {
+  roomId: string;
+  to: MessageThreadKey;
+  text: string;
+}
+
+export interface IncomingMessage extends ChatMessage {
+  roomId: string;
+  thread: MessageThreadKey;
+}
+
+export interface UnreadMessages {
+  total: number;
+  rooms: Array<{ roomId: string; count: number }>;
+}

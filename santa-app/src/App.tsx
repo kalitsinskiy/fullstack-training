@@ -17,6 +17,7 @@ import { MessagesPage } from '@/pages/MessagesPage';
 import { NotificationsPage } from '@/pages/NotificationsPage';
 import { ProfilePage } from '@/pages/ProfilePage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
+import { RoomMessagesPage } from './pages/RoomMessagesPage';
 
 export default function App() {
   return (
@@ -36,6 +37,10 @@ export default function App() {
                   <Route element={<AppLayout />}>
                     <Route path="/rooms" element={<RoomListPage />} />
                     <Route path="/rooms/:id" element={<RoomDetailPage />} />
+                    <Route
+                      path="/rooms/:id/messages"
+                      element={<RoomMessagesPage />}
+                    />
                     <Route path="/messages" element={<MessagesPage />} />
                     <Route
                       path="/notifications"

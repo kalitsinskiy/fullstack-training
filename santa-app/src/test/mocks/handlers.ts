@@ -158,4 +158,64 @@ export const handlers = [
       createdAt: new Date().toISOString(),
     }),
   ),
+
+  http.get('/api/messages/unread', () =>
+    HttpResponse.json({ total: 3, rooms: [{ roomId: 'r1', count: 3 }] }),
+  ),
+
+  http.get('/api/messages/:roomId', () =>
+    HttpResponse.json({
+      giftee: {
+        id: 'u2',
+        name: 'Bob',
+        messages: [
+          {
+            id: 'm1',
+            text: 'hope you like puzzles!',
+            createdAt: new Date().toISOString(),
+            direction: 'out',
+          },
+          {
+            id: 'm2',
+            text: 'I do!',
+            createdAt: new Date().toISOString(),
+            direction: 'in',
+          },
+        ],
+      },
+      santa: {
+        messages: [
+          {
+            id: 'm3',
+            text: 'guess who',
+            createdAt: new Date().toISOString(),
+            direction: 'in',
+          },
+        ],
+      },
+    }),
+  ),
+
+  http.post('/api/messages', async ({ request }) => {
+    // 🆕
+    const body = (await request.json()) as {
+      roomId: string;
+      to: string;
+      text: string;
+    };
+    return HttpResponse.json(
+      {
+        id: 'm9',
+        text: body.text,
+        createdAt: new Date().toISOString(),
+        direction: 'out',
+        thread: body.to,
+      },
+      { status: 201 },
+    );
+  }),
+
+  http.patch('/api/messages/:roomId/read', () =>
+    HttpResponse.json({ updated: 3 }),
+  ),
 ];
