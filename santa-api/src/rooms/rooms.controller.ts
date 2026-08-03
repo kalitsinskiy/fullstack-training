@@ -193,7 +193,11 @@ export class RoomsController {
   @RequirePermissions('room:edit')
   @ApiOperation({ summary: 'Edit a room (owner only)' })
   @ApiParam({ name: 'id', description: 'Room identifier' })
-  @ApiResponse({ status: 200, description: 'Room updated', type: RoomResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Room updated',
+    type: RoomResponseDto,
+  })
   @ApiResponse({ status: 400, description: 'Validation error' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Missing room:edit permission' })

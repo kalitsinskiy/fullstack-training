@@ -47,7 +47,7 @@ import { InternalModule } from './internal/internal.module';
         skipIf: () => process.env.NODE_ENV === 'test',
         ...(process.env.NODE_ENV !== 'test' && {
           storage: new ThrottlerStorageRedisService(
-            config.get<string>('REDIS_URL')!,
+            config.get<string>('REDIS_URL'),
           ),
         }),
       }),

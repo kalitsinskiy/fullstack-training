@@ -51,7 +51,10 @@ export class UsersService {
     return this.toUser(doc);
   }
 
-  async updateCurrentUser(id: string, dto: UpdateCurrentUserDto): Promise<User> {
+  async updateCurrentUser(
+    id: string,
+    dto: UpdateCurrentUserDto,
+  ): Promise<User> {
     if (!isValidObjectId(id)) {
       throw new NotFoundException('User not found');
     }

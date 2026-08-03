@@ -40,13 +40,23 @@ export class AuthService {
       passwordHash,
     });
 
-    const accessToken = this.jwtService.sign({ sub: user.id, email: user.email });
+    const accessToken = this.jwtService.sign({
+      sub: user.id,
+      email: user.email,
+    });
 
-    return { id: user.id, email: user.email, displayName: user.displayName, accessToken };
+    return {
+      id: user.id,
+      email: user.email,
+      displayName: user.displayName,
+      accessToken,
+    };
   }
 
   async login(dto: LoginDto): Promise<LoginResponse> {
-    const user = await this.usersService.findByEmail(dto.email, { withPassword: true });
+    const user = await this.usersService.findByEmail(dto.email, {
+      withPassword: true,
+    });
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -56,7 +66,10 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const accessToken = this.jwtService.sign({ sub: user._id.toString(), email: user.email });
+    const accessToken = this.jwtService.sign({
+      sub: user._id.toString(),
+      email: user.email,
+    });
 
     return { accessToken };
   }

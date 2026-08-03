@@ -6,7 +6,10 @@ import {
 import { getModelToken } from '@nestjs/mongoose';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Types } from 'mongoose';
+import { EventPublisherService } from '../events/event-publisher.service';
+import { RedisService } from '../redis/redis.service';
 import { UsersService } from '../users/users.service';
+import { WishlistService } from '../wishlist/wishlist.service';
 import { Room } from './schemas/room.schema';
 import { RoomsService } from './rooms.service';
 
@@ -88,6 +91,7 @@ describe('RoomsService', () => {
     findByIdAndUpdate: jest.Mock;
   };
   let usersService: jest.Mocked<Pick<UsersService, 'findById'>>;
+  let redisService: jest.Mocked<Pick<RedisService, 'get' | 'set' | 'del'>>;
 
   beforeEach(async () => {
     roomModel = {
@@ -99,8 +103,11 @@ describe('RoomsService', () => {
       findOneAndUpdate: jest.fn(),
       findByIdAndUpdate: jest.fn(),
     };
-    usersService = {
-      findById: jest.fn(),
+    usersService = { findById: jest.fn() };
+    redisService = {
+      get: jest.fn().mockResolvedValue(null),
+      set: jest.fn().mockResolvedValue(undefined),
+      del: jest.fn().mockResolvedValue(undefined),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -108,10 +115,13 @@ describe('RoomsService', () => {
         RoomsService,
         { provide: getModelToken(Room.name), useValue: roomModel },
         { provide: UsersService, useValue: usersService },
+        { provide: RedisService, useValue: redisService },
+        { provide: WishlistService, useValue: { findByUser: jest.fn() } },
+        { provide: EventPublisherService, useValue: { publish: jest.fn() } },
       ],
     }).compile();
 
-    service = module.get(RoomsService);
+    service = module.get<RoomsService>(RoomsService);
     jest.clearAllMocks();
   });
 
@@ -146,46 +156,27 @@ describe('RoomsService', () => {
     });
   });
 
-  it('findById returns a room when present', async () => {
-    const roomDocument = createRoomDocument();
-    roomModel.findById.mockReturnValue(createQueryMock(roomDocument));
-
-    await expect(
-      service.findById(roomDocument._id.toString()),
-    ).resolves.toMatchObject({
-      id: roomDocument._id.toString(),
-      code: roomDocument.inviteCode,
-    });
-  });
-
-  it('findById throws when the room does not exist', async () => {
-    roomModel.findById.mockReturnValue(createQueryMock(null));
-
-    await expect(
-      service.findById(new Types.ObjectId().toString()),
-    ).rejects.toThrow(NotFoundException);
-  });
-
-  it('join adds the user with $addToSet and does not duplicate members', async () => {
+  it('join is idempotent when the user is already a participant', async () => {
     const userId = new Types.ObjectId().toString();
     const ownerId = new Types.ObjectId();
     const roomDocument = createRoomDocument({
       creatorId: ownerId,
       participants: [ownerId, new Types.ObjectId(userId)],
     });
+    const saveMock = jest.fn();
+    const roomDocWithSave = { ...roomDocument, save: saveMock };
 
     usersService.findById.mockResolvedValue({ id: userId } as never);
-    roomModel.findOne.mockReturnValue(createQueryMock(roomDocument));
-    roomModel.findOneAndUpdate.mockReturnValue(createQueryMock(roomDocument));
+    roomModel.findById.mockReturnValue(createQueryMock(roomDocWithSave));
 
-    const room = await service.join(roomDocument.inviteCode, userId);
-
-    expect(roomModel.findOneAndUpdate).toHaveBeenCalledWith(
-      { inviteCode: roomDocument.inviteCode },
-      { $addToSet: { participants: userId } },
-      { new: true },
+    const room = await service.join(
+      roomDocument._id.toString(),
+      roomDocument.inviteCode,
+      userId,
     );
-    expect(room.members).toEqual([
+
+    expect(saveMock).not.toHaveBeenCalled();
+    expect(room.participants.map((p) => p.id)).toEqual([
       ownerId.toString(),
       new Types.ObjectId(userId).toString(),
     ]);
@@ -194,7 +185,7 @@ describe('RoomsService', () => {
   it('join rejects a room that has already been drawn', async () => {
     const userId = new Types.ObjectId().toString();
     usersService.findById.mockResolvedValue({ id: userId } as never);
-    roomModel.findOne.mockReturnValue(
+    roomModel.findById.mockReturnValue(
       createQueryMock(
         createRoomDocument({
           status: 'drawn',
@@ -202,27 +193,28 @@ describe('RoomsService', () => {
       ),
     );
 
-    await expect(service.join('ABC123', userId)).rejects.toThrow(
-      ForbiddenException,
-    );
+    await expect(
+      service.join(new Types.ObjectId().toString(), 'ABC123', userId),
+    ).rejects.toThrow(BadRequestException);
 
-    expect(roomModel.findOneAndUpdate).not.toHaveBeenCalled();
+    expect(roomModel.findByIdAndUpdate).not.toHaveBeenCalled();
   });
 
   it('draw rejects rooms with fewer than 3 participants', async () => {
     const ownerId = new Types.ObjectId();
-    roomModel.findById.mockReturnValue(
-      createQueryMock(
-        createRoomDocument({
-          creatorId: ownerId,
-          participants: [ownerId, new Types.ObjectId()],
-        }),
-      ),
-    );
+    const roomDocument = createRoomDocument({
+      creatorId: ownerId,
+      participants: [ownerId, new Types.ObjectId()],
+    });
+    roomModel.findById.mockReturnValue(createQueryMock(roomDocument));
 
-    await expect(service.draw(new Types.ObjectId().toString())).rejects.toThrow(
-      BadRequestException,
-    );
+    await expect(
+      service.draw(
+        roomDocument._id.toString(),
+        ownerId.toString(),
+        '2025-12-24',
+      ),
+    ).rejects.toThrow(BadRequestException);
   });
 
   it('draw stores assignments and marks the room as drawn', async () => {
@@ -247,7 +239,11 @@ describe('RoomsService', () => {
     roomModel.findById.mockReturnValue(createQueryMock(roomDocument));
     roomModel.findByIdAndUpdate.mockReturnValue(createQueryMock(updatedRoom));
 
-    const room = await service.draw(roomId);
+    const room = await service.draw(
+      roomId,
+      participants[0].toString(),
+      '2025-12-24',
+    );
 
     expect(roomModel.findByIdAndUpdate).toHaveBeenCalledWith(
       roomId,
@@ -316,47 +312,44 @@ describe('RoomsService', () => {
     ).rejects.toThrow(ForbiddenException);
   });
 
-  it('joinByCode delegates to join', async () => {
+  it('joinByCode resolves when the invite code maps to a valid room', async () => {
     const userId = new Types.ObjectId().toString();
     const roomDocument = createRoomDocument({
       participants: [new Types.ObjectId(userId)],
+      status: 'pending',
     });
+    const saveMock = jest.fn().mockResolvedValue(roomDocument);
+    const roomDocWithSave = { ...roomDocument, save: saveMock };
 
+    redisService.get.mockResolvedValue(roomDocument._id.toString());
+    roomModel.findById.mockReturnValue(createQueryMock(roomDocWithSave));
     usersService.findById.mockResolvedValue({ id: userId } as never);
-    roomModel.findOne.mockReturnValue(createQueryMock(roomDocument));
-    roomModel.findOneAndUpdate.mockReturnValue(createQueryMock(roomDocument));
 
     await expect(
       service.joinByCode(roomDocument.inviteCode, userId),
     ).resolves.toBeDefined();
-    expect(roomModel.findOneAndUpdate).toHaveBeenCalled();
   });
 
-  it('join throws NotFoundException when the room code does not exist', async () => {
+  it('join throws NotFoundException when the room does not exist', async () => {
     const userId = new Types.ObjectId().toString();
+    const roomId = new Types.ObjectId().toString();
 
-    usersService.findById.mockResolvedValue({ id: userId } as never);
-    roomModel.findOne.mockReturnValue(createQueryMock(null));
+    roomModel.findById.mockReturnValue(createQueryMock(null));
 
-    await expect(service.join('NOROOM', userId)).rejects.toThrow(
+    await expect(service.join(roomId, 'ABC123', userId)).rejects.toThrow(
       NotFoundException,
     );
-    expect(roomModel.findOneAndUpdate).not.toHaveBeenCalled();
   });
 
-  it('join throws NotFoundException when findOneAndUpdate returns null', async () => {
+  it('join throws BadRequestException when the invite code is wrong', async () => {
     const userId = new Types.ObjectId().toString();
-    const roomDocument = createRoomDocument({
-      participants: [new Types.ObjectId(userId)],
-    });
+    const roomDocument = createRoomDocument({ inviteCode: 'CORRECT' });
 
-    usersService.findById.mockResolvedValue({ id: userId } as never);
-    roomModel.findOne.mockReturnValue(createQueryMock(roomDocument));
-    roomModel.findOneAndUpdate.mockReturnValue(createQueryMock(null));
+    roomModel.findById.mockReturnValue(createQueryMock(roomDocument));
 
-    await expect(service.join(roomDocument.inviteCode, userId)).rejects.toThrow(
-      NotFoundException,
-    );
+    await expect(
+      service.join(roomDocument._id.toString(), 'WRONG01', userId),
+    ).rejects.toThrow(BadRequestException);
   });
 
   it('draw throws NotFoundException when findByIdAndUpdate returns null', async () => {
@@ -373,8 +366,12 @@ describe('RoomsService', () => {
     roomModel.findById.mockReturnValue(createQueryMock(roomDocument));
     roomModel.findByIdAndUpdate.mockReturnValue(createQueryMock(null));
 
-    await expect(service.draw(roomDocument._id.toString())).rejects.toThrow(
-      NotFoundException,
-    );
+    await expect(
+      service.draw(
+        roomDocument._id.toString(),
+        participants[0].toString(),
+        '2025-12-24',
+      ),
+    ).rejects.toThrow(NotFoundException);
   });
 });

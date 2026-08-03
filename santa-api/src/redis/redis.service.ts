@@ -15,7 +15,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     private readonly logger: PinoLogger,
   ) {}
 
-  async onModuleInit() {
+  onModuleInit() {
     if (process.env.NODE_ENV === 'test') return;
     this.client = new Redis(this.configService.get<string>('REDIS_URL')!);
     this.client.on('connect', () => this.logger.info('Redis connected'));
@@ -32,7 +32,10 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   async set(key: string, value: string, ttlSeconds?: number): Promise<void> {
-    if (!this.client) { this.memStore.set(key, value); return; }
+    if (!this.client) {
+      this.memStore.set(key, value);
+      return;
+    }
     if (ttlSeconds) {
       await this.client.set(key, value, 'EX', ttlSeconds);
     } else {
@@ -41,7 +44,10 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   async del(key: string): Promise<void> {
-    if (!this.client) { this.memStore.delete(key); return; }
+    if (!this.client) {
+      this.memStore.delete(key);
+      return;
+    }
     await this.client.del(key);
   }
 

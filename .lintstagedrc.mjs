@@ -7,7 +7,9 @@ import path from 'node:path';
  * passed as paths relative to the app.
  */
 const appScoped = (app) => (files) => {
-  const rel = files.map((f) => path.relative(app, f)).join(' ');
+  const rel = files
+    .map((f) => path.relative(app, f).replace(/\\/g, '/'))
+    .join(' ');
   return `bash -c 'cd ${app} && npx eslint --fix ${rel}'`;
 };
 

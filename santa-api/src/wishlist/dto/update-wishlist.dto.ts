@@ -3,7 +3,8 @@ import { ArrayMaxSize, IsArray, IsString, Length } from 'class-validator';
 
 export class UpdateWishlistDto {
   @ApiProperty({
-    description: 'Wishlist items that replace the current wishlist (one string per item)',
+    description:
+      'Wishlist items that replace the current wishlist (one string per item)',
     type: String,
     isArray: true,
     example: ['Wool socks', 'A good book', 'Coffee beans'],

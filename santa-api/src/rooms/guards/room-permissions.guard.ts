@@ -51,9 +51,12 @@ export class RoomPermissionsGuard implements CanActivate {
       return true;
     }
 
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<{
+      user?: { id: string };
+      params: { id?: string; roomId?: string };
+    }>();
     const userId = request.user?.id;
-    const roomId = request.params.id || request.params.roomId;
+    const roomId = request.params.id ?? request.params.roomId;
 
     if (!userId || !roomId) {
       throw new NotFoundException('Room not found');

@@ -1,5 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsIn, IsInt, IsOptional, IsString, Max, Min, MinLength } from 'class-validator';
+import {
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+  MinLength,
+} from 'class-validator';
 
 export const CURRENCIES = ['$', '€', '£', '₴', 'zł'] as const;
 
@@ -31,6 +39,6 @@ export class CreateRoomDto {
     enum: CURRENCIES,
   })
   @IsOptional()
-  @IsIn(CURRENCIES as unknown as string[])
+  @IsIn(CURRENCIES)
   currency?: string;
 }

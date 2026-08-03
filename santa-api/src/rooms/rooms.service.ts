@@ -108,7 +108,10 @@ export class RoomsService {
       const room = JSON.parse(cached) as Room;
       const viewer = room.participants.find((p) => p.id === userId);
       if (!viewer) throw new NotFoundException('Room not found');
-      return { ...room, viewerPermissions: [...permissionsForRole(viewer.role)] };
+      return {
+        ...room,
+        viewerPermissions: [...permissionsForRole(viewer.role)],
+      };
     }
 
     this.logger.debug(`Room cache MISS: ${cacheKey}`);
@@ -116,8 +119,13 @@ export class RoomsService {
     const displayNames = await this.resolveDisplayNames(doc);
     const room = this.toRoom(doc, userId, displayNames);
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { viewerPermissions: _, ...cacheable } = room;
-    await this.redisService.set(cacheKey, JSON.stringify(cacheable), ROOM_CACHE_TTL);
+    await this.redisService.set(
+      cacheKey,
+      JSON.stringify(cacheable),
+      ROOM_CACHE_TTL,
+    );
 
     return room;
   }
@@ -386,7 +394,9 @@ export class RoomsService {
     };
   }
 
-  async findByIdInternal(id: string): Promise<{ id: string; name: string; memberIds: string[] }> {
+  async findByIdInternal(
+    id: string,
+  ): Promise<{ id: string; name: string; memberIds: string[] }> {
     if (!isValidObjectId(id)) {
       throw new NotFoundException('Room not found');
     }

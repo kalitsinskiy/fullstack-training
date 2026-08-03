@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as amqp from 'amqplib';
 import { randomUUID } from 'crypto';
@@ -16,7 +21,7 @@ export class EventPublisherService implements OnModuleInit, OnModuleDestroy {
   async onModuleInit() {
     if (process.env.NODE_ENV === 'test') return;
     const url = this.config.get<string>('RABBITMQ_URL')!;
-    this.connection = await amqp.connect(url) as amqp.ChannelModel;
+    this.connection = await amqp.connect(url);
     this.channel = await this.connection.createChannel();
     await this.channel.assertExchange(EXCHANGE, 'topic', { durable: true });
     this.logger.log(`Connected to RabbitMQ, exchange "${EXCHANGE}" ready`);
