@@ -1,0 +1,11 @@
+# Local E2E only. Never used by `docker compose up -d` on its own.
+#
+# The register endpoint is throttled to 3 requests/min per IP and the Playwright
+# journet registers exactly 3 users - so a retry or a quick second run gets 429.
+# buildThrottlerOptions() disables throttling when NODE_ENV === 'test'.
+#
+# Usage: docker compose -f docker-compose.yml -f docker-compose.e2e.yml up -d
+services:
+  santa-api:
+    environment:
+      NODE_ENV: test

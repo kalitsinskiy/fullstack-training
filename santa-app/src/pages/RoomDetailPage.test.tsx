@@ -125,4 +125,36 @@ describe('RoomDetailPage', () => {
       screen.queryByRole('button', { name: /draw names/i }),
     ).not.toBeInTheDocument(); // hidden when drawn
   });
+
+  it('locks the wishlist when the exchange date has passed', async () => {
+    server.use(
+      http.get('/api/rooms/:id', () =>
+        HttpResponse.json({
+          id: 'r1',
+          name: 'Office Party',
+          inviteCode: 'ABC123',
+          creatorId: 'u1',
+          status: 'drawn',
+          exchangeDate: '2020-12-24T00:00:00.000Z',
+          participantCount: 3,
+          participants: [{ id: 'u1', displayName: 'Alice', role: 'owner' }],
+        }),
+      ),
+      http.get('/api/rooms/:id/assignment', () =>
+        HttpResponse.json({
+          receiver: { id: 'u2', displayName: 'Bob', wishlist: [] },
+        }),
+      ),
+    );
+
+    setup();
+
+    expect(
+      await screen.findByText(/wishlists are locked/i),
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getByRole('button', { name: /save wishlist/i }),
+    ).toBeDisabled();
+  });
 });

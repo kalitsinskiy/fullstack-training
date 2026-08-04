@@ -2,20 +2,6 @@ import request from 'supertest';
 import { useTestApp } from './helpers/e2e-app';
 import { makeSeeders } from './helpers/seed';
 
-jest.mock('ioredis', () => require('ioredis-mock'));
-
-jest.mock('amqplib', () => ({
-  connect: jest.fn().mockResolvedValue({
-    createChannel: jest.fn().mockResolvedValue({
-      assertExchange: jest.fn(),
-      publish: jest.fn(),
-      close: jest.fn(),
-    }),
-    on: jest.fn(),
-    close: jest.fn(),
-  }),
-}));
-
 describe('Internal Service', () => {
   const { getApp, serviceKey } = useTestApp();
   const { seedUser, seedOwnerAndMember, seedDrawableRoom } =
@@ -61,10 +47,16 @@ describe('Internal Service', () => {
       .set('X-Service-Key', serviceKey)
       .expect(200);
 
-    expect(res.body.name).toBe(room.name);
-    expect([...res.body.memberIds].sort()).toEqual(
-      [owner.user._id.toString(), member.user._id.toString()].sort(),
-    );
+    expect(res.body).toEqual({
+      id: room._id.toString(),
+      name: room.name,
+      memberIds: expect.arrayContaining([
+        owner.user._id.toString(),
+        member.user._id.toString(),
+      ]),
+    });
+
+    expect(res.body.memberIds).toHaveLength(2);
   });
 
   it('GET /api/internal/rooms/:roomId/relations/:userId -> both edges for a drawn room', async () => {

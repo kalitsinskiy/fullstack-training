@@ -13,9 +13,11 @@ import { Input } from '@/components/ui/input';
 export function WishlistEditor({
   roomId,
   userId,
+  locked = false,
 }: {
   roomId: string;
   userId: string;
+  locked?: boolean;
 }) {
   const { data, isLoading } = useWishlist(roomId, userId);
   const hydratedKey = useRef('');
@@ -45,6 +47,8 @@ export function WishlistEditor({
   }, [data, roomId, userId, reset]);
 
   async function onSubmit(values: WishlistFormInput) {
+    if (locked) return;
+
     try {
       await save.mutateAsync(
         cleanWishlistItems(values.items.map((i) => i.value)),
@@ -62,11 +66,18 @@ export function WishlistEditor({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
+      {locked && (
+        <p className="text-sm text-muted-foreground">
+          Wishlists are locked — the gift exchange has passed.
+        </p>
+      )}
+
       <div className="space-y-2">
         {fields.map((field, index) => (
           <div key={field.id} className="flex items-center gap-2">
             <Input
               placeholder={`Gift item ${index + 1}`}
+              disabled={locked}
               {...register(`items.${index}.value`)}
             />
             <Button
@@ -74,6 +85,7 @@ export function WishlistEditor({
               variant="ghost"
               size="icon"
               aria-label="Remove item"
+              disabled={locked}
               onClick={() => remove(index)}
             >
               <Trash2 className="size-4" />
@@ -86,11 +98,12 @@ export function WishlistEditor({
           type="button"
           variant="outline"
           size="sm"
+          disabled={locked}
           onClick={() => append({ value: '' })}
         >
           <Plus className="size-4" /> Add Item
         </Button>
-        <Button type="submit" disabled={save.isPending}>
+        <Button type="submit" disabled={locked || save.isPending}>
           {save.isPending ? 'Saving…' : 'Save wishlist'}
         </Button>
       </div>

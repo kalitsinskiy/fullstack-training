@@ -8,23 +8,6 @@ import { roomFixture } from './factories';
 import { useTestApp } from './helpers/e2e-app';
 import { makeSeeders } from './helpers/seed';
 
-jest.mock('amqplib', () => {
-  const publish = jest.fn();
-  return {
-    connect: jest.fn().mockResolvedValue({
-      createChannel: jest.fn().mockResolvedValue({
-        assertExchange: jest.fn().mockResolvedValue(undefined),
-        publish,
-        close: jest.fn(),
-      }),
-      on: jest.fn(),
-      close: jest.fn(),
-    }),
-  };
-});
-
-jest.mock('ioredis', () => require('ioredis-mock'));
-
 /**
  * COMPONENT TEST (HTTP slice) for Rooms. Boots the real AppModule on in-memory
  * Mongo via the shared `useTestApp()` harness; seeds via `makeSeeders`.
@@ -203,6 +186,33 @@ describe('Rooms (HTTP)', () => {
       .set('Authorization', `Bearer ${owner.token}`)
       .expect(200)
       .expect((res) => expect(res.body.participantCount).toBe(1));
+  });
+
+  it('POST /api/rooms/:id/join -> joining a room you are already in -> appropriate handling', async () => {
+    const { connect } = jest.requireMock('amqplib');
+    const channel = await (await connect.mock.results[0].value).createChannel();
+    const publish = channel.publish as jest.Mock;
+
+    const { member, room, roomModel } = await seedOwnerAndMember();
+
+    publish.mockClear();
+
+    const res = await request(app.getHttpServer())
+      .post(`/api/rooms/${room._id.toString()}/join`)
+      .set('Authorization', `Bearer ${member.token}`)
+      .send({ inviteCode: room.inviteCode })
+      .expect(201);
+
+    expect(res.body.participantCount).toBe(2);
+    expect(res.body.participants).toHaveLength(2);
+
+    const stored = await roomModel.findById(room._id).lean();
+    const ids = stored!.participants.map((p) => p.userId.toString());
+
+    expect(ids).toHaveLength(2);
+    expect(new Set(ids).size).toBe(ids.length);
+
+    expect(publish.mock.calls.map((c) => c[1])).not.toContain('user.joined');
   });
 
   it('POST /api/rooms/:id/draw → creator-only; assigns everyone a giftee (nobody themselves)', async () => {

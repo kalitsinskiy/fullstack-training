@@ -3,7 +3,7 @@
   "rootDir": ".",
   "globalSetup": "<rootDir>/global-setup.ts",
   "globalTeardown": "<rootDir>/global-teardown.ts",
-  "setupFilesAfterEnv": ["<rootDir>/setup-mongo.ts"],
+  "setupFilesAfterEnv": ["<rootDir>/mock-infra.ts", "<rootDir>/setup-mongo.ts"],
   "testEnvironment": "node",
   "testRegex": ".e2e-spec.ts$",
   "transform": {

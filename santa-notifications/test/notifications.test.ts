@@ -118,4 +118,90 @@ describe('GET /api/notifications (JWT-scoped)', () => {
 
     expect(res.statusCode).toBe(404);
   });
+
+  it('PATCH /:id/read -> 200 flips read, persists it and drops unreadCount', async () => {
+    const notification = await NotificationModel.create({
+      userId: alice,
+      roomId: alice,
+      type: 'draw.completed',
+      message: 'The draw for "Office Party" is complete!',
+      read: false,
+    });
+
+    const id = notification._id.toString();
+
+    const res = await app.inject({
+      method: 'PATCH',
+      url: `/api/notifications/${id}/read`,
+      headers: { authorization: `Bearer ${tokenFor(app, alice)}` },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ id, read: true });
+
+    const stored = await NotificationModel.findById(id).lean();
+    expect(stored?.read).toBe(true);
+
+    const list = await app.inject({
+      method: 'GET',
+      url: '/api/notifications',
+      headers: { authorization: `Bearer ${tokenFor(app, alice)}` },
+    });
+
+    expect(list.json().unreadCount).toBe(0);
+  });
+
+  it('paginates: 25 notification ->  page_1 has 20, page_2 has 5', async () => {
+    const base = new Date('2026-01-01T00:00:00.000Z').getTime();
+
+    await NotificationModel.insertMany(
+      Array.from({ length: 25 }, (_, i) => ({
+        userId: alice,
+        roomId: alice,
+        type: 'user.joined' as const,
+        message: `notification ${i}`,
+        read: false,
+        createdAt: new Date(base + i * 1_000),
+      }))
+    );
+
+    const fetchPage = async (page: number) => {
+      const res = await app.inject({
+        method: 'GET',
+        url: `/api/notifications?page=${page}`,
+        headers: { authorization: `Bearer ${tokenFor(app, alice)}` },
+      });
+
+      expect(res.statusCode).toBe(200);
+
+      return res.json();
+    };
+
+    const first = await fetchPage(1);
+    const second = await fetchPage(2);
+
+    expect(first.data).toHaveLength(20);
+    expect(second.data).toHaveLength(5);
+
+    expect(first.total).toBe(25);
+    expect(second.total).toBe(25);
+    expect(first.limit).toBe(20);
+    expect(second.page).toBe(2);
+
+    expect(first.data[0].message).toBe('notification 24');
+    expect(second.data[4].message).toBe('notification 0');
+
+    const ids = new Set([...first.data, ...second.data].map((n) => n.id));
+    expect(ids.size).toBe(25);
+  });
+
+  it('rejects an out-of-range limit (schema: maximum 100)', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/notifications?limit=500',
+      headers: { authorization: `Bearer ${tokenFor(app, alice)}` },
+    });
+
+    expect(res.statusCode).toBe(400);
+  });
 });

@@ -33,6 +33,7 @@ import { usePermissions } from '@/features/rooms/usePermissions';
 import { toast } from 'sonner';
 import { getApiErrorMessage } from '@/lib/api';
 import { EditRoomDialog } from '@/features/rooms/EditRoomDialog';
+import { isExchangePassed } from '@/features/rooms/helpers';
 
 /**
  * Room detail — participants, your wishlist, the draw, and your assignment.
@@ -112,6 +113,7 @@ export function RoomDetailPage() {
 
   const canDraw = can('room:draw') && room.status === 'pending';
   const notEnough = room.participantCount < 3;
+  const wishlishLocked = isExchangePassed(room.exchangeDate);
 
   async function handleDelete() {
     if (!can('room:delete')) return;
@@ -204,7 +206,10 @@ export function RoomDetailPage() {
                 Invite code
               </p>
               <div className="flex items-center gap-2">
-                <p className="font-mono text-lg tracking-widest">
+                <p
+                  data-testid="invite-code"
+                  className="font-mono text-lg tracking-widest"
+                >
                   {room.inviteCode}
                 </p>
                 {can('room:invite') && (
@@ -265,7 +270,10 @@ export function RoomDetailPage() {
                 <div className="my-3">
                   <p className="text-sm">
                     You're gifting:{' '}
-                    <span className="font-semibold">
+                    <span
+                      data-testid="assignment-receiver"
+                      className="font-semibold"
+                    >
                       {assignment.data.receiver.displayName}
                     </span>
                   </p>
@@ -299,7 +307,13 @@ export function RoomDetailPage() {
             <CardTitle>Your wishlist</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {id && user && <WishlistEditor roomId={id} userId={user.id} />}
+            {id && user && (
+              <WishlistEditor
+                roomId={id}
+                userId={user.id}
+                locked={wishlishLocked}
+              />
+            )}
           </CardContent>
         </Card>
       </div>

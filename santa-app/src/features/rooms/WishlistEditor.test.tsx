@@ -48,4 +48,31 @@ describe('WishlistEditor', () => {
       expect(putBody).toEqual({ items: ['Lego car', 'A pair of socks'] }),
     );
   });
+
+  it('is read-only and fires no PUT when locked', async () => {
+    let putCalled = false;
+
+    server.use(
+      http.put('/api/rooms/:roomId/wishlist', () => {
+        putCalled = true;
+        return HttpResponse.json({ roomId: 'r1', userId: 'u1', items: [] });
+      }),
+    );
+
+    renderWithProviders(<WishlistEditor roomId="r1" userId="u1" locked />);
+
+    expect(
+      await screen.findByText(/wishlists are locked/i),
+    ).toBeInTheDocument();
+
+    const input = await screen.findByPlaceholderText(/gift item 1/i);
+    expect(input).toBeDisabled();
+    expect(screen.getByRole('button', { name: /add item/i })).toBeDisabled();
+
+    const save = screen.getByRole('button', { name: /save wishlist/i });
+    expect(save).toBeDisabled();
+
+    await userEvent.click(save);
+    expect(putCalled).toBe(false);
+  });
 });
