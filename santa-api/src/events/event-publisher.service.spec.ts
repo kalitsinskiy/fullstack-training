@@ -5,13 +5,14 @@ const createChannelMock = jest.fn().mockResolvedValue({
   assertExchange: assertExchangeMock,
   close: jest.fn(),
 });
-jest.mock('amqplib', () => ({
-  connect: jest.fn().mockResolvedValue({
-    createChannel: createChannelMock,
-    on: jest.fn(),
-    close: jest.fn(),
-  }),
-}));
+
+const connectMock = jest.fn().mockResolvedValue({
+  createChannel: createChannelMock,
+  on: jest.fn(),
+  close: jest.fn(),
+});
+
+jest.mock('amqplib', () => ({ connect: connectMock }));
 
 import type { ConfigService } from '@nestjs/config';
 import { EventPublisherService } from './event-publisher.service';
@@ -43,11 +44,16 @@ describe('EventPublisherService', () => {
 
     expect(publishMock).toHaveBeenCalledTimes(1);
 
-    const [exchange, routingKey, buffer, opts] = publishMock.mock.calls[0];
+    const [exchange, routingKey, buffer, opts] = publishMock.mock.calls[0] as [
+      string,
+      string,
+      Buffer,
+      { messageId?: string; persistent?: boolean; contentType?: string },
+    ];
 
     expect(exchange).toBe('santa.events');
     expect(routingKey).toBe('room.created');
-    expect(JSON.parse((buffer as Buffer).toString())).toEqual({
+    expect(JSON.parse(buffer.toString())).toEqual({
       roomId: 'r1',
       roomName: 'Office',
     });
@@ -59,8 +65,7 @@ describe('EventPublisherService', () => {
   });
 
   it('no-ops (does not throw) when the broker was unavailable at startup', async () => {
-    const amqp = jest.requireMock('amqplib');
-    amqp.connect.mockRejectedValueOnce(new Error('ECONNREFUSED'));
+    connectMock.mockRejectedValueOnce(new Error('ECONNREFUSED'));
 
     const svc = make();
 

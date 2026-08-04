@@ -1,7 +1,8 @@
 import type { ConfigService } from '@nestjs/config';
 import { RedisService } from './redis.service';
 
-jest.mock('ioredis', () => require('ioredis-mock'));
+// eslint-disable-next-line @typescript-eslint/no-unsafe-return
+jest.mock('ioredis', () => jest.requireActual('ioredis-mock'));
 
 function makeRedis(): RedisService {
   const config = {

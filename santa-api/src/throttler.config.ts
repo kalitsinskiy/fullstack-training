@@ -1,10 +1,18 @@
-import type { ThrottlerModuleOptions } from '@nestjs/throttler';
+import type {
+  ThrottlerModuleOptions,
+  ThrottlerOptions,
+} from '@nestjs/throttler';
 import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
+
+type ThrottlerObjectOptions = Exclude<
+  ThrottlerModuleOptions,
+  ThrottlerOptions[]
+>;
 
 export function buildThrottlerOptions(
   redisUrl: string,
   nodeEnv: string,
-): ThrottlerModuleOptions {
+): ThrottlerObjectOptions {
   const isTest = nodeEnv === 'test';
 
   return {

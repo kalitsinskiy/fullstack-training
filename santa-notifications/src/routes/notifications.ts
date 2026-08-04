@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { NotFoundError } from '../errors';
-import { NotificationDocument, NotificationModel, NotificationType } from '../models/notification';
+import { NotificationDocument, NotificationModel } from '../models/notification';
 
 interface Notification {
   id: string;
@@ -13,13 +13,6 @@ interface Notification {
   createdAt: string;
 }
 
-const notificationTypeValues = [
-  'room.created',
-  'user.joined',
-  'draw.completed',
-  'wishlist.updated',
-] as const;
-
 const idParamsSchema = {
   type: 'object',
   required: ['id'],
@@ -27,8 +20,6 @@ const idParamsSchema = {
     id: { type: 'string', pattern: '^[a-fA-F0-9]{24}$' },
   },
 };
-
-const objectIdSchema = { type: 'string', pattern: '^[a-fA-F0-9]{24}$' };
 
 function toNotification(notification: NotificationDocument): Notification {
   return {

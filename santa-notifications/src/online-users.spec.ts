@@ -1,4 +1,4 @@
-jest.mock('ioredis', () => require('ioredis-mock'));
+jest.mock('ioredis', () => jest.requireActual('ioredis-mock'));
 
 import Redis from 'ioredis';
 import { markOnline, markOffline, isOnline, listOnline, countOnline } from './online-users';
