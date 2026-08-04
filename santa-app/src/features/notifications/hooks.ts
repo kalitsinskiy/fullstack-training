@@ -1,4 +1,4 @@
-import { api } from '@/lib/api';
+import { notificationsApi } from '@/lib/notificationsApi';
 import { NotificationList } from '@/types/api';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -9,7 +9,7 @@ export function useNotifications(page = 1, limit = 20) {
     queryKey: [...notificationsKey, page, limit],
     queryFn: async () =>
       (
-        await api.get<NotificationList>(
+        await notificationsApi.get<NotificationList>(
           `/api/notifications?page=${page}&limit=${limit}`,
         )
       ).data,
@@ -20,8 +20,11 @@ export function useUnreadCount() {
   return useQuery({
     queryKey: [...notificationsKey, 'unread'],
     queryFn: async () =>
-      (await api.get<NotificationList>('/api/notifications?limit=1')).data
-        .unreadCount,
+      (
+        await notificationsApi.get<NotificationList>(
+          '/api/notifications?limit=1',
+        )
+      ).data.unreadCount,
     refetchInterval: 30_000,
   });
 }
@@ -31,7 +34,11 @@ export function useMarkRead() {
 
   return useMutation({
     mutationFn: async (id: string) =>
-      (await api.patch<Notification>(`/api/notifications/${id}/read`)).data,
+      (
+        await notificationsApi.patch<Notification>(
+          `/api/notifications/${id}/read`,
+        )
+      ).data,
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: notificationsKey }),
   });

@@ -146,6 +146,7 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_API_URL: http://localhost:3001
+        VITE_WS_URL: http://localhost:3002
     container_name: santa-app
     restart: unless-stopped
     ports:
