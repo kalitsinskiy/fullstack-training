@@ -26,7 +26,7 @@ async function configPlugin(fastify: FastifyInstance) {
   const redisUrl = process.env.REDIS_URL ?? '';
   const rabbitmqUrl = process.env.RABBITMQ_URL ?? '';
   const jwtSecret = process.env.JWT_SECRET ?? '';
-  const santaApiUrl = process.env.SANTA_API_URL ?? 'http://localhost:3001';
+  const santaApiUrl = process.env.SANTA_API_URL ?? '';
   const serviceKey = process.env.SERVICE_API_KEY ?? '';
   const corsOrigin = process.env.CORS_ORIGIN ?? '';
 

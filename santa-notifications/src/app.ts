@@ -38,9 +38,7 @@ export function buildApp() {
 
   // CORS so the browser SPA (Vite :5173) can read notifications directly.
   app.register(cors, {
-    origin: process.env.CORS_ORIGIN
-      ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
-      : ['http://localhost:5173'],
+    origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim()) : [],
     methods: ['GET', 'POST', 'PATCH', 'DELETE'],
   });
   app.register(configPlugin);
