@@ -99,7 +99,9 @@ services:
     envVars:
       - key: VITE_API_URL # the deployed santa-api URL
         sync: false
-      - key: VITE_WS_URL # the deployed santa-notifications URL
+      - key: VITE_WS_URL # the deployed santa-notifications URL (https://, Socket.IO upgrades itself)
+        sync: false
+      - key: VITE_NOTIFICATIONS_URL # the deployed santa-notifications URL (REST: messages + notifications)
         sync: false
     routes:
       # SPA fallback: every unknown path serves index.html so client-side
