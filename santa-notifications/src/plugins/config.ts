@@ -10,7 +10,7 @@ export interface AppConfig {
   jwtSecret: string;
   santaApiUrl: string;
   serviceKey: string;
-  corsOrigin: string;
+  corsOrigin: string[];
 }
 
 declare module 'fastify' {
@@ -28,7 +28,10 @@ async function configPlugin(fastify: FastifyInstance) {
   const jwtSecret = process.env.JWT_SECRET ?? '';
   const santaApiUrl = process.env.SANTA_API_URL ?? '';
   const serviceKey = process.env.SERVICE_API_KEY ?? '';
-  const corsOrigin = process.env.CORS_ORIGIN ?? '';
+  const corsOrigin = (process.env.CORS_ORIGIN ?? '')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
 
   const missing: string[] = [];
 
@@ -36,6 +39,9 @@ async function configPlugin(fastify: FastifyInstance) {
   if (!jwtSecret) missing.push('JWT_SECRET');
   if (!serviceKey) missing.push('SERVICE_API_KEY');
   if (!santaApiUrl) missing.push('SANTA_API_URL');
+  if (!redisUrl) missing.push('REDIS_URL');
+  if (!rabbitmqUrl) missing.push('RABBITMQ_URL');
+  if (corsOrigin.length === 0) missing.push('CORS_ORIGIN');
 
   if (missing.length > 0) {
     throw new Error(`Missing required env variables: ${missing.join(', ')}`);

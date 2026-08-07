@@ -36,12 +36,14 @@ export function buildApp() {
     },
   });
 
-  // CORS so the browser SPA (Vite :5173) can read notifications directly.
-  app.register(cors, {
-    origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim()) : [],
-    methods: ['GET', 'POST', 'PATCH', 'DELETE'],
-  });
   app.register(configPlugin);
+  app.register(async (scope) => {
+    await scope.register(cors, {
+      origin: scope.config.corsOrigin,
+      methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+      credentials: true,
+    });
+  });
   app.register(authPlugin);
   app.register(santaApiPlugin);
   app.register(ioPlugin);
