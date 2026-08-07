@@ -2,17 +2,6 @@ import { Link } from 'react-router-dom';
 import { Gift, ListChecks, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-/**
- * Public landing page — STUB.
- *
- * Build this from the Santa Figma mockup (see design/screens/).
- * The LoginPage is provided as a worked example of the patterns you'll need
- * (layout, tokens, components). Replicate that approach here: hero section,
- * feature highlights, and calls-to-action.
- *
- * TODO(you): implement the landing layout to match the Figma "Landing" frame.
- */
-
 const features = [
   { icon: Sparkles, title: 'Fair draw', text: 'No one ever draws themselves.' },
   {

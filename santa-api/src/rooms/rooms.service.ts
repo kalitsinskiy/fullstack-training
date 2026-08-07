@@ -48,12 +48,6 @@ export class RoomsService {
   // and set `viewerPermissions` to the calling user's permissions for that room
   // (resolve their role via permissionsForRole() from ./permissions).
 
-  // TODO (Kickoff): create a room with a unique invite code; the creator is the
-  // first participant with role 'owner'. Status starts as 'pending'.
-  // STRETCH (optional, see Kickoff §4): make the name unique PER CREATOR — add a
-  // compound unique index { creatorId, name } and translate the duplicate-key
-  // error (code 11000) into a 409 ConflictException. Don't make names globally
-  // unique — different users may reuse a name.
   async create(dto: CreateRoomDto, creatorId: string): Promise<Room> {
     try {
       const created = await this.roomModel.create({
@@ -89,7 +83,6 @@ export class RoomsService {
     }
   }
 
-  // TODO (Kickoff): list rooms where the user is a participant (paginated).
   async findByUser(
     userId: string,
     query: PaginationQuery,
@@ -110,9 +103,6 @@ export class RoomsService {
     };
   }
 
-  // TODO (Kickoff): return a room by id, but only if the user is a participant.
-  // A non-participant (or unknown id) must be indistinguishable: throw
-  // NotFoundException (404) in both cases — don't reveal that the room exists.
   async findByIdForUser(id: string, userId: string): Promise<Room> {
     if (!Types.ObjectId.isValid(id)) {
       throw new NotFoundException('Room not found');
@@ -131,9 +121,6 @@ export class RoomsService {
     return withViewerPermissions(room, userId);
   }
 
-  // TODO (Kickoff): join a room by id, authorised by the invite code in the body.
-  // The new participant is added with role 'member'.
-  // Reject a wrong code, and a room whose draw is already done.
   async join(id: string, inviteCode: string, userId: string): Promise<Room> {
     if (!Types.ObjectId.isValid(id)) {
       throw new NotFoundException('Room not found');
@@ -177,10 +164,6 @@ export class RoomsService {
     return this.toRoomResponse(room, userId);
   }
 
-  // TODO (Lesson 05): join using ONLY the invite code. Invitees have the code,
-  // not the room id (and a non-member can't open the room to find it). Resolve
-  // invite:{code} -> roomId from Redis (you store it in create()), then run the
-  // same join logic. 400 if the code is missing/expired.
   async joinByCode(inviteCode: string, userId: string): Promise<Room> {
     const roomId = await this.redis.get(`invite:${inviteCode}`);
 
@@ -191,10 +174,6 @@ export class RoomsService {
     return this.join(roomId, inviteCode, userId);
   }
 
-  // TODO (Lesson 03): only the creator may draw, and only once, with >= 3 participants.
-  // Produce a derangement (Sattolo / Fisher–Yates with rejection — no self-assignment)
-  // and persist ALL assignments in a single document write (atomic, no transaction).
-  // Save `exchangeDate` (required) so every participant sees the gift-exchange day.
   async draw(
     id: string,
     requesterId: string,
@@ -256,8 +235,6 @@ export class RoomsService {
     return this.toRoomResponse(updated as RoomDocument, requesterId);
   }
 
-  // TODO (Lesson 03): return the giftee assigned to this user, plus their wishlist.
-  // Only a participant of a drawn room may read it.
   async getAssignment(id: string, userId: string): Promise<AssignmentView> {
     if (!Types.ObjectId.isValid(id)) {
       throw new NotFoundException('Room not found');
@@ -296,8 +273,6 @@ export class RoomsService {
     };
   }
 
-  // TODO (Lesson 04): update the room's fields (e.g. name). Owner-only access is
-  // already enforced by RoomPermissionsGuard via @RequirePermissions('room:edit').
   async editRoom(
     id: string,
     dto: UpdateRoomDto,
@@ -346,7 +321,6 @@ export class RoomsService {
     return this.toRoomResponse(room, userId);
   }
 
-  // TODO (Lesson 04): delete the room. Owner-only access is enforced by the guard.
   async deleteRoom(id: string): Promise<void> {
     if (!Types.ObjectId.isValid(id)) {
       throw new NotFoundException('Room not found');
@@ -361,8 +335,6 @@ export class RoomsService {
     await this.invalidateRoom(id);
   }
 
-  // TODO (Lesson 04): remove a participant from the room. The owner can never be
-  // removed (respond 400). Owner-only access is enforced by the guard.
   async kickMember(id: string, targetUserId: string): Promise<void> {
     if (!Types.ObjectId.isValid(id) || !Types.ObjectId.isValid(targetUserId)) {
       throw new NotFoundException('Room or member not found');
@@ -393,8 +365,6 @@ export class RoomsService {
     await this.invalidateRoom(id);
   }
 
-  // TODO (Lesson 04): generate a fresh unique invite code and persist it.
-  // Owner-only access is enforced by the guard.
   async regenerateInviteCode(id: string, userId: string): Promise<Room> {
     if (!Types.ObjectId.isValid(id)) {
       throw new NotFoundException('Room not found');

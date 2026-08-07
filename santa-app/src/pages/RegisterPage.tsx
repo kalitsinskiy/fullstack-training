@@ -16,16 +16,6 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 
-/**
- * Registration page — STUB.
- *
- * Build this from the Santa Figma mockup ("Register" frame).
- * Mirror the LoginPage worked example: same form/validation/toast/auth
- * approach, plus a displayName field. POST /api/auth/register returns
- * { id, email, displayName, accessToken } — log the user in on success.
- *
- * TODO(you): implement the registration form (lesson fe-08 adds RHF + zod).
- */
 export function RegisterPage() {
   const { login } = useAuth();
   const navigate = useNavigate();

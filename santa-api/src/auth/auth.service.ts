@@ -27,8 +27,6 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  // TODO (Kickoff / Auth): reject a duplicate email, hash the password with bcrypt,
-  // create the user via UsersService, and return the user plus a signed JWT.
   async register(dto: RegisterDto): Promise<RegisterResponse> {
     const email = dto.email.toLowerCase();
 
@@ -58,9 +56,6 @@ export class AuthService {
     };
   }
 
-  // TODO (Kickoff / Auth): look up the user by email (with password hash), verify the
-  // password with bcrypt.compare, and return a signed JWT. Throw UnauthorizedException
-  // on any mismatch — never reveal which field was wrong.
   async login(dto: LoginDto): Promise<LoginResponse> {
     const user = await this.usersService.findByEmail(dto.email, {
       withPassword: true,

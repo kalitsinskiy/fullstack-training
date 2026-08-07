@@ -19,7 +19,6 @@ export class UsersService {
     private readonly userModel: Model<UserModel>,
   ) {}
 
-  // TODO (Kickoff / Auth): persist a new user (lower-case the email, default role 'user').
   async create(input: CreateUserInput): Promise<User> {
     const created = await this.userModel.create({
       email: input.email.toLowerCase(),
@@ -31,8 +30,6 @@ export class UsersService {
     return this.toUser(created);
   }
 
-  // TODO (Kickoff / Auth): find a user by email. When opts.withPassword is set,
-  // select('+passwordHash') so login can compare it. Returns the raw document or null.
   findByEmail(
     email: string,
     opts: { withPassword?: boolean } = {},
@@ -46,7 +43,6 @@ export class UsersService {
     return query.exec();
   }
 
-  // TODO (Profile): find a user by id; throw NotFoundException if missing or id invalid.
   async findById(id: string): Promise<User> {
     if (!Types.ObjectId.isValid(id)) {
       throw new NotFoundException('User not found');
@@ -61,7 +57,6 @@ export class UsersService {
     return this.toUser(user);
   }
 
-  // TODO (Profile): update the current user's displayName and return the fresh user.
   async updateCurrentUser(
     id: string,
     dto: UpdateCurrentUserDto,

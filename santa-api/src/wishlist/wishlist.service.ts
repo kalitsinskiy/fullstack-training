@@ -16,7 +16,6 @@ export class WishlistService {
     private readonly events: EventPublisherService,
   ) {}
 
-  // TODO (Lesson: Wishlist) — upsert the wishlist for {userId, roomId} with `items`.
   async set(
     roomId: string,
     userId: string,
@@ -38,8 +37,6 @@ export class WishlistService {
     return this.toWishlist(doc);
   }
 
-  // TODO (Lesson: Wishlist) — return the wishlist for {roomId, userId}. If the user
-  // has none yet, return an EMPTY one ({ roomId, userId, items: [] }) — not a 404.
   async get(roomId: string, userId: string): Promise<Wishlist> {
     const doc = await this.wishlistModel
       .findOne({
