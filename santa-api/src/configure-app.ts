@@ -31,7 +31,7 @@ export async function configureApp(
     }),
   );
   app.useGlobalInterceptors(app.get(LoggingInterceptor));
-  app.useGlobalFilters(new AllExceptionsFilter());
+  app.useGlobalFilters(app.get(AllExceptionsFilter));
 
   await app.register(helmet, {
     contentSecurityPolicy: {

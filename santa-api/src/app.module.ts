@@ -16,6 +16,7 @@ import { WishlistModule } from './wishlist/wishlist.module';
 import { RedisModule } from './redis/redis.module';
 import { EventsModule } from './events/events.module';
 import { InternalModule } from './internal/internal.module';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 @Module({
   imports: [
@@ -82,6 +83,7 @@ import { InternalModule } from './internal/internal.module';
   providers: [
     AppService,
     LoggingInterceptor,
+    AllExceptionsFilter,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
 })
