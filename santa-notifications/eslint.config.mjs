@@ -18,5 +18,5 @@ export default tseslint.config(
       // Unused imports and local variables are still reported.
       '@typescript-eslint/no-unused-vars': ['error', { args: 'none' }],
     },
-  },
+  }
 );

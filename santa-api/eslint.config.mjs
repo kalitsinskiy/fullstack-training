@@ -6,7 +6,7 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['eslint.config.mjs'],
+    ignores: ['eslint.config.mjs', 'dist', 'coverage'],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
@@ -32,7 +32,7 @@ export default tseslint.config(
       // Skeleton methods ship unimplemented, so unused *parameters* are expected.
       // Unused imports and local variables are still reported.
       '@typescript-eslint/no-unused-vars': ['error', { args: 'none' }],
-      "prettier/prettier": ["error", { endOfLine: "auto" }],
+      'prettier/prettier': ['error', { endOfLine: 'auto' }],
     },
   },
   {

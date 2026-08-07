@@ -4,7 +4,7 @@ import { clearTestDb, setupTestDb, teardownTestDb } from './helpers/db';
 import { buildApp } from '../src/app';
 import { MessageModel } from '../src/models/message';
 
-jest.mock('ioredis', () => require('ioredis-mock'));
+jest.mock('ioredis', () => jest.requireActual('ioredis-mock'));
 
 const roomId = new Types.ObjectId().toString();
 const alice = new Types.ObjectId().toString();

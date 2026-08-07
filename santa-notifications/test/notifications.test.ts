@@ -1,4 +1,4 @@
-jest.mock('ioredis', () => require('ioredis-mock'));
+jest.mock('ioredis', () => jest.requireActual('ioredis-mock'));
 
 import { FastifyInstance } from 'fastify';
 import { Types } from 'mongoose';

@@ -1,4 +1,4 @@
-jest.mock('ioredis', () => require('ioredis-mock'));
+jest.mock('ioredis', () => jest.requireActual('ioredis-mock'));
 
 import type { FastifyInstance } from 'fastify';
 import { io as ioClient, type Socket } from 'socket.io-client';
