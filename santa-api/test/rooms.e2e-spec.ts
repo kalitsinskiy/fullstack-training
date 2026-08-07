@@ -404,6 +404,11 @@ describe('Rooms (HTTP)', () => {
     const id = room._id.toString();
 
     await request(app.getHttpServer())
+      .delete('/api-rooms/not-an-id')
+      .set('Authorization', `Bearer ${owner.token}`)
+      .expect(404);
+
+    await request(app.getHttpServer())
       .delete(`/api/rooms/${id}`)
       .set('Authorization', `Bearer ${owner.token}`)
       .expect(204);

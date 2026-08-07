@@ -348,7 +348,7 @@ export class RoomsService {
 
   // TODO (Lesson 04): delete the room. Owner-only access is enforced by the guard.
   async deleteRoom(id: string): Promise<void> {
-    if (!Types.ObjectId.isValid) {
+    if (!Types.ObjectId.isValid(id)) {
       throw new NotFoundException('Room not found');
     }
 
