@@ -1,4 +1,4 @@
-jest.mock('ioredis', () => require('ioredis-mock'));
+jest.mock('ioredis', () => jest.requireActual('ioredis-mock'));
 
 import type { FastifyInstance } from 'fastify';
 import { buildApp } from '../src/app';
@@ -27,8 +27,18 @@ describe('GET /users/online', () => {
     await app.close();
   });
 
-  it('returns an empty list when no one is online', async () => {
+  const authHeader = (sub = '507f1f77bcf86cd799439011') => ({
+    authorization: `Bearer ${app.jwt.sign({ sub, email: 'example@example.com', role: 'user' })}`,
+  });
+
+  it('rejects an unauthenticated user', async () => {
     const res = await app.inject({ method: 'GET', url: '/users/online' });
+
+    expect(res.statusCode).toBe(401);
+  });
+
+  it('returns an empty list when no one is online', async () => {
+    const res = await app.inject({ method: 'GET', url: '/users/online', headers: authHeader() });
 
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual([]);
@@ -38,7 +48,7 @@ describe('GET /users/online', () => {
     await markOnline(app.redis, 'u1');
     await markOnline(app.redis, 'u2');
 
-    const res = await app.inject({ method: 'GET', url: '/users/online' });
+    const res = await app.inject({ method: 'GET', url: '/users/online', headers: authHeader() });
 
     expect(res.statusCode).toBe(200);
     expect((res.json() as string[]).sort()).toEqual(['u1', 'u2']);
