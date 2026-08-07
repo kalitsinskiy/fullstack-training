@@ -44,24 +44,30 @@ export async function configureApp(
     },
   });
 
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle('Secret Santa API')
-    .setDescription(
-      'API for managing Secret Santa rooms, wishlists, and assignments',
-    )
-    .setVersion('1.0')
-    .addBearerAuth(
-      { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
-      'JWT',
-    )
-    .addTag('auth')
-    .addTag('users')
-    .addTag('rooms')
-    .addTag('wishlists')
-    .build();
+  const swaggerEnabled =
+    process.env.NODE_ENV !== 'production' ||
+    process.env.ENABLE_SWAGGER === 'true';
 
-  const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup('docs', app, swaggerDocument, {
-    swaggerOptions: { persistAuthorization: true },
-  });
+  if (swaggerEnabled) {
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle('Secret Santa API')
+      .setDescription(
+        'API for managing Secret Santa rooms, wishlists, and assignments',
+      )
+      .setVersion('1.0')
+      .addBearerAuth(
+        { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
+        'JWT',
+      )
+      .addTag('auth')
+      .addTag('users')
+      .addTag('rooms')
+      .addTag('wishlists')
+      .build();
+
+    const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
+    SwaggerModule.setup('docs', app, swaggerDocument, {
+      swaggerOptions: { persistAuthorization: true },
+    });
+  }
 }

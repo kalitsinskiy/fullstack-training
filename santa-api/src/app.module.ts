@@ -33,6 +33,7 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
         SERVICE_API_KEY: Joi.string().required(),
         JWT_SECRET: Joi.string().required(),
         JWT_EXPIRATION: Joi.string().default('7d'),
+        ENABLE_SWAGGER: Joi.boolean().default(false),
       }),
     }),
     MongooseModule.forRootAsync({
