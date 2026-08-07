@@ -1,4 +1,5 @@
 import type { ConsumeMessage } from 'amqplib';
+import type { FastifyBaseLogger } from 'fastify';
 import { Types } from 'mongoose';
 import { handleMessage } from '../src/events/consumer';
 import { NotificationModel } from '../src/models/notification';
@@ -19,16 +20,25 @@ const client = {
   getUserById: jest.fn(),
 } as unknown as SantaApiClient;
 
-function makeMsg(routingKey: string, data: unknown, messageId = 'm1'): ConsumeMessage {
+function makeMsg(
+  routingKey: string,
+  data: unknown,
+  messageId = 'm1',
+  redelivered = false
+): ConsumeMessage {
   return {
     content: Buffer.from(JSON.stringify(data)),
-    fields: { routingKey, deliveryTag: 1, redelivered: false, exchange: 'santa.events' },
+    fields: { routingKey, deliveryTag: 1, redelivered, exchange: 'santa.events' },
     properties: { messageId },
   } as unknown as ConsumeMessage;
 }
 
 function fakeChannel() {
   return { ack: jest.fn(), nack: jest.fn() };
+}
+
+function fakeLog() {
+  return { error: jest.fn(), warn: jest.fn(), info: jest.fn() } as unknown as FastifyBaseLogger;
 }
 
 function fakeIo() {
@@ -53,7 +63,8 @@ describe('handleMessage - fan-out', () => {
       channel as never,
       makeMsg('user.joined', { roomId, userId: joiner }),
       client,
-      fakeIo().io
+      fakeIo().io,
+      fakeLog()
     );
 
     const docs = await NotificationModel.find().lean();
@@ -71,7 +82,8 @@ describe('handleMessage - fan-out', () => {
       channel as never,
       makeMsg('draw.completed', { roomId }),
       client,
-      fakeIo().io
+      fakeIo().io,
+      fakeLog()
     );
 
     expect(await NotificationModel.countDocuments()).toBe(3);
@@ -81,14 +93,14 @@ describe('handleMessage - fan-out', () => {
     const channel = fakeChannel();
     const msg = makeMsg('draw.completed', { roomId }, 'dup-1');
 
-    await handleMessage(channel as never, msg, client, fakeIo().io);
-    await handleMessage(channel as never, msg, client, fakeIo().io);
+    await handleMessage(channel as never, msg, client, fakeIo().io, fakeLog());
+    await handleMessage(channel as never, msg, client, fakeIo().io, fakeLog());
 
     expect(await NotificationModel.countDocuments()).toBe(3);
     expect(channel.ack).toHaveBeenCalledTimes(2);
   });
 
-  it('nacks to the DQL when santa-api enrichment fails', async () => {
+  it('requeues once when santa-api enrichment fails on first delivery', async () => {
     const failing = {
       getRoomById: jest.fn(async () => {
         throw new Error('down');
@@ -100,7 +112,28 @@ describe('handleMessage - fan-out', () => {
       channel as never,
       makeMsg('draw.completed', { roomId }),
       failing,
-      fakeIo().io
+      fakeIo().io,
+      fakeLog()
+    );
+
+    expect(await NotificationModel.countDocuments()).toBe(0);
+    expect(channel.nack).toHaveBeenCalledWith(expect.anything(), false, true);
+  });
+
+  it('nacks to the DLQ when a redelivered message fails again', async () => {
+    const failing = {
+      getRoomById: jest.fn(async () => {
+        throw new Error('down');
+      }),
+    } as unknown as SantaApiClient;
+    const channel = fakeChannel();
+
+    await handleMessage(
+      channel as never,
+      makeMsg('draw.completed', { roomId }, 'retry-1', true),
+      failing,
+      fakeIo().io,
+      fakeLog()
     );
 
     expect(await NotificationModel.countDocuments()).toBe(0);
@@ -115,7 +148,8 @@ describe('handleMessage - fan-out', () => {
       channel as never,
       makeMsg('user.joined', { roomId, userId: joiner }),
       client,
-      io
+      io,
+      fakeLog()
     );
 
     expect(to).toHaveBeenCalledWith(`user:${owner}`);
@@ -132,7 +166,13 @@ describe('handleMessage - fan-out', () => {
     const channel = fakeChannel();
     const { io, to, emit } = fakeIo();
 
-    await handleMessage(channel as never, makeMsg('draw.completed', { roomId }), client, io);
+    await handleMessage(
+      channel as never,
+      makeMsg('draw.completed', { roomId }),
+      client,
+      io,
+      fakeLog()
+    );
 
     expect(to).toHaveBeenCalledWith(`room:${roomId}`);
     expect(emit).toHaveBeenCalledWith('room:draw-completed', { roomId });

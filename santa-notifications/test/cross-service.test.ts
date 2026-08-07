@@ -1,4 +1,4 @@
-jest.mock('ioredis', () => require('ioredis-mock'));
+jest.mock('ioredis', () => jest.requireActual('ioredis-mock'));
 
 import type { ConsumeMessage } from 'amqplib';
 import { FastifyInstance } from 'fastify';
@@ -43,6 +43,7 @@ function drawCompleted(messageId = 'draw-1'): ConsumeMessage {
 }
 
 const fakeIo = () => ({ to: jest.fn(() => ({ emit: jest.fn() })) });
+const fakeLog = () => ({ error: jest.fn(), warn: jest.fn(), info: jest.fn() });
 
 describe('Cross-service: draw.completed -> notification -> REST', () => {
   let app: FastifyInstance;
@@ -71,7 +72,13 @@ describe('Cross-service: draw.completed -> notification -> REST', () => {
     const channel = { ack: jest.fn(), nack: jest.fn() };
 
     // 1. The event arrives, exactly as RabbitMQ would deliver it.
-    await handleMessage(channel as never, drawCompleted(), client, fakeIo() as never);
+    await handleMessage(
+      channel as never,
+      drawCompleted(),
+      client,
+      fakeIo() as never,
+      fakeLog() as never
+    );
 
     expect(channel.ack).toHaveBeenCalledTimes(1);
     expect(await NotificationModel.countDocuments()).toBe(3);
@@ -112,8 +119,8 @@ describe('Cross-service: draw.completed -> notification -> REST', () => {
     const channel = { ack: jest.fn(), nack: jest.fn() };
     const msg = drawCompleted('draw-up');
 
-    await handleMessage(channel as never, msg, client, fakeIo() as never);
-    await handleMessage(channel as never, msg, client, fakeIo() as never);
+    await handleMessage(channel as never, msg, client, fakeIo() as never, fakeLog() as never);
+    await handleMessage(channel as never, msg, client, fakeIo() as never, fakeLog() as never);
 
     const res = await app.inject({
       method: 'GET',

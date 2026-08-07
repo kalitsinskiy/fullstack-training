@@ -3,6 +3,7 @@ import { NotificationModel, NotificationType } from '../models/notification';
 import { buildNotificationMessage } from './messages';
 import type { SantaApiClient, RoomDetails } from '../services/santa-api-client';
 import { Server } from 'socket.io';
+import type { FastifyBaseLogger } from 'fastify';
 
 export function resolveRecipients(
   routingKey: NotificationType,
@@ -55,7 +56,8 @@ export async function handleMessage(
   channel: Channel,
   msg: ConsumeMessage | null,
   client: SantaApiClient,
-  io: Server | null
+  io: Server | null,
+  log: FastifyBaseLogger
 ): Promise<void> {
   if (!msg) return;
 
@@ -106,7 +108,21 @@ export async function handleMessage(
     }
 
     channel.ack(msg);
-  } catch {
-    channel.nack(msg, false, false);
+  } catch (err) {
+    const redelivered = msg.fields.redelivered;
+
+    log.error(
+      {
+        err,
+        routingKey: msg.fields.routingKey,
+        messageId: msg.properties.messageId,
+        redelivered,
+      },
+      redelivered
+        ? 'Event handling failed again - dead-lettering'
+        : 'Event handling failed - requeueing once'
+    );
+
+    channel.nack(msg, false, !redelivered);
   }
 }
