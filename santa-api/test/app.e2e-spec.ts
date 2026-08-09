@@ -194,10 +194,7 @@ describe('App (e2e)', () => {
 
     await request(server()).delete(`/rooms/${id}`).expect(204);
 
-    expect(roomsServiceMock.deleteRoom).toHaveBeenCalledWith(
-      id,
-      '64e000000000000000000001',
-    );
+    expect(roomsServiceMock.deleteRoom).toHaveBeenCalledWith(id);
   });
 
   it('/rooms/:roomId/wishlist (PUT) upserts wishlist', async () => {

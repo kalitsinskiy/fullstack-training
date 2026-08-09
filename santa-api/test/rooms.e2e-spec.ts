@@ -97,8 +97,8 @@ describe('Rooms (e2e)', () => {
   ) {
     type CreatedUser = { _id: Types.ObjectId; email: string; role: string };
     const [user] = await (
-      userModel.create as (d: unknown) => Promise<CreatedUser[]>
-    )(userFixture(overrides));
+      userModel.create as (d: unknown[]) => Promise<CreatedUser[]>
+    )([userFixture(overrides)]);
     const token = `Bearer ${tokenFor(jwt, { _id: user._id.toString(), email: user.email, role: user.role })}`;
     return { user, token };
   }

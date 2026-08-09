@@ -11,7 +11,13 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
  * specs share this process, so they see these values at import time.
  */
 export default async function globalSetup(): Promise<void> {
-  const mongo = await MongoMemoryServer.create();
+  // mongodb-memory-server enforces a hard 10s launch timeout by default. The
+  // bundled mongod 8.x is heavy and its cold start competes with ts-jest
+  // compilation on the first e2e run, occasionally tipping past 10s and failing
+  // with "Instance failed to start within 10000ms". Give it generous headroom.
+  const mongo = await MongoMemoryServer.create({
+    instance: { launchTimeout: 60_000 },
+  });
 
   // Read back in global-teardown.ts (Jest preserves globals between the two).
   (globalThis as unknown as { __MONGO__: MongoMemoryServer }).__MONGO__ = mongo;
