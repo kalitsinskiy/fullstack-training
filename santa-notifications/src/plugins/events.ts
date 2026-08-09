@@ -219,7 +219,9 @@ async function eventsPlugin(fastify: FastifyInstance) {
         // Idempotency check — only for single-notification events; fan-out events
         // are deduplicated by the compound (userId + roomId + type) compound key below.
         if (messageId) {
-          const existing = await NotificationModel.findOne({ messageId }).exec();
+          const existing = await NotificationModel.findOne({
+            messageId: { $eq: messageId },
+          }).exec();
           if (existing) {
             channel.ack(msg);
             return;

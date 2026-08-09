@@ -409,7 +409,7 @@ describe('RoomsService', () => {
       const result = await service.draw(roomId, creatorId, '2026-12-24');
 
       expect(mockRoomModel.findByIdAndUpdate).toHaveBeenCalledWith(
-        roomId,
+        new Types.ObjectId(roomId),
         expect.objectContaining({ status: 'drawn' }),
         { new: true },
       );
@@ -483,7 +483,7 @@ describe('RoomsService', () => {
       );
 
       expect(mockRoomModel.findByIdAndUpdate).toHaveBeenCalledWith(
-        roomId,
+        new Types.ObjectId(roomId),
         { name: 'Renamed' },
         { new: true },
       );
@@ -510,7 +510,9 @@ describe('RoomsService', () => {
 
       await service.deleteRoom(roomId);
 
-      expect(mockRoomModel.findByIdAndDelete).toHaveBeenCalledWith(roomId);
+      expect(mockRoomModel.findByIdAndDelete).toHaveBeenCalledWith(
+        new Types.ObjectId(roomId),
+      );
     });
   });
 
@@ -567,7 +569,7 @@ describe('RoomsService', () => {
       const result = await service.regenerateInviteCode(roomId, creatorId);
 
       expect(mockRoomModel.findByIdAndUpdate).toHaveBeenCalledWith(
-        roomId,
+        new Types.ObjectId(roomId),
         expect.objectContaining({ inviteCode: expect.any(String) as string }),
         { new: true },
       );

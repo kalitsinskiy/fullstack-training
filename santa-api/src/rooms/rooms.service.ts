@@ -147,7 +147,7 @@ export class RoomsService {
 
     const doc = await this.roomModel
       .findOne({
-        _id: id,
+        _id: new Types.ObjectId(id),
         'participants.userId': new Types.ObjectId(userId),
       })
       .exec();
@@ -240,7 +240,7 @@ export class RoomsService {
 
     const updated = await this.roomModel
       .findByIdAndUpdate(
-        id,
+        new Types.ObjectId(id),
         {
           status: 'drawn',
           drawDate: new Date(),
@@ -316,7 +316,7 @@ export class RoomsService {
       update.exchangeDate = new Date(dto.exchangeDate);
 
     const updated = await this.roomModel
-      .findByIdAndUpdate(id, update, { new: true })
+      .findByIdAndUpdate(new Types.ObjectId(id), update, { new: true })
       .exec();
     await this.redisService.del(`room:${id}`);
     return this.toRoomView(updated as unknown as RoomDocument, userId);
@@ -327,7 +327,7 @@ export class RoomsService {
       throw new NotFoundException('Room not found');
     const doc = await this.roomModel.findById(id).exec();
     if (!doc) throw new NotFoundException('Room not found');
-    await this.roomModel.findByIdAndDelete(id).exec();
+    await this.roomModel.findByIdAndDelete(new Types.ObjectId(id)).exec();
     await this.redisService.del(`room:${id}`);
   }
 
@@ -358,7 +358,11 @@ export class RoomsService {
     const oldCode = doc.inviteCode;
     const code = this.generateCode();
     const updated = await this.roomModel
-      .findByIdAndUpdate(id, { inviteCode: code }, { new: true })
+      .findByIdAndUpdate(
+        new Types.ObjectId(id),
+        { inviteCode: code },
+        { new: true },
+      )
       .exec();
     await Promise.all([
       this.redisService.del(`invite:${oldCode}`),

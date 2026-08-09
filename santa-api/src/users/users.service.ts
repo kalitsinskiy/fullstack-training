@@ -38,7 +38,9 @@ export class UsersService {
     email: string,
     opts: { withPassword?: boolean } = {},
   ): Promise<UserDocument | null> {
-    const query = this.userModel.findOne({ email: email.toLowerCase() });
+    const query = this.userModel.findOne({
+      email: { $eq: email.toLowerCase() },
+    });
     if (opts.withPassword) query.select('+passwordHash');
     return query.exec();
   }
@@ -63,7 +65,11 @@ export class UsersService {
     if (!Types.ObjectId.isValid(id))
       throw new NotFoundException('User not found');
     const doc = await this.userModel
-      .findByIdAndUpdate(id, { displayName: dto.displayName }, { new: true })
+      .findByIdAndUpdate(
+        new Types.ObjectId(id),
+        { displayName: dto.displayName },
+        { new: true },
+      )
       .exec();
     if (!doc) throw new NotFoundException('User not found');
     return {

@@ -17,11 +17,13 @@ ENV VITE_WS_URL=$VITE_WS_URL
 RUN npm run build
 
 # ---------- Stage 2: Serve ----------
-FROM nginx:alpine
+# Unprivileged nginx: runs as the non-root uid 101 and binds port 8080 (a
+# privileged port <1024 like 80 can't be bound by a non-root process).
+FROM nginxinc/nginx-unprivileged:alpine
 
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-EXPOSE 80
+EXPOSE 8080
 
 CMD ["nginx", "-g", "daemon off;"]

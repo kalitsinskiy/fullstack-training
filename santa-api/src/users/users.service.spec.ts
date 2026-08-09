@@ -1,6 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
+import { Types } from 'mongoose';
 import { UsersService } from './users.service';
 import { User } from './schemas/user.schema';
 
@@ -99,7 +100,7 @@ describe('UsersService', () => {
       });
 
       expect(mockUserModel.findOne).toHaveBeenCalledWith({
-        email: 'alice@test.com',
+        email: { $eq: 'alice@test.com' },
       });
       expect(mockQuery.select).toHaveBeenCalledWith('+passwordHash');
       expect(result).toEqual(doc);
@@ -187,7 +188,7 @@ describe('UsersService', () => {
       );
 
       expect(mockUserModel.findByIdAndUpdate).toHaveBeenCalledWith(
-        '64e000000000000000000001',
+        new Types.ObjectId('64e000000000000000000001'),
         { displayName: 'New Name' },
         { new: true },
       );

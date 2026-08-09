@@ -6,5 +6,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
+# Drop root — run the watcher as the unprivileged built-in `node` user.
+USER node
 EXPOSE 3002
 CMD ["npm", "run", "dev"]

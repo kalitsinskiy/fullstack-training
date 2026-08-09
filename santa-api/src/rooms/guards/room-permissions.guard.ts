@@ -42,7 +42,7 @@ export class RoomPermissionsGuard implements CanActivate {
 
     const room = await this.roomModel
       .findOne({
-        _id: roomId,
+        _id: new Types.ObjectId(roomId),
         'participants.userId': new Types.ObjectId(callerId),
       })
       .exec();
