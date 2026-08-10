@@ -50,4 +50,18 @@ export default defineConfig({
     css: true,
     exclude: [...configDefaults.exclude, 'e2e/**'],
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // Long-live vendors and custom code.
+        // Page change won't invalidate React
+        manualChunks: {
+          react: ['react', 'react-dom', 'react-router-dom'],
+          query: ['@tanstack/react-query', 'axios'],
+          dates: ['date-fns', 'react-day-picker'],
+          socket: ['socket.io-client'],
+        },
+      },
+    },
+  },
 });

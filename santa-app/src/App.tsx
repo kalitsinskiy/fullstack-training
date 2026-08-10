@@ -1,3 +1,4 @@
+import { lazy } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
@@ -11,14 +12,35 @@ import { PublicLayout } from '@/components/layout/PublicLayout';
 import { Toaster } from '@/components/ui/sonner';
 import { LandingPage } from '@/pages/LandingPage';
 import { LoginPage } from '@/pages/LoginPage';
-import { RegisterPage } from '@/pages/RegisterPage';
-import { RoomListPage } from '@/pages/RoomListPage';
-import { RoomDetailPage } from '@/pages/RoomDetailPage';
-import { MessagesPage } from '@/pages/MessagesPage';
-import { NotificationsPage } from '@/pages/NotificationsPage';
-import { ProfilePage } from '@/pages/ProfilePage';
-import { NotFoundPage } from '@/pages/NotFoundPage';
-import { RoomMessagesPage } from './pages/RoomMessagesPage';
+
+const RegisterPage = lazy(() =>
+  import('@/pages/RegisterPage').then((m) => ({ default: m.RegisterPage })),
+);
+const RoomListPage = lazy(() =>
+  import('@/pages/RoomListPage').then((m) => ({ default: m.RoomListPage })),
+);
+const RoomDetailPage = lazy(() =>
+  import('@/pages/RoomDetailPage').then((m) => ({ default: m.RoomDetailPage })),
+);
+const MessagesPage = lazy(() =>
+  import('@/pages/MessagesPage').then((m) => ({ default: m.MessagesPage })),
+);
+const NotificationsPage = lazy(() =>
+  import('@/pages/NotificationsPage').then((m) => ({
+    default: m.NotificationsPage,
+  })),
+);
+const ProfilePage = lazy(() =>
+  import('@/pages/ProfilePage').then((m) => ({ default: m.ProfilePage })),
+);
+const RoomMessagesPage = lazy(() =>
+  import('@/pages/RoomMessagesPage').then((m) => ({
+    default: m.RoomMessagesPage,
+  })),
+);
+const NotFoundPage = lazy(() =>
+  import('@/pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })),
+);
 
 export default function App() {
   return (

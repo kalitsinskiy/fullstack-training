@@ -3,6 +3,7 @@ import { SocketNotifications } from '@/features/socket/SocketNotifications';
 import { AppErrorBoundary } from '../AppErrorBoundary';
 import { Sidebar } from './Sidebar';
 import { BottomNav } from './BottomNav';
+import { Suspense } from 'react';
 
 /** Shell for authenticated pages: sidebar on desktop, bottom nav on mobile. */
 export function AppLayout() {
@@ -18,7 +19,13 @@ export function AppLayout() {
       <main className="flex-1 pb-20 md:pb-0">
         <div className="container max-w-4xl py-6">
           <AppErrorBoundary resetKeys={[pathname]}>
-            <Outlet />
+            <Suspense
+              fallback={
+                <p className="text-sm text-muted-foreground">Loading...</p>
+              }
+            >
+              <Outlet />
+            </Suspense>
           </AppErrorBoundary>
         </div>
       </main>
