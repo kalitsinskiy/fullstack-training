@@ -8,6 +8,7 @@ import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { normalizeEmail } from '../common/normailize-email';
 
 export type RegisterResponse = {
   id: string;
@@ -28,7 +29,7 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto): Promise<RegisterResponse> {
-    const email = dto.email.toLowerCase();
+    const email = normalizeEmail(dto.email);
 
     const existing = await this.usersService.findByEmail(email);
 

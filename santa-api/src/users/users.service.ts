@@ -1,9 +1,15 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { UpdateCurrentUserDto } from './dto/update-current-user.dto';
 import { User } from './user.types';
 import { User as UserModel, UserDocument } from './schemas/user.schema';
+import { MongoServerError } from 'mongodb';
+import { normalizeEmail } from '../common/normailize-email';
 
 type CreateUserInput = {
   email: string;
@@ -20,21 +26,29 @@ export class UsersService {
   ) {}
 
   async create(input: CreateUserInput): Promise<User> {
-    const created = await this.userModel.create({
-      email: input.email.toLowerCase(),
-      displayName: input.displayName,
-      passwordHash: input.passwordHash,
-      role: input.role ?? 'user',
-    });
+    try {
+      const created = await this.userModel.create({
+        email: normalizeEmail(input.email),
+        displayName: input.displayName,
+        passwordHash: input.passwordHash,
+        role: input.role ?? 'user',
+      });
 
-    return this.toUser(created);
+      return this.toUser(created);
+    } catch (err) {
+      if (err instanceof MongoServerError && err.code === 11000) {
+        throw new ConflictException('Email is already registered');
+      }
+
+      throw err;
+    }
   }
 
   findByEmail(
     email: string,
     opts: { withPassword?: boolean } = {},
   ): Promise<UserDocument | null> {
-    const query = this.userModel.findOne({ email: email.toLocaleLowerCase() });
+    const query = this.userModel.findOne({ email: normalizeEmail(email) });
 
     if (opts.withPassword) {
       query.select('+passwordHash');
