@@ -690,6 +690,26 @@ describe('Rooms (HTTP)', () => {
     expect(amqpPublish.mock.calls.map((c) => c[1])).toContain('draw.completed');
   });
 
+  it('returns participants populated with displayName', async () => {
+    const { owner, room } = await seedDrawableRoom();
+
+    const res = await request(app.getHttpServer())
+      .post(`/api/rooms/${room.id}/draw`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ exchangeDate: '2026-12-24' })
+      .expect(200);
+
+    expect(res.body.participants).toHaveLength(3);
+
+    for (const p of res.body.participants) {
+      expect(p).toEqual({
+        id: expect.any(String),
+        displayName: expect.any(String),
+        role: expect.stringMatching(/^(owner|member)$/),
+      });
+    }
+  });
+
   it('PATCH /api/rooms/:id publishes room.date_changed when exchangeDate changes', async () => {
     const { connect } = jest.requireMock('amqplib');
     const channel = await (await connect.mock.results[0].value).createChannel();

@@ -222,7 +222,12 @@ export class RoomsService {
         },
         { new: true },
       )
+      .populate('participants.userId', 'displayName')
       .exec();
+
+    if (!updated) {
+      throw new NotFoundException('Room not found');
+    }
 
     await this.invalidateRoom(id);
 
@@ -232,7 +237,7 @@ export class RoomsService {
       requesterId,
     });
 
-    return this.toRoomResponse(updated as RoomDocument, requesterId);
+    return this.toRoomResponse(updated, requesterId);
   }
 
   async getAssignment(id: string, userId: string): Promise<AssignmentView> {
