@@ -1,3 +1,4 @@
+import type { Types } from 'mongoose';
 import type { Permission, RoomRole } from './permissions';
 
 /** A room member, as returned in room responses (participants are populated). */
@@ -5,6 +6,11 @@ export interface RoomParticipant {
   id: string;
   displayName: string;
   role: RoomRole;
+}
+
+export interface PopulatedUser {
+  _id: Types.ObjectId;
+  displayName: string;
 }
 
 export interface Room {

@@ -22,7 +22,12 @@ import {
 } from '../common/pagination';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
-import { AssignmentView, Room, RoomRelations } from './room.types';
+import {
+  AssignmentView,
+  PopulatedUser,
+  Room,
+  RoomRelations,
+} from './room.types';
 import { Room as RoomModel, RoomDocument } from './schemas/room.schema';
 import { permissionsForRole } from './permissions';
 import { derange } from './derangement';
@@ -43,6 +48,28 @@ export class RoomsService {
   private readonly ROOM_CACHE_TTL = 300; // 5 minutes
   private readonly INVITE_TTL = 48 * 60 * 60; // 48h = 172800s
 
+  private static readonly PARTICIPANT_POPULATE = {
+    path: 'participants.userId',
+    select: 'displayName',
+  } as const;
+
+  /**
+   * Fetch a room document or throw 404
+   */
+  private async loadRoom(id: string): Promise<RoomDocument> {
+    const room = await this.roomModel.findById(id).exec();
+
+    if (!room) {
+      throw new NotFoundException('Room not found');
+    }
+
+    return room;
+  }
+
+  private async populateParticipants(doc: RoomDocument): Promise<RoomDocument> {
+    return doc.populate(RoomsService.PARTICIPANT_POPULATE);
+  }
+
   async create(dto: CreateRoomDto, creatorId: string): Promise<Room> {
     try {
       const created = await this.roomModel.create({
@@ -56,7 +83,7 @@ export class RoomsService {
           : {}),
       });
 
-      await created.populate('participants.userId', 'displayName');
+      await this.populateParticipants(created);
 
       try {
         await this.redis.set(
@@ -93,10 +120,10 @@ export class RoomsService {
     const filter = { 'participants.userId': userId };
     const result = await paginate(this.roomModel, filter, query);
 
-    await this.roomModel.populate(result.data, {
-      path: 'participants.userId',
-      select: 'displayName',
-    });
+    await this.roomModel.populate(
+      result.data,
+      RoomsService.PARTICIPANT_POPULATE,
+    );
 
     return {
       data: result.data.map((doc) =>
@@ -121,11 +148,8 @@ export class RoomsService {
   }
 
   async join(id: string, inviteCode: string, userId: string): Promise<Room> {
-    const room = await this.roomModel.findById(id).exec();
+    const room = await this.loadRoom(id);
 
-    if (!room) {
-      throw new NotFoundException('Room not found');
-    }
     if (room.inviteCode !== inviteCode) {
       throw new BadRequestException('Invalid invite code');
     }
@@ -154,7 +178,7 @@ export class RoomsService {
       });
     }
 
-    await room.populate('participants.userId', 'displayName');
+    await this.populateParticipants(room);
 
     return this.toRoomResponse(room, userId);
   }
@@ -174,13 +198,8 @@ export class RoomsService {
     requesterId: string,
     exchangeDate: string,
   ): Promise<Room> {
-    const room = await this.roomModel.findById(id).exec();
+    const room = await this.loadRoom(id);
 
-    if (!room) {
-      throw new NotFoundException('Room not found');
-    }
-
-    // Guard is a passthrough until L04, so enforce creator-only here.
     if (room.creatorId.toString() !== requesterId) {
       throw new ForbiddenException('Only the room creator can run the draw');
     }
@@ -213,7 +232,7 @@ export class RoomsService {
         },
         { new: true },
       )
-      .populate('participants.userId', 'displayName')
+      .populate(RoomsService.PARTICIPANT_POPULATE)
       .exec();
 
     if (!updated) {
@@ -283,7 +302,7 @@ export class RoomsService {
     try {
       room = await this.roomModel
         .findByIdAndUpdate(id, update, { new: true })
-        .populate('participants.userId', 'displayName')
+        .populate(RoomsService.PARTICIPANT_POPULATE)
         .exec();
 
       await this.invalidateRoom(id);
@@ -320,11 +339,7 @@ export class RoomsService {
   }
 
   async kickMember(id: string, targetUserId: string): Promise<void> {
-    const room = await this.roomModel.findById(id).exec();
-
-    if (!room) {
-      throw new NotFoundException('Room not found');
-    }
+    const room = await this.loadRoom(id);
 
     const target = room.participants.find(
       (p) => p.userId.toString() === targetUserId,
@@ -346,11 +361,7 @@ export class RoomsService {
   }
 
   async regenerateInviteCode(id: string, userId: string): Promise<Room> {
-    const room = await this.roomModel.findById(id).exec();
-
-    if (!room) {
-      throw new NotFoundException('Room not found');
-    }
+    const room = await this.loadRoom(id);
 
     const oldCode = room.inviteCode;
 
@@ -359,7 +370,7 @@ export class RoomsService {
     await this.redis.del(`invite:${oldCode}`);
     await this.redis.set(`invite:${room.inviteCode}`, id, this.INVITE_TTL);
     await this.invalidateRoom(id);
-    await room.populate('participants.userId', 'displayName');
+    await this.populateParticipants(room);
 
     return this.toRoomResponse(room, userId);
   }
@@ -383,10 +394,14 @@ export class RoomsService {
 
   private toRoomResponse(doc: RoomDocument, viewerId?: string): Room {
     const participants = doc.participants.map((p) => {
-      const user = p.userId as unknown as {
-        _id: Types.ObjectId;
-        displayName: string;
-      };
+      const user = p.userId as unknown as PopulatedUser;
+
+      if (typeof user?.displayName !== 'string') {
+        throw new Error(
+          `Room ${doc._id.toString()} was mapped with unpopulated participants — ` +
+            'the query is missing .populate(PARTICIPANT_POPULATE)',
+        );
+      }
 
       return {
         id: user._id.toString(),
@@ -432,7 +447,7 @@ export class RoomsService {
 
     const doc = await this.roomModel
       .findById(id)
-      .populate('participants.userId', 'displayName')
+      .populate(RoomsService.PARTICIPANT_POPULATE)
       .exec();
 
     if (!doc) return null;
