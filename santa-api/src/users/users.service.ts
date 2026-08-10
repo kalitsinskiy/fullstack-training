@@ -1,14 +1,10 @@
-import {
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { UpdateCurrentUserDto } from './dto/update-current-user.dto';
 import { User } from './user.types';
 import { User as UserModel, UserDocument } from './schemas/user.schema';
-import { MongoServerError } from 'mongodb';
+import { rethrowDuplicateKey } from '../common/mongo-errors';
 import { normalizeEmail } from '../common/normailize-email';
 
 type CreateUserInput = {
@@ -36,11 +32,7 @@ export class UsersService {
 
       return this.toUser(created);
     } catch (err) {
-      if (err instanceof MongoServerError && err.code === 11000) {
-        throw new ConflictException('Email is already registered');
-      }
-
-      throw err;
+      rethrowDuplicateKey(err, 'Email is already registered');
     }
   }
 

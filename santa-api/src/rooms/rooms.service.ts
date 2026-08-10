@@ -2,14 +2,13 @@ import {
   Injectable,
   Logger,
   BadRequestException,
-  ConflictException,
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { MongoServerError } from 'mongodb';
 import { randomBytes } from 'node:crypto';
+import { rethrowDuplicateKey } from '../common/mongo-errors';
 import { UsersService } from '../users/users.service';
 import { WishlistService } from '../wishlist/wishlist.service';
 import { RedisService } from '../redis/redis.service';
@@ -106,10 +105,7 @@ export class RoomsService {
 
       return this.toRoomResponse(created, creatorId);
     } catch (err) {
-      if (err instanceof MongoServerError && err.code === 11000) {
-        throw new ConflictException('You already have a room with this name');
-      }
-      throw err;
+      rethrowDuplicateKey(err, 'You already have a room with this name');
     }
   }
 
@@ -314,11 +310,7 @@ export class RoomsService {
         });
       }
     } catch (err) {
-      if (err instanceof MongoServerError && err.code === 11000) {
-        throw new ConflictException('You already have a room with this name');
-      }
-
-      throw err;
+      rethrowDuplicateKey(err, 'You already have a room with this name');
     }
 
     if (!room) {
