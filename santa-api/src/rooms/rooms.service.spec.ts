@@ -1,8 +1,4 @@
-import {
-  BadRequestException,
-  ForbiddenException,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { getModelToken } from '@nestjs/mongoose';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Types } from 'mongoose';
@@ -30,22 +26,37 @@ function createQueryMock<T>(value: T): QueryMock<T> {
   return query;
 }
 
+interface RoomParticipantStub {
+  userId: Types.ObjectId;
+  role: string;
+}
+
 interface RoomDocumentStub {
   _id: Types.ObjectId;
   name: string;
   creatorId: Types.ObjectId;
   inviteCode: string;
-  participants: Types.ObjectId[];
+  participants: RoomParticipantStub[];
   status: string;
   drawDate?: Date;
   assignments: Array<{ giverId: Types.ObjectId; receiverId: Types.ObjectId }>;
 }
 
 function createRoomDocument(
-  overrides: Partial<RoomDocumentStub> = {},
+  overrides: Partial<Omit<RoomDocumentStub, 'participants'>> & {
+    participants?: Types.ObjectId[] | RoomParticipantStub[];
+  } = {},
 ): RoomDocumentStub {
   const creatorId = overrides.creatorId ?? new Types.ObjectId();
-  const participants = overrides.participants ?? [creatorId];
+  const rawParticipants = overrides.participants ?? [creatorId];
+  const participants: RoomParticipantStub[] = (
+    rawParticipants as Array<Types.ObjectId | RoomParticipantStub>
+  ).map(
+    (p): RoomParticipantStub =>
+      p instanceof Types.ObjectId
+        ? { userId: p, role: p.equals(creatorId) ? 'owner' : 'member' }
+        : p,
+  );
 
   return {
     _id: overrides._id ?? new Types.ObjectId(),
@@ -142,16 +153,15 @@ describe('RoomsService', () => {
     expect(roomModel.create).toHaveBeenCalledWith(
       expect.objectContaining({
         name: 'North Pole Ops',
-        creatorId: ownerId,
-        participants: [ownerId],
+        creatorId: new Types.ObjectId(ownerId),
+        participants: [{ userId: new Types.ObjectId(ownerId), role: 'owner' }],
         status: 'pending',
         inviteCode: expect.stringMatching(/^[A-Z2-9]{6}$/) as string,
       }),
     );
     expect(room).toMatchObject({
       name: 'North Pole Ops',
-      ownerId,
-      members: [ownerId],
+      creatorId: ownerId,
       status: 'pending',
     });
   });
@@ -281,7 +291,9 @@ describe('RoomsService', () => {
 
     const result = await service.findByUser(userId, { page: 1, limit: 10 });
 
-    expect(roomModel.find).toHaveBeenCalledWith({ participants: userId });
+    expect(roomModel.find).toHaveBeenCalledWith({
+      'participants.userId': new Types.ObjectId(userId),
+    });
     expect(result.data).toHaveLength(1);
     expect(result.meta.total).toBe(1);
   });
@@ -297,7 +309,7 @@ describe('RoomsService', () => {
     ).resolves.toMatchObject({ id: roomDocument._id.toString() });
   });
 
-  it('findByIdForUser throws ForbiddenException when user is not a participant', async () => {
+  it('findByIdForUser throws NotFoundException when user is not a participant', async () => {
     const roomDocument = createRoomDocument({
       participants: [new Types.ObjectId()],
     });
@@ -309,7 +321,7 @@ describe('RoomsService', () => {
         roomDocument._id.toString(),
         new Types.ObjectId().toString(),
       ),
-    ).rejects.toThrow(ForbiddenException);
+    ).rejects.toThrow(NotFoundException);
   });
 
   it('joinByCode resolves when the invite code maps to a valid room', async () => {

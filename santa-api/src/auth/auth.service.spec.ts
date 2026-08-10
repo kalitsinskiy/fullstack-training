@@ -15,7 +15,7 @@ const mockBcrypt = bcrypt as jest.Mocked<typeof bcrypt>;
 describe('AuthService', () => {
   let service: AuthService;
   let usersService: jest.Mocked<Pick<UsersService, 'create' | 'findByEmail'>>;
-  let jwtService: jest.Mocked<Pick<JwtService, 'signAsync'>>;
+  let jwtService: jest.Mocked<Pick<JwtService, 'sign'>>;
 
   beforeEach(async () => {
     usersService = {
@@ -23,7 +23,7 @@ describe('AuthService', () => {
       findByEmail: jest.fn(),
     };
     jwtService = {
-      signAsync: jest.fn(),
+      sign: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -47,7 +47,7 @@ describe('AuthService', () => {
       displayName: 'Alice',
       role: 'user',
     });
-    jwtService.signAsync.mockResolvedValue('signed-token');
+    jwtService.sign.mockReturnValue('signed-token');
 
     await expect(
       service.register({
@@ -97,7 +97,7 @@ describe('AuthService', () => {
       passwordHash: '$hash',
     } as never);
     mockBcrypt.compare.mockResolvedValue(true as never);
-    jwtService.signAsync.mockResolvedValue('signed-token');
+    jwtService.sign.mockReturnValue('signed-token');
 
     await expect(
       service.login({ email: 'ALICE@TEST.COM', password: 'SecretPass1' }),

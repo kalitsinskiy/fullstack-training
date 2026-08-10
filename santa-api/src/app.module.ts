@@ -8,7 +8,6 @@ import { LoggerModule } from 'nestjs-pino';
 import * as Joi from 'joi';
 import { AppController } from './app.controller';
 import { AuthModule } from './auth/auth.module';
-import { AppService } from './app.service';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { EventsModule } from './events/events.module';
 import { RedisModule } from './redis/redis.module';
@@ -84,7 +83,6 @@ import { InternalModule } from './internal/internal.module';
   ],
   controllers: [AppController],
   providers: [
-    AppService,
     LoggingInterceptor,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
