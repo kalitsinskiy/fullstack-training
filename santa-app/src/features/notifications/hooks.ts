@@ -2,7 +2,7 @@ import { notificationsApi } from '@/lib/notificationsApi';
 import type { Notification, NotificationList } from '@/types/api';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-const notificationsKey = ['notifications'] as const;
+export const notificationsKey = ['notifications'] as const;
 
 export function useNotifications(page = 1, limit = 20) {
   return useQuery({

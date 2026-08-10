@@ -7,7 +7,7 @@ import { MessagesPage } from './MessagesPage';
 describe('MessagesPage', () => {
   it('shows an error, when the rooms fetch fails', async () => {
     server.use(
-      http.get('/api/rooms/', () => new HttpResponse(null, { status: 500 })),
+      http.get('/api/rooms', () => new HttpResponse(null, { status: 500 })),
     );
 
     renderWithProviders(<MessagesPage />);

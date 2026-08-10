@@ -21,6 +21,7 @@ import {
   useKickMember,
   useRegenerateInvite,
 } from '@/features/rooms/hooks';
+import { roomKeys } from '@/features/rooms/keys';
 import { PageHeader } from '@/components/PageHeader';
 import { EmptyState } from '@/components/EmptyState';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -34,14 +35,6 @@ import { toast } from 'sonner';
 import { getApiErrorMessage } from '@/lib/api';
 import { EditRoomDialog } from '@/features/rooms/EditRoomDialog';
 import { isExchangePassed } from '@/features/rooms/helpers';
-
-/**
- * Room detail — participants, your wishlist, the draw, and your assignment.
- * TODO(lesson 03): fetch GET /api/rooms/:id; render participant list + invite code.
- * TODO(lesson 03): wishlist editor → PUT /api/rooms/:id/wishlist.
- * TODO(lesson 03): "Draw names" (creator only) → POST /api/rooms/:id/draw, then reveal
- *                  GET /api/rooms/:id/assignment.
- */
 
 function initials(name: string) {
   return name
@@ -74,17 +67,17 @@ export function RoomDetailPage() {
     joinRoom(id);
 
     const onMemberJoined = () =>
-      void queryClient.invalidateQueries({ queryKey: ['rooms', id] });
+      void queryClient.invalidateQueries({ queryKey: roomKeys.detail(id) });
 
     const onDrawCompleted = () => {
-      void queryClient.invalidateQueries({ queryKey: ['rooms', id] });
+      void queryClient.invalidateQueries({ queryKey: roomKeys.detail(id) });
       void queryClient.invalidateQueries({
-        queryKey: ['rooms', id, 'assignment'],
+        queryKey: roomKeys.assignment(id),
       });
     };
 
     const onDateChanged = () =>
-      void queryClient.invalidateQueries({ queryKey: ['rooms', id] });
+      void queryClient.invalidateQueries({ queryKey: roomKeys.detail(id) });
 
     socket.on('room:member-joined', onMemberJoined);
     socket.on('room:draw-completed', onDrawCompleted);

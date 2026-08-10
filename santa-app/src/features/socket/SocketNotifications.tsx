@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useSocket } from './SocketContext';
 import { IncomingMessage } from '@/types/api';
 import { messageKey, unreadMessagesKey } from '../messages/hooks';
+import { notificationsKey } from '../notifications/hooks';
 
 interface NotificationPayload {
   id: string;
@@ -27,7 +28,7 @@ export function SocketNotifications() {
 
     const onNotification = (payload: NotificationPayload) => {
       toast(payload.message, { icon: ICONS[payload.type] ?? '🔔' });
-      void queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      void queryClient.invalidateQueries({ queryKey: notificationsKey });
     };
 
     const onMessage = (payload: IncomingMessage) => {

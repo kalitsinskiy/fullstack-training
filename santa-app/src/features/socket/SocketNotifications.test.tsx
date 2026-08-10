@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { notificationsKey } from '@/features/notifications/hooks';
 import { SocketContext } from '@/features/socket/SocketContext';
 import { SocketNotifications } from '@/features/socket/SocketNotifications';
 import { createMockSocket } from '@/test/mockSocket';
@@ -40,7 +41,7 @@ describe('SocketNotifications', () => {
     });
 
     expect(toast).toHaveBeenCalledWith('The draw is complete!', { icon: '🎉' });
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['notifications'] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: notificationsKey });
   });
 
   it('toasts on an incoming anonymous message', () => {
