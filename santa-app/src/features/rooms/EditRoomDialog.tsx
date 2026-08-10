@@ -5,7 +5,6 @@ import { EditRoomFormInput, editRoomSchema, CURRENCIES } from '@/schemas/rooms';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
-import { getApiErrorMessage } from '@/lib/api';
 import {
   Dialog,
   DialogContent,
@@ -46,9 +45,9 @@ export function EditRoomDialog({ room, open, onOpenChange }: Props) {
     },
   });
 
-  async function onSubmit(values: EditRoomFormInput) {
-    try {
-      await edit.mutateAsync({
+  function onSubmit(values: EditRoomFormInput) {
+    edit.mutate(
+      {
         name: values.name.trim(),
         ...(values.budget
           ? { budget: values.budget, currency: values.currency ?? '$' }
@@ -56,13 +55,14 @@ export function EditRoomDialog({ room, open, onOpenChange }: Props) {
         ...(values.exchangeDate
           ? { exchangeDate: format(values.exchangeDate, 'yyyy-MM-dd') }
           : {}),
-      });
-
-      toast.success('Room updated');
-      onOpenChange(false);
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, 'Could not update the room'));
-    }
+      },
+      {
+        onSuccess: () => {
+          toast.success('Room updated');
+          onOpenChange(false);
+        },
+      },
+    );
   }
 
   return (

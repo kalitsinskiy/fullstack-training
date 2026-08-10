@@ -26,6 +26,7 @@ export function useSendMessage(roomId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
+    meta: { errorMessage: 'Could not send the message' },
     mutationFn: async (input: Omit<SendMessageInput, 'roomId'>) =>
       (await notificationsApi.post('/api/messages', { roomId, ...input })).data,
     onSuccess: () =>
@@ -46,6 +47,7 @@ export function useMarkThreadRead(roomId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
+    meta: { silentError: true },
     mutationFn: async (thread?: MessageThreadKey) =>
       (
         await notificationsApi.patch(

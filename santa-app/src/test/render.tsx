@@ -1,7 +1,8 @@
 import { type ReactElement, type ReactNode } from 'react';
 import { render, type RenderOptions } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { createQueryClient } from '@/lib/queryClient';
 import { AuthProvider } from '@/features/auth/AuthContext';
 import { SocketProvider } from '@/features/socket/SocketProvider';
 
@@ -17,9 +18,7 @@ interface Options extends Omit<RenderOptions, 'wrapper'> {
  */
 export function renderWithProviders(ui: ReactElement, options: Options = {}) {
   const { route = '/', ...rtlOptions } = options;
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
+  const queryClient = createQueryClient({ retry: false });
 
   function Wrapper({ children }: { children: ReactNode }) {
     return (

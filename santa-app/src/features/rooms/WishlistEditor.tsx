@@ -3,7 +3,6 @@ import { useFieldArray, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { getApiErrorMessage } from '@/lib/api';
 import { wishlistFormSchema, type WishlistFormInput } from '@/schemas/wishlist';
 import { cleanWishlistItems } from './helpers';
 import { useSaveWishlist, useWishlist } from './hooks';
@@ -46,17 +45,12 @@ export function WishlistEditor({
     });
   }, [data, roomId, userId, reset]);
 
-  async function onSubmit(values: WishlistFormInput) {
+  function onSubmit(values: WishlistFormInput) {
     if (locked) return;
 
-    try {
-      await save.mutateAsync(
-        cleanWishlistItems(values.items.map((i) => i.value)),
-      );
-      toast.success('Wishlist saved');
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, 'Could not save your wishlist'));
-    }
+    save.mutate(cleanWishlistItems(values.items.map((i) => i.value)), {
+      onSuccess: () => toast.success('Wishlist saved'),
+    });
   }
 
   if (isLoading)

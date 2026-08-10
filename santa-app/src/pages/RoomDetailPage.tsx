@@ -32,7 +32,6 @@ import { WishlistEditor } from '@/features/rooms/WishlistEditor';
 import { DrawDialog } from '@/features/rooms/DrawDialog';
 import { usePermissions } from '@/features/rooms/usePermissions';
 import { toast } from 'sonner';
-import { getApiErrorMessage } from '@/lib/api';
 import { EditRoomDialog } from '@/features/rooms/EditRoomDialog';
 import { isExchangePassed } from '@/features/rooms/helpers';
 
@@ -108,39 +107,35 @@ export function RoomDetailPage() {
   const notEnough = room.participantCount < 3;
   const wishlishLocked = isExchangePassed(room.exchangeDate);
 
-  async function handleDelete() {
+  // Failures are toasted centrally by the MutationCache (lib/queryClient.ts);
+  // each handler only describes what success means. Navigation lives in
+  // onSuccess so it can never run after a failed delete.
+  function handleDelete() {
     if (!can('room:delete')) return;
     if (!window.confirm('Delete this room? This cannot be undone.')) return;
 
-    try {
-      await del.mutateAsync();
-      toast.success('Room deleted');
-      navigate('/rooms');
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, 'Could not delete the room'));
-    }
+    del.mutate(undefined, {
+      onSuccess: () => {
+        toast.success('Room deleted');
+        navigate('/rooms');
+      },
+    });
   }
 
-  async function handleKick(userId: string) {
+  function handleKick(userId: string) {
     if (!can('room:kick')) return;
 
-    try {
-      await kick.mutateAsync(userId);
-      toast.success('Member removed');
-    } catch (e) {
-      toast.error(getApiErrorMessage(e, 'Could not remove the member'));
-    }
+    kick.mutate(userId, {
+      onSuccess: () => toast.success('Member removed'),
+    });
   }
 
-  async function handleRegenerate() {
+  function handleRegenerate() {
     if (!can('room:invite')) return;
 
-    try {
-      await regen.mutateAsync();
-      toast.success('New invite code generated');
-    } catch (e) {
-      toast.error(getApiErrorMessage(e, 'Could not regenerate the code'));
-    }
+    regen.mutate(undefined, {
+      onSuccess: () => toast.success('New invite code generated'),
+    });
   }
 
   return (

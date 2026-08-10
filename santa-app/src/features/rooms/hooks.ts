@@ -36,6 +36,7 @@ export function useCreateRoom() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    meta: { errorMessage: 'Could not create the room' },
     mutationFn: async (input: CreateRoomInput) =>
       (await api.post<RoomDetail>('/api/rooms', input)).data,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: roomKeys.all }),
@@ -46,8 +47,9 @@ export function useJoinRoom() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    meta: { errorMessage: "Couldn't join — check the code" },
     mutationFn: async (inviteCode: string) =>
-      (await api.post('/api/rooms/join', { inviteCode })).data,
+      (await api.post<RoomDetail>('/api/rooms/join', { inviteCode })).data,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: roomKeys.all }),
   });
 }
@@ -68,6 +70,7 @@ export function useSaveWishlist(roomId: string, userId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
+    meta: { errorMessage: 'Could not save your wishlist' },
     mutationFn: async (items: string[]) =>
       (
         await api.put<Wishlist>(`/api/rooms/${roomId}/wishlist`, {
@@ -75,7 +78,9 @@ export function useSaveWishlist(roomId: string, userId: string) {
         })
       ).data,
     onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: roomKeys.wishlist(roomId, userId) }),
+      queryClient.invalidateQueries({
+        queryKey: roomKeys.wishlist(roomId, userId),
+      }),
   });
 }
 
@@ -83,6 +88,7 @@ export function useDraw(roomId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
+    meta: { errorMessage: 'Could not run the draw' },
     mutationFn: async (exchangeDate: string) =>
       (
         await api.post<RoomDetail>(`/api/rooms/${roomId}/draw`, {
@@ -111,6 +117,7 @@ export function useEditRoom(roomId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
+    meta: { errorMessage: 'Could not update the room' },
     mutationFn: async (input: UpdateRoomInput) =>
       (await api.patch<RoomDetail>(`/api/rooms/${roomId}`, input)).data,
     onSuccess: () =>
@@ -122,6 +129,7 @@ export function useDeleteRoom(roomId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
+    meta: { errorMessage: 'Could not delete the room' },
     mutationFn: async () => {
       await api.delete(`/api/rooms/${roomId}`);
     },
@@ -136,6 +144,7 @@ export function useKickMember(roomId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
+    meta: { errorMessage: 'Could not remove the member' },
     mutationFn: async (userId: string) => {
       await api.delete(`/api/rooms/${roomId}/members/${userId}`);
     },
@@ -148,6 +157,7 @@ export function useRegenerateInvite(roomId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
+    meta: { errorMessage: 'Could not regenerate the code' },
     mutationFn: async () =>
       (
         await api.post<RoomDetail>(

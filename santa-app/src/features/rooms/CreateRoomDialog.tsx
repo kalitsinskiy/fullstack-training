@@ -2,7 +2,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { getApiErrorMessage } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/ui/form-field';
 import { SelectField } from '@/components/ui/select-field';
@@ -46,22 +45,23 @@ export function CreateRoomDialog({ open, onOpenChange }: Props) {
     onOpenChange(next);
   }
 
-  async function onSubmit(values: CreateRoomFormInput) {
-    try {
-      const room = await createRoom.mutateAsync({
+  function onSubmit(values: CreateRoomFormInput) {
+    createRoom.mutate(
+      {
         name: values.name.trim(),
         ...(values.budget
           ? { budget: values.budget, currency: values.currency ?? '$' }
           : {}),
-      });
+      },
+      {
+        onSuccess: (room) => {
+          toast.success('Room created');
 
-      toast.success('Room created');
-
-      close(false);
-      navigate(`/rooms/${room.id}`);
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, 'Could not create the room'));
-    }
+          close(false);
+          navigate(`/rooms/${room.id}`);
+        },
+      },
+    );
   }
 
   return (

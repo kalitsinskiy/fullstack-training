@@ -11,7 +11,6 @@ import {
   useMarkThreadRead,
 } from '@/features/messages/hooks';
 import { useSocket } from '@/features/socket/SocketContext';
-import { getApiErrorMessage } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import type {
   ChatMessage,
@@ -22,7 +21,6 @@ import { format } from 'date-fns';
 import { Gift, MessageCircle, Send } from 'lucide-react';
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { toast } from 'sonner';
 
 export function RoomMessagesPage() {
   const { id } = useParams<{ id: string }>();
@@ -70,19 +68,16 @@ export function RoomMessagesPage() {
     bottomRef.current?.scrollIntoView({ block: 'end' });
   }, [active.length, tab]);
 
-  async function onSubmit(e: FormEvent) {
+  function onSubmit(e: FormEvent) {
     e.preventDefault();
 
     const body = text.trim();
 
     if (!body) return;
 
-    try {
-      await send.mutateAsync({ to: tab, text: body });
-      setText('');
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, 'Could not sent the message'));
-    }
+    // Only clear the composer once the send actually succeeded — the previous
+    // version cleared it inside a try that could still have thrown.
+    send.mutate({ to: tab, text: body }, { onSuccess: () => setText('') });
   }
 
   if (isLoading)

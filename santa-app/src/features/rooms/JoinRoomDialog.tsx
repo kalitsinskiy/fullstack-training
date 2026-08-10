@@ -2,7 +2,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { getApiErrorMessage } from '@/lib/api';
 import { joinRoomSchema, type JoinRoomFormInput } from '@/schemas/rooms';
 import { normalizeInviteCode } from '@/features/rooms/helpers';
 import { useJoinRoom } from '@/features/rooms/hooks';
@@ -39,17 +38,14 @@ export function JoinRoomDialog({ open, onOpenChange }: Props) {
     onOpenChange(next);
   }
 
-  async function onSubmit(values: JoinRoomFormInput) {
-    try {
-      const room = await joinRoom.mutateAsync(
-        normalizeInviteCode(values.inviteCode),
-      );
-      toast.success('Joined the room');
-      close(false);
-      navigate(`/rooms/${room.id}`);
-    } catch (error) {
-      toast.error(getApiErrorMessage(error, "Couldn't join — check the code"));
-    }
+  function onSubmit(values: JoinRoomFormInput) {
+    joinRoom.mutate(normalizeInviteCode(values.inviteCode), {
+      onSuccess: (room) => {
+        toast.success('Joined the room');
+        close(false);
+        navigate(`/rooms/${room.id}`);
+      },
+    });
   }
 
   return (

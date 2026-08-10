@@ -33,6 +33,7 @@ export function useMarkRead() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    meta: { silentError: true },
     mutationFn: async (id: string) =>
       (
         await notificationsApi.patch<Notification>(
