@@ -57,11 +57,19 @@ export class RoomsService {
       });
 
       await created.populate('participants.userId', 'displayName');
-      await this.redis.set(
-        `invite:${created.inviteCode}`,
-        created._id.toString(),
-        this.INVITE_TTL,
-      );
+
+      try {
+        await this.redis.set(
+          `invite:${created.inviteCode}`,
+          created._id.toString(),
+          this.INVITE_TTL,
+        );
+      } catch (err: unknown) {
+        this.logger.warn(
+          { err, roomId: created._id.toString() },
+          'Failed to cache invite code - join-by-code will fallback to Mongo',
+        );
+      }
 
       this.events.publish('room.created', {
         roomId: created._id.toString(),
