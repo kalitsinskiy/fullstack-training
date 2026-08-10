@@ -88,6 +88,18 @@ describe('RoomsService.toRoomResponse', () => {
     expect(room.viewerPermissions).toContain('room:draw');
   });
 
+  it('gives a member exactly room:view + wishlist:set', () => {
+    const nick = populated('Nick', 'member');
+    const doc = roomDoc([populated('Alice', 'owner'), nick]);
+
+    const room = toRoomResponse(doc, nick.userId._id.toString());
+
+    expect([...(room.viewerPermissions ?? [])].sort()).toEqual([
+      'room:view',
+      'wishlist:set',
+    ]);
+  });
+
   it('omits viewerPermissions for a non-participant', () => {
     const doc = roomDoc([populated('Alice', 'owner')]);
 

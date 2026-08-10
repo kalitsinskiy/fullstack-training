@@ -1,4 +1,4 @@
-import { withViewerPermissions } from './room-veiw';
+import { withViewerPermissions } from './room-view';
 import type { Room } from './room.types';
 
 const shared: Room = {
@@ -15,7 +15,7 @@ const shared: Room = {
 };
 
 describe('withViewerPermissions', () => {
-  it('gives the woner the full owner perms', () => {
+  it('gives the owner the full owner perms', () => {
     expect(withViewerPermissions(shared, 'u1').viewerPermissions).toContain(
       'room:delete',
     );
@@ -27,7 +27,7 @@ describe('withViewerPermissions', () => {
     ).toEqual(['room:view', 'wishlist:set']);
   });
 
-  it('leaves viewerPermissions unset fo a non-participant', () => {
+  it('leaves viewerPermissions unset for a non-participant', () => {
     expect(
       withViewerPermissions(shared, 'stranger').viewerPermissions,
     ).toBeUndefined();

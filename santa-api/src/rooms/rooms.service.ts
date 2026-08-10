@@ -13,7 +13,7 @@ import { UsersService } from '../users/users.service';
 import { WishlistService } from '../wishlist/wishlist.service';
 import { RedisService } from '../redis/redis.service';
 import { EventPublisherService } from '../events/event-publisher.service';
-import { withViewerPermissions } from './room-veiw';
+import { withViewerPermissions } from './room-view';
 import {
   PaginatedResponse,
   PaginationQuery,
@@ -28,7 +28,6 @@ import {
   RoomRelations,
 } from './room.types';
 import { Room as RoomModel, RoomDocument } from './schemas/room.schema';
-import { permissionsForRole } from './permissions';
 import { derange } from './derangement';
 
 @Injectable()
@@ -417,12 +416,7 @@ export class RoomsService {
     if (doc.currency) room.currency = doc.currency;
     if (doc.exchangeDate) room.exchangeDate = doc.exchangeDate.toISOString();
 
-    if (viewerId) {
-      const mine = participants.find((p) => p.id === viewerId);
-      if (mine) room.viewerPermissions = [...permissionsForRole(mine.role)];
-    }
-
-    return room;
+    return viewerId ? withViewerPermissions(room, viewerId) : room;
   }
 
   private async getSharedRoom(id: string): Promise<Room | null> {
