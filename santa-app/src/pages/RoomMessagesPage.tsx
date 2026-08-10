@@ -32,6 +32,7 @@ export function RoomMessagesPage() {
   const { socket } = useSocket();
   const bottomRef = useRef<HTMLDivElement>(null);
   const markRead = useMarkThreadRead(id ?? '');
+  const markThreadRead = markRead.mutate;
   const markedRef = useRef<string>('');
 
   useEffect(() => {
@@ -51,7 +52,7 @@ export function RoomMessagesPage() {
 
     const onMessage = (payload: IncomingMessage) => {
       void refetch();
-      if (payload.roomId === id && payload.thread === tab) markRead.mutate(tab);
+      if (payload.roomId === id && payload.thread === tab) markThreadRead(tab);
     };
 
     socket.on('message:received', onMessage);
@@ -59,7 +60,7 @@ export function RoomMessagesPage() {
     return () => {
       socket.off('message:received', onMessage);
     };
-  }, [socket, refetch, id, tab, markRead]);
+  }, [socket, refetch, id, tab, markThreadRead]);
 
   const active: ChatMessage[] =
     (tab === 'giftee' ? data?.giftee?.messages : data?.santa?.messages) ?? [];

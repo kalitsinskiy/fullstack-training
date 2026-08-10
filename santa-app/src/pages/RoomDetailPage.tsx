@@ -65,6 +65,10 @@ export function RoomDetailPage() {
 
     joinRoom(id);
 
+    const onConnect = () => joinRoom(id);
+
+    socket.on('connect', onConnect);
+
     const onMemberJoined = () =>
       void queryClient.invalidateQueries({ queryKey: roomKeys.detail(id) });
 
@@ -83,6 +87,7 @@ export function RoomDetailPage() {
     socket.on('room:date-changed', onDateChanged);
 
     return () => {
+      socket.off('connect', onConnect);
       leaveRoom(id);
       socket.off('room:member-joined', onMemberJoined);
       socket.off('room:draw-completed', onDrawCompleted);
