@@ -1,4 +1,5 @@
 import Fastify, { FastifyError } from 'fastify';
+import fp from 'fastify-plugin';
 import cors from '@fastify/cors';
 import ajvFormats from 'ajv-formats';
 
@@ -39,13 +40,15 @@ export function buildApp() {
   });
 
   app.register(configPlugin);
-  app.register(async (scope) => {
-    await scope.register(cors, {
-      origin: scope.config.corsOrigin,
-      methods: ['GET', 'POST', 'PATCH', 'DELETE'],
-      credentials: true,
-    });
-  });
+  app.register(
+    fp(async (scope) => {
+      await scope.register(cors, {
+        origin: scope.config.corsOrigin,
+        methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+        credentials: true,
+      });
+    })
+  );
   app.register(helmet, { contentSecurityPolicy: false });
   app.register(rateLimit, { max: 100, timeWindow: '1 minute', redis: undefined });
   app.register(authPlugin);
