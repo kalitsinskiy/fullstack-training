@@ -14,6 +14,8 @@ import authPlugin from './plugins/auth';
 import santaApiPlugin from './plugins/santa-api';
 import ioPlugin from './plugins/io';
 import messageRoutes from './routes/messages';
+import helmet from '@fastify/helmet';
+import rateLimit from '@fastify/rate-limit';
 
 export function buildApp() {
   const app = Fastify({
@@ -44,6 +46,8 @@ export function buildApp() {
       credentials: true,
     });
   });
+  app.register(helmet, { contentSecurityPolicy: false });
+  app.register(rateLimit, { max: 100, timeWindow: '1 minute', redis: undefined });
   app.register(authPlugin);
   app.register(santaApiPlugin);
   app.register(ioPlugin);
