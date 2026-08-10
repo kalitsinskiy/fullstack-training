@@ -5,6 +5,19 @@ import { server } from '@/test/mocks/server';
 import { MessagesPage } from './MessagesPage';
 
 describe('MessagesPage', () => {
+  it('shows an error, when the rooms fetch fails', async () => {
+    server.use(
+      http.get('/api/rooms/', () => new HttpResponse(null, { status: 500 })),
+    );
+
+    renderWithProviders(<MessagesPage />);
+
+    expect(
+      await screen.findByText(/could not load your chats/i),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/no chats yet/i)).not.toBeInTheDocument();
+  });
+
   it('lists drawn rooms and highlights ones with unread messages', async () => {
     server.use(
       http.get('/api/rooms', () =>

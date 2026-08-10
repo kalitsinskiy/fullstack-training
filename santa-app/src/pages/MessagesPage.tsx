@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { useUnreadMessages } from '@/features/messages/hooks';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 /**
  * Anonymous messaging — chat with your Santa / your giftee without revealing identity.
@@ -13,7 +14,7 @@ import { cn } from '@/lib/utils';
  * TODO(lesson 07): receive messages in real time over the WebSocket (useSocket).
  */
 export function MessagesPage() {
-  const { data, isLoading } = useRooms();
+  const { data, isLoading, isError, refetch } = useRooms();
   const { data: unread } = useUnreadMessages();
   const drawnRooms = (data?.data ?? []).filter((r) => r.status === 'drawn');
 
@@ -39,7 +40,18 @@ export function MessagesPage() {
         </div>
       )}
 
-      {!isLoading && drawnRooms.length === 0 && (
+      {isError && (
+        <div className="rounded-lg border border-dashed border-border py-12 text-center">
+          <p className="text-sm text-muted-foreground">
+            Could not load your chats.
+          </p>
+          <Button variant="outline" className="mt-3" onClick={() => refetch()}>
+            Try again
+          </Button>
+        </div>
+      )}
+
+      {!isLoading && !isError && drawnRooms.length === 0 && (
         <EmptyState
           icon={MessageCircle}
           title="No chats yet"
