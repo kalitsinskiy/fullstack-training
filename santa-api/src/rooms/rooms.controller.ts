@@ -31,6 +31,7 @@ import { RequirePermissions } from './decorators/require-permissions.decorator';
 import { RoomPermissionsGuard } from './guards/room-permissions.guard';
 import type { AssignmentView, Room } from './room.types';
 import { RoomsService } from './rooms.service';
+import { ParseObjectIdPipe } from '../common/pipes/parse-object-id.pipe';
 
 @Controller('rooms')
 @ApiTags('rooms')
@@ -86,13 +87,14 @@ export class RoomsController {
     description: 'Room returned successfully',
     type: RoomResponseDto,
   })
+  @ApiResponse({ status: 400, description: 'Malformed room id' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({
     status: 404,
     description: 'Room not found, or the caller is not a participant',
   })
   findById(
-    @Param('id') id: string,
+    @Param('id', ParseObjectIdPipe) id: string,
     @CurrentUser('id') userId: string,
   ): Promise<Room> {
     return this.roomsService.findByIdForUser(id, userId);
@@ -126,12 +128,15 @@ export class RoomsController {
     description: 'Room joined successfully',
     type: RoomResponseDto,
   })
-  @ApiResponse({ status: 400, description: 'Invalid invite code' })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid invite code, or malformed room id',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Draw already completed' })
   @ApiResponse({ status: 404, description: 'Room not found' })
   join(
-    @Param('id') id: string,
+    @Param('id', ParseObjectIdPipe) id: string,
     @Body() body: JoinRoomDto,
     @CurrentUser('id') userId: string,
   ): Promise<Room> {
@@ -154,7 +159,7 @@ export class RoomsController {
   })
   @ApiResponse({
     status: 400,
-    description: 'Not enough participants / already drawn',
+    description: 'Not enough participants / already drawn / malformed room id',
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({
@@ -163,7 +168,7 @@ export class RoomsController {
   })
   @ApiResponse({ status: 404, description: 'Room not found' })
   draw(
-    @Param('id') id: string,
+    @Param('id', ParseObjectIdPipe) id: string,
     @Body() body: DrawRoomDto,
     @CurrentUser('id') userId: string,
   ): Promise<Room> {
@@ -178,12 +183,15 @@ export class RoomsController {
     example: '665f0c2ab7d13a5e8b1c4d9f',
   })
   @ApiResponse({ status: 200, description: 'Your assignment' })
-  @ApiResponse({ status: 400, description: 'Draw not completed yet' })
+  @ApiResponse({
+    status: 400,
+    description: 'Draw not completed yet, or malformed room id',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Not a room participant' })
   @ApiResponse({ status: 404, description: 'Room or assignment not found' })
   getAssignment(
-    @Param('id') id: string,
+    @Param('id', ParseObjectIdPipe) id: string,
     @CurrentUser('id') userId: string,
   ): Promise<AssignmentView> {
     return this.roomsService.getAssignment(id, userId);
@@ -198,12 +206,15 @@ export class RoomsController {
     description: 'Room updated',
     type: RoomResponseDto,
   })
-  @ApiResponse({ status: 400, description: 'Validation error' })
+  @ApiResponse({
+    status: 400,
+    description: 'Validation error, or malformed room id',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Missing room:edit permission' })
   @ApiResponse({ status: 404, description: 'Room not found' })
   edit(
-    @Param('id') id: string,
+    @Param('id', ParseObjectIdPipe) id: string,
     @Body() body: UpdateRoomDto,
     @CurrentUser('id') userId: string,
   ): Promise<Room> {
@@ -216,13 +227,11 @@ export class RoomsController {
   @ApiOperation({ summary: 'Delete a room (owner only)' })
   @ApiParam({ name: 'id', description: 'Room identifier' })
   @ApiResponse({ status: 204, description: 'Room deleted' })
+  @ApiResponse({ status: 400, description: 'Malformed room id' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Missing room:delete permission' })
   @ApiResponse({ status: 404, description: 'Room not found' })
-  remove(
-    @Param('id') id: string,
-    @CurrentUser('id') userId: string,
-  ): Promise<void> {
+  remove(@Param('id', ParseObjectIdPipe) id: string): Promise<void> {
     return this.roomsService.deleteRoom(id);
   }
 
@@ -233,14 +242,16 @@ export class RoomsController {
   @ApiParam({ name: 'id', description: 'Room identifier' })
   @ApiParam({ name: 'userId', description: 'Id of the member to remove' })
   @ApiResponse({ status: 204, description: 'Member removed' })
-  @ApiResponse({ status: 400, description: 'Cannot remove the owner' })
+  @ApiResponse({
+    status: 400,
+    description: 'Cannot remove the owner, or malformed room/member id',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Missing room:kick permission' })
   @ApiResponse({ status: 404, description: 'Room or member not found' })
   kick(
-    @Param('id') id: string,
-    @Param('userId') targetUserId: string,
-    @CurrentUser('id') userId: string,
+    @Param('id', ParseObjectIdPipe) id: string,
+    @Param('userId', ParseObjectIdPipe) targetUserId: string,
   ): Promise<void> {
     return this.roomsService.kickMember(id, targetUserId);
   }
@@ -255,11 +266,12 @@ export class RoomsController {
     description: 'New invite code generated',
     type: RoomResponseDto,
   })
+  @ApiResponse({ status: 400, description: 'Malformed room id' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Missing room:invite permission' })
   @ApiResponse({ status: 404, description: 'Room not found' })
   regenerateInvite(
-    @Param('id') id: string,
+    @Param('id', ParseObjectIdPipe) id: string,
     @CurrentUser('id') userId: string,
   ): Promise<Room> {
     return this.roomsService.regenerateInviteCode(id, userId);

@@ -1,5 +1,6 @@
 import { Controller, Get, Param, UseGuards } from '@nestjs/common';
 import { ApiExcludeController } from '@nestjs/swagger';
+import { ParseObjectIdPipe } from '../common/pipes/parse-object-id.pipe';
 import { ServiceKeyGuard } from './service-key.guard';
 import { UsersService } from '../users/users.service';
 import { RoomsService } from '../rooms/rooms.service';
@@ -16,7 +17,7 @@ export class InternalController {
 
   @Get('users/:id')
   async getUser(
-    @Param('id') id: string,
+    @Param('id', ParseObjectIdPipe) id: string,
   ): Promise<{ id: string; displayName: string; email: string }> {
     const user = await this.userService.findById(id);
 
@@ -29,15 +30,15 @@ export class InternalController {
 
   @Get('rooms/:id')
   getRoom(
-    @Param('id') id: string,
+    @Param('id', ParseObjectIdPipe) id: string,
   ): Promise<{ id: string; name: string; memberIds: string[] }> {
     return this.roomsService.getParticipantIds(id);
   }
 
   @Get('rooms/:roomId/relations/:userId')
   getRelations(
-    @Param('roomId') roomId: string,
-    @Param('userId') userId: string,
+    @Param('roomId', ParseObjectIdPipe) roomId: string,
+    @Param('userId', ParseObjectIdPipe) userId: string,
   ): Promise<RoomRelations> {
     return this.roomsService.getRelations(roomId, userId);
   }

@@ -108,6 +108,18 @@ object includes `viewerPermissions` — the calling user's effective permissions
 for that room, which the frontend uses to gate UI. A request lacking the required
 permission gets `403`; a non-member gets `404`.
 
+### Identifier validation
+
+Every `:id`, `:roomId` and `:userId` path segment must be a valid Mongo ObjectId
+(24 hex characters). A value of the wrong **shape** is a client error and returns
+`400` with `Invalid <param>: expected a 24-character hex id` — it never reaches
+the database, so it cannot surface as a `500`.
+
+This is distinct from a *well-formed but unknown* id, which still returns `404`.
+Shape is not existence: a malformed value cannot identify a room, so returning
+`400` for it does not weaken the rule above that the API never reveals whether a
+room exists to someone who isn't in it.
+
 > Adding a new role is a one-line change to the role→permission preset on the
 > backend — no guard, route, or frontend change.
 
@@ -180,7 +192,7 @@ Requires `room:view`. Response `200`: the room shape. Only a participant may rea
 it; a non-participant (or an unknown id) gets `404` — the API never reveals that a
 room exists to someone who isn't in it.
 
-Errors: `401`, `404`
+Errors: `400` (malformed id), `401`, `404`
 
 ### `POST /rooms/join`
 
@@ -259,7 +271,7 @@ Requires `room:delete` (owner-only). Deletes the room.
 
 Response `204`: no content.
 
-Errors: `401`, `403` (missing `room:delete`), `404`
+Errors: `400` (malformed id), `401`, `403` (missing `room:delete`), `404`
 
 ### `DELETE /rooms/:id/members/:userId`
 
@@ -277,7 +289,7 @@ invalidating the old one.
 
 Response `200`: the room shape with the new `inviteCode`.
 
-Errors: `401`, `403` (missing `room:invite`), `404`
+Errors: `400` (malformed id), `401`, `403` (missing `room:invite`), `404`
 
 ## Wishlist
 

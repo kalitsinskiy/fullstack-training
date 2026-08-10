@@ -105,4 +105,23 @@ describe('Wishlist (HTTP)', () => {
       .send({ name: 'Family Santa' })
       .expect(201);
   });
+
+  it('GET /api/rooms/:roomId/wishlist/:userId -> 400 for a malformed userId', async () => {
+    const { room, token } = await seedUserAndRoom();
+
+    await request(app.getHttpServer())
+      .get(`/api/rooms/${room._id.toString()}/wishlist/not-an-object-id`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(400);
+  });
+
+  it('PUT /api/rooms/:roomId/wishlist -> 400 for a malformed roomId', async () => {
+    const { token } = await seedUserAndRoom();
+
+    await request(app.getHttpServer())
+      .put('/api/rooms/not-an-object-id/wishlist')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ items: ['socks'] })
+      .expect(400);
+  });
 });

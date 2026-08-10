@@ -1,5 +1,5 @@
 import { getModelToken } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import request from 'supertest';
 import { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Room } from '../src/rooms/schemas/room.schema';
@@ -404,11 +404,6 @@ describe('Rooms (HTTP)', () => {
     const id = room._id.toString();
 
     await request(app.getHttpServer())
-      .delete('/api-rooms/not-an-id')
-      .set('Authorization', `Bearer ${owner.token}`)
-      .expect(404);
-
-    await request(app.getHttpServer())
       .delete(`/api/rooms/${id}`)
       .set('Authorization', `Bearer ${owner.token}`)
       .expect(204);
@@ -734,5 +729,47 @@ describe('Rooms (HTTP)', () => {
     expect(publish.mock.calls.map((c) => c[1])).not.toContain(
       'room.date_changed',
     );
+  });
+
+  describe('malformed id handling', () => {
+    const bad = 'not-an-object-id';
+
+    it.each([
+      ['GET', (id: string) => `/api/rooms/${id}`],
+      ['GET', (id: string) => `/api/rooms/${id}/assignment`],
+      ['PATCH', (id: string) => `/api/rooms/${id}`],
+      ['DELETE', (id: string) => `/api/rooms/${id}`],
+      ['POST', (id: string) => `/api/rooms/${id}/draw`],
+      ['POST', (id: string) => `/api/rooms/${id}/join`],
+      ['POST', (id: string) => `/api/rooms/${id}/invite-code/regenerate`],
+    ])('%s %s returns 400, not 404 or 500', async (method, path) => {
+      const { owner } = await seedOwnerAndMember();
+
+      const res = await request(app.getHttpServer())
+        [method.toLowerCase() as 'get'](path(bad))
+        .set('Authorization', `Bearer ${owner.token}`)
+        .send({});
+
+      expect(res.status).toBe(400);
+    });
+
+    it('DELETE /api/rooms/:id/members/:userId rejects a malformed member id', async () => {
+      const { owner, room } = await seedOwnerAndMember();
+
+      await request(app.getHttpServer())
+        .delete(`/api/rooms/${room._id.toString()}/members/${bad}`)
+        .set('Authorization', `Bearer ${owner.token}`)
+        .expect(400);
+    });
+
+    it('still returns 404 for a well-formed but unknown room id', async () => {
+      const { owner } = await seedOwnerAndMember();
+      const unknown = new Types.ObjectId().toString();
+
+      await request(app.getHttpServer())
+        .get(`/api/rooms/${unknown}`)
+        .set('Authorization', `Bearer ${owner.token}`)
+        .expect(404);
+    });
   });
 });

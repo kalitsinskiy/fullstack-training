@@ -9,6 +9,7 @@ import {
 } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ParseObjectIdPipe } from '../common/pipes/parse-object-id.pipe';
 import { RequirePermissions } from '../rooms/decorators/require-permissions.decorator';
 import { RoomPermissionsGuard } from '../rooms/guards/room-permissions.guard';
 import { UpdateWishlistDto } from './dto/update-wishlist.dto';
@@ -40,12 +41,15 @@ export class WishlistController {
     description: 'Wishlist saved successfully',
     type: WishlistResponseDto,
   })
-  @ApiResponse({ status: 400, description: 'Validation failed' })
+  @ApiResponse({
+    status: 400,
+    description: 'Validation failed, or malformed roomId',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Missing wishlist:set permission' })
   @ApiResponse({ status: 404, description: 'Room not found' })
   set(
-    @Param('roomId') roomId: string,
+    @Param('roomId', ParseObjectIdPipe) roomId: string,
     @CurrentUser('id') userId: string,
     @Body() body: UpdateWishlistDto,
   ): Promise<Wishlist> {
@@ -65,6 +69,7 @@ export class WishlistController {
     description: 'Wishlist returned successfully',
     type: WishlistResponseDto,
   })
+  @ApiResponse({ status: 400, description: 'Malformed roomId or userId' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Missing room:view permission' })
   @ApiResponse({
@@ -72,8 +77,8 @@ export class WishlistController {
     description: 'Room not found / not a participant',
   })
   async findOne(
-    @Param('roomId') roomId: string,
-    @Param('userId') userId: string,
+    @Param('roomId', ParseObjectIdPipe) roomId: string,
+    @Param('userId', ParseObjectIdPipe) userId: string,
   ): Promise<Wishlist> {
     // Returns an empty wishlist ({ items: [] }) if the user has none yet.
     return this.wishlistService.get(roomId, userId);

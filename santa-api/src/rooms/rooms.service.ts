@@ -43,11 +43,6 @@ export class RoomsService {
   private readonly ROOM_CACHE_TTL = 300; // 5 minutes
   private readonly INVITE_TTL = 48 * 60 * 60; // 48h = 172800s
 
-  // NOTE: every room response uses the shape in docs/api-contract.md — map
-  // participants to populated { id, displayName, role }, include participantCount,
-  // and set `viewerPermissions` to the calling user's permissions for that room
-  // (resolve their role via permissionsForRole() from ./permissions).
-
   async create(dto: CreateRoomDto, creatorId: string): Promise<Room> {
     try {
       const created = await this.roomModel.create({
@@ -104,10 +99,6 @@ export class RoomsService {
   }
 
   async findByIdForUser(id: string, userId: string): Promise<Room> {
-    if (!Types.ObjectId.isValid(id)) {
-      throw new NotFoundException('Room not found');
-    }
-
     const room = await this.getSharedRoom(id);
 
     if (!room) {
@@ -122,10 +113,6 @@ export class RoomsService {
   }
 
   async join(id: string, inviteCode: string, userId: string): Promise<Room> {
-    if (!Types.ObjectId.isValid(id)) {
-      throw new NotFoundException('Room not found');
-    }
-
     const room = await this.roomModel.findById(id).exec();
 
     if (!room) {
@@ -179,10 +166,6 @@ export class RoomsService {
     requesterId: string,
     exchangeDate: string,
   ): Promise<Room> {
-    if (!Types.ObjectId.isValid(id)) {
-      throw new NotFoundException('Room not found');
-    }
-
     const room = await this.roomModel.findById(id).exec();
 
     if (!room) {
@@ -241,10 +224,6 @@ export class RoomsService {
   }
 
   async getAssignment(id: string, userId: string): Promise<AssignmentView> {
-    if (!Types.ObjectId.isValid(id)) {
-      throw new NotFoundException('Room not found');
-    }
-
     const room = await this.roomModel
       .findOne({ _id: id, 'participants.userId': userId })
       .exec();
@@ -283,10 +262,6 @@ export class RoomsService {
     dto: UpdateRoomDto,
     userId: string,
   ): Promise<Room> {
-    if (!Types.ObjectId.isValid(id)) {
-      throw new NotFoundException('Room not found');
-    }
-
     const update: Record<string, unknown> = {};
 
     if (dto.name !== undefined) update.name = dto.name.trim();
@@ -327,10 +302,6 @@ export class RoomsService {
   }
 
   async deleteRoom(id: string): Promise<void> {
-    if (!Types.ObjectId.isValid(id)) {
-      throw new NotFoundException('Room not found');
-    }
-
     const deleted = await this.roomModel.findByIdAndDelete(id).exec();
 
     if (!deleted) {
@@ -341,10 +312,6 @@ export class RoomsService {
   }
 
   async kickMember(id: string, targetUserId: string): Promise<void> {
-    if (!Types.ObjectId.isValid(id) || !Types.ObjectId.isValid(targetUserId)) {
-      throw new NotFoundException('Room or member not found');
-    }
-
     const room = await this.roomModel.findById(id).exec();
 
     if (!room) {
@@ -371,10 +338,6 @@ export class RoomsService {
   }
 
   async regenerateInviteCode(id: string, userId: string): Promise<Room> {
-    if (!Types.ObjectId.isValid(id)) {
-      throw new NotFoundException('Room not found');
-    }
-
     const room = await this.roomModel.findById(id).exec();
 
     if (!room) {
@@ -480,10 +443,6 @@ export class RoomsService {
   async getParticipantIds(
     id: string,
   ): Promise<{ id: string; name: string; memberIds: string[] }> {
-    if (!Types.ObjectId.isValid(id)) {
-      throw new NotFoundException('Room not found');
-    }
-
     const room = await this.roomModel
       .findById(id)
       .select('name participants')
@@ -502,10 +461,6 @@ export class RoomsService {
   }
 
   async getRelations(roomId: string, userId: string): Promise<RoomRelations> {
-    if (!Types.ObjectId.isValid(roomId) || !Types.ObjectId.isValid(userId)) {
-      throw new NotFoundException('Room not found');
-    }
-
     const room = await this.roomModel
       .findById(roomId)
       .select('assignments')

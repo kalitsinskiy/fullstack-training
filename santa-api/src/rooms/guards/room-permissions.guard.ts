@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   CanActivate,
   ExecutionContext,
   Injectable,
@@ -36,8 +37,16 @@ export class RoomPermissionsGuard implements CanActivate {
     const userId = request.user?.id;
     const roomId = request.params.id ?? request.params.roomId;
 
-    if (!userId || !roomId || !Types.ObjectId.isValid(roomId)) {
+    if (!userId || !roomId) {
       throw new NotFoundException('Room not found');
+    }
+
+    // Guards run BEFORE pipes in Nest, so ParseObjectIdPipe on the handler
+    // never sees the id on a permission-gated route.
+    if (!Types.ObjectId.isValid(roomId)) {
+      throw new BadRequestException(
+        'Invalid room id: expected a 24-character hex id',
+      );
     }
 
     const room = await this.roomModel
