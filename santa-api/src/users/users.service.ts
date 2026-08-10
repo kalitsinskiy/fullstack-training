@@ -5,7 +5,7 @@ import { UpdateCurrentUserDto } from './dto/update-current-user.dto';
 import { User } from './user.types';
 import { User as UserModel, UserDocument } from './schemas/user.schema';
 import { rethrowDuplicateKey } from '../common/mongo-errors';
-import { normalizeEmail } from '../common/normailize-email';
+import { normalizeEmail } from '../common/normalize-email';
 
 type CreateUserInput = {
   email: string;
