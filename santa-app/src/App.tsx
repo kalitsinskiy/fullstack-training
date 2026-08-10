@@ -7,6 +7,7 @@ import { AuthProvider } from '@/features/auth/AuthContext';
 import { AuthGuard } from '@/features/auth/AuthGuard';
 import { SocketProvider } from '@/features/socket/SocketProvider';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { PublicLayout } from '@/components/layout/PublicLayout';
 import { Toaster } from '@/components/ui/sonner';
 import { LandingPage } from '@/pages/LandingPage';
 import { LoginPage } from '@/pages/LoginPage';
@@ -27,10 +28,11 @@ export default function App() {
           <SocketProvider>
             <BrowserRouter>
               <Routes>
-                {/* Public */}
-                <Route path="/" element={<LandingPage />} />
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/register" element={<RegisterPage />} />
+                <Route element={<PublicLayout />}>
+                  <Route path="/" element={<LandingPage />} />
+                  <Route path="/login" element={<LoginPage />} />
+                  <Route path="/register" element={<RegisterPage />} />
+                </Route>
 
                 {/* Protected */}
                 <Route element={<AuthGuard />}>

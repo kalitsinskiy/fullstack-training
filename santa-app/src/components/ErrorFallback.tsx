@@ -10,8 +10,13 @@ export function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
       <div className="space-y-1">
         <h2 className="font-display text-xl font-bold">Something went wrong</h2>
         <p className="text-sm text-muted-foreground">
-          {error instanceof Error ? error.message : 'Unexpected error'}
+          Something unexpected happened. Please try again.
         </p>
+        {import.meta.env.DEV && error instanceof Error && (
+          <p className="max-w-md text-xs text-muted-foreground/70">
+            {error.message}
+          </p>
+        )}
       </div>
       <Button variant="outline" onClick={resetErrorBoundary}>
         Try again
