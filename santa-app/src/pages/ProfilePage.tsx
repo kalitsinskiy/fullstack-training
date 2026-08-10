@@ -10,10 +10,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/ui/form-field';
 
-/**
- * Profile — view and edit your account.
- * TODO(lesson 02 frontend): edit display name → PATCH /api/users/me.
- */
 export function ProfilePage() {
   const { user, logout, updateUser } = useAuth();
   const {

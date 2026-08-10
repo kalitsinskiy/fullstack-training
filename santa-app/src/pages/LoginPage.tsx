@@ -16,16 +16,6 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 
-/**
- * WORKED EXAMPLE — the one fully-built screen in the baseline.
- *
- * Study this as the reference pattern for every other screen you build from
- * the Figma mockups: design tokens + shadcn components, an axios call through
- * `api`, error feedback via `toast`, auth via `useAuth`, and routing.
- * Landing, Register, Rooms, etc. are stubs — you implement them the same way.
- *
- * TODO(lesson fe-08): refactor to react-hook-form + zod with field-level errors.
- */
 export function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();

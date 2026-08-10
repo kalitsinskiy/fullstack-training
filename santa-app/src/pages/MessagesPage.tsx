@@ -8,11 +8,6 @@ import { useUnreadMessages } from '@/features/messages/hooks';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
-/**
- * Anonymous messaging — chat with your Santa / your giftee without revealing identity.
- * TODO(lesson 08): two-pane chat UI, send via santa-notifications relay.
- * TODO(lesson 07): receive messages in real time over the WebSocket (useSocket).
- */
 export function MessagesPage() {
   const { data, isLoading, isError, refetch } = useRooms();
   const { data: unread } = useUnreadMessages();

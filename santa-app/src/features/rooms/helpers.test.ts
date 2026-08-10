@@ -7,7 +7,7 @@ import {
 } from './helpers';
 
 describe('normalizeInviteCode', () => {
-  it('trims, uppercases and caos at 6 chars', () => {
+  it('trims, uppercases and caps at 6 chars', () => {
     expect(normalizeInviteCode('  q7x4lm  ')).toBe('Q7X4LM');
     expect(normalizeInviteCode('abcdefgh')).toBe('ABCDEF');
   });

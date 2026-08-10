@@ -105,7 +105,7 @@ export function RoomDetailPage() {
 
   const canDraw = can('room:draw') && room.status === 'pending';
   const notEnough = room.participantCount < 3;
-  const wishlishLocked = isExchangePassed(room.exchangeDate);
+  const wishlistLocked = isExchangePassed(room.exchangeDate);
 
   // Failures are toasted centrally by the MutationCache (lib/queryClient.ts);
   // each handler only describes what success means. Navigation lives in
@@ -273,7 +273,7 @@ export function RoomDetailPage() {
                     </ul>
                   ) : (
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Your giftee has't added a wishlist yet.
+                      Your giftee hasn't added a wishlist yet.
                     </p>
                   )}
                 </div>
@@ -299,7 +299,7 @@ export function RoomDetailPage() {
               <WishlistEditor
                 roomId={id}
                 userId={user.id}
-                locked={wishlishLocked}
+                locked={wishlistLocked}
               />
             )}
           </CardContent>

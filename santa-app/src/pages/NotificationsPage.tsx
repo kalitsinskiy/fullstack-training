@@ -7,11 +7,6 @@ import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 
-/**
- * Notifications — room events, draw completed, new messages.
- * TODO(lesson 06): fetch notification list from santa-notifications (HTTP).
- * TODO(lesson 07): live updates over the WebSocket + toast on new arrivals.
- */
 export function NotificationsPage() {
   const { data, isLoading, isError } = useNotifications();
   const markRead = useMarkRead();
@@ -29,7 +24,7 @@ export function NotificationsPage() {
       />
 
       {isLoading && (
-        <div className="space-y2">
+        <div className="space-y-2">
           {[0, 1, 2].map((i) => (
             <div
               key={i}

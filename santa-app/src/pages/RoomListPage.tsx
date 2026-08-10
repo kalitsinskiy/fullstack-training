@@ -8,11 +8,6 @@ import { RoomCard } from '@/features/rooms/RoomCard';
 import { CreateRoomDialog } from '@/features/rooms/CreateRoomDialog';
 import { JoinRoomDialog } from '@/features/rooms/JoinRoomDialog';
 
-/**
- * Dashboard — list of rooms the user owns or joined.
- * TODO(lesson 03 / 04): fetch GET /api/rooms with TanStack Query, render RoomCard grid,
- * wire "Create room" (POST /api/rooms) and "Join with code" (POST /api/rooms/:id/join).
- */
 export function RoomListPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [joinOpen, setJoinOpen] = useState(false);

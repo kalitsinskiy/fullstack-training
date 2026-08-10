@@ -51,7 +51,7 @@ export function RegisterPage() {
             <img src="/decor/santa-hat.svg" alt="" className="size-10" />
           </span>
           <CardTitle>Create your account</CardTitle>
-          <CardDescription>Join Secret Santa and start giftin</CardDescription>
+          <CardDescription>Join Secret Santa and start gifting</CardDescription>
         </CardHeader>
         <CardContent>
           <form

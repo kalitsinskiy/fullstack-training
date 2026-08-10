@@ -90,7 +90,7 @@ export function RoomMessagesPage() {
         <EmptyState
           icon={MessageCircle}
           title="Messaging isn't available yet"
-          description="Once the draw is done you can chet with your giftee and your Secret Santa."
+          description="Once the draw is done you can chat with your giftee and your Secret Santa."
         />
       </>
     );

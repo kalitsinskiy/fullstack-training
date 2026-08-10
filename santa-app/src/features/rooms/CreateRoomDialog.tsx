@@ -70,7 +70,7 @@ export function CreateRoomDialog({ open, onOpenChange }: Props) {
         <DialogHeader>
           <DialogTitle>Create a room</DialogTitle>
           <DialogDescription>
-            Name your room and optionally set a per0gift budget.
+            Name your room and optionally set a per-gift budget.
           </DialogDescription>
         </DialogHeader>
         <form
