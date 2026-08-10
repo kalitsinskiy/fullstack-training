@@ -2,16 +2,7 @@ import { Link } from 'react-router-dom';
 import { Gift } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-/**
- * Public landing page — STUB.
- *
- * Build this from the Santa Figma mockup (see design/screens/).
- * The LoginPage is provided as a worked example of the patterns you'll need
- * (layout, tokens, components). Replicate that approach here: hero section,
- * feature highlights, and calls-to-action.
- *
- * TODO(you): implement the landing layout to match the Figma "Landing" frame.
- */
+
 export function LandingPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-6 p-6 text-center">

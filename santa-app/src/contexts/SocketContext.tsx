@@ -37,7 +37,6 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     s.on('connect', () => setIsConnected(true));
     s.on('disconnect', () => setIsConnected(false));
     s.on('connect_error', (err) => {
-      console.error('Socket connection error:', err.message);
       if (err.message === 'Invalid or expired token') {
         s.disconnect();
       }

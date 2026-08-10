@@ -93,7 +93,6 @@ export async function createSocketServer(
       if (remainingSockets.length === 0) {
         await redisClient.srem('online:users', userId);
       }
-      console.log(`User ${userId} disconnected`);
     });
   });
 

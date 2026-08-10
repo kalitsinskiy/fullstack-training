@@ -3,10 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/features/auth/useAuth';
 
-/**
- * Profile — view and edit your account.
- * TODO(lesson 02 frontend): edit display name → PATCH /api/users/me.
- */
+/** Profile — view and edit your account. */
 export function ProfilePage() {
   const { user, logout } = useAuth();
 

@@ -13,27 +13,7 @@ import { Room as RoomModel } from '../schemas/room.schema';
 import { permissionsForRole } from '../permissions';
 import type { Permission } from '../permissions';
 
-/**
- * Enforces `@RequirePermissions(...)` on room routes.
- *
- * Runs AFTER `JwtAuthGuard`, so `request.user` is already populated.
- *
- * SKELETON: this stub ALLOWS every request so the routes you build in earlier
- * lessons keep working. Implementing real enforcement is your Lesson 04 task —
- * until then, membership/ownership checks live in the services.
- *
- * TODO (Lesson 04): replace `return true` with real enforcement:
- *   1. Read the required permissions from metadata (REQUIRE_PERMISSIONS_KEY) for
- *      the current handler via `this.reflector`. If none are required, return true.
- *   2. Read the caller id (`request.user.id`) and the room id from route params
- *      (`:id`, or `:roomId` on the wishlist routes — read whichever is present).
- *   3. Load the room and find the caller's participant entry.
- *        - not a participant  -> throw `NotFoundException` (do not leak existence)
- *   4. Resolve the participant's role to its permission set with
- *      `permissionsForRole(role)` and require EVERY requested permission.
- *        - missing a permission -> throw `ForbiddenException`
- *   5. Decide by PERMISSION, never by the role string.
- */
+/** Enforces `@RequirePermissions(...)` on room routes. Runs AFTER `JwtAuthGuard`. */
 @Injectable()
 export class RoomPermissionsGuard implements CanActivate {
   constructor(

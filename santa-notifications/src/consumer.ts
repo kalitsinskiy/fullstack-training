@@ -238,7 +238,7 @@ export async function startConsumer(
       log(`Processed event: ${routingKey}`);
       channel.ack(msg);
     } catch (error) {
-      console.error('Failed to process RabbitMQ message:', error);
+      log(`Failed to process RabbitMQ message: ${error instanceof Error ? error.message : String(error)}`);
       channel.nack(msg, false, false);
     }
   });
