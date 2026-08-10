@@ -1,51 +1,62 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 import { io, type Socket } from 'socket.io-client';
 import { tokenStore } from '@/lib/api';
 import { useAuth } from '@/features/auth/useAuth';
 import { SocketContext } from './SocketContext';
 
 export function SocketProvider({ children }: { children: ReactNode }) {
-  const { isAuthenticated } = useAuth();
-  const socketRef = useRef<Socket | null>(null);
+  const { isAuthenticated, logout } = useAuth();
+  const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    const socket = io(import.meta.env.VITE_WS_URL || undefined, {
+    const next = io(import.meta.env.VITE_WS_URL || undefined, {
       auth: { token: tokenStore.get() },
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
     });
-    socketRef.current = socket;
 
-    socket.on('connect', () => setIsConnected(true));
-    socket.on('disconnect', () => setIsConnected(false));
-    socket.on('connect_error', (err) => {
+    setSocket(next);
+
+    next.on('connect', () => setIsConnected(true));
+    next.on('disconnect', () => setIsConnected(false));
+    next.on('connect_error', (err) => {
       if (err.message === 'Invalid or expired token') {
-        socket.disconnect();
+        next.disconnect();
+        logout();
       }
     });
 
     return () => {
-      socket.removeAllListeners();
-      socket.disconnect();
-      socketRef.current = null;
+      next.removeAllListeners();
+      next.disconnect();
+      setSocket(null);
       setIsConnected(false);
     };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, logout]);
+
+  const joinRoom = useCallback(
+    (roomId: string) => socket?.emit('join-room', roomId),
+    [socket],
+  );
+
+  const leaveRoom = useCallback(
+    (roomId: string) => socket?.emit('leave-room', roomId),
+    [socket],
+  );
 
   const value = useMemo(
-    () => ({
-      socket: socketRef.current,
-      isConnected,
-      joinRoom: (roomId: string) =>
-        socketRef.current?.emit('join-room', roomId),
-      leaveRoom: (roomId: string) =>
-        socketRef.current?.emit('leave-room', roomId),
-    }),
-    [isConnected],
+    () => ({ socket, isConnected, joinRoom, leaveRoom }),
+    [socket, isConnected, joinRoom, leaveRoom],
   );
 
   return (
