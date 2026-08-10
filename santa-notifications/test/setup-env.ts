@@ -8,3 +8,9 @@ import { randomBytes } from 'node:crypto';
 process.env.JWT_SECRET ??= randomBytes(24).toString('hex');
 process.env.SERVICE_API_KEY ??= randomBytes(24).toString('hex');
 process.env.SANTA_API_URL ??= 'http://localhost:3001';
+
+process.env.NODE_ENV ??= 'test';
+
+process.env.REDIS_URL ??= 'redis://localhost:6379';
+process.env.RABBITMQ_URL ??= 'amqp://localhost:5672';
+process.env.CORS_ORIGIN ??= 'http://localhost:5173';
