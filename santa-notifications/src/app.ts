@@ -44,7 +44,7 @@ export function buildApp() {
     fp(async (scope) => {
       await scope.register(cors, {
         origin: scope.config.corsOrigin,
-        methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+        methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
         credentials: true,
       });
     })
