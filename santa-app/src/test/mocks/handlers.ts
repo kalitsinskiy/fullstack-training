@@ -174,12 +174,17 @@ export const handlers = [
             text: 'hope you like puzzles!',
             createdAt: new Date().toISOString(),
             direction: 'out',
+            read: false,
+            myReaction: null,
+            theirReaction: null,
           },
           {
             id: 'm2',
             text: 'I do!',
             createdAt: new Date().toISOString(),
             direction: 'in',
+            myReaction: null,
+            theirReaction: null,
           },
         ],
       },
@@ -190,6 +195,8 @@ export const handlers = [
             text: 'guess who',
             createdAt: new Date().toISOString(),
             direction: 'in',
+            myReaction: null,
+            theirReaction: null,
           },
         ],
       },
@@ -197,7 +204,6 @@ export const handlers = [
   ),
 
   http.post('/api/messages', async ({ request }) => {
-    // 🆕
     const body = (await request.json()) as {
       roomId: string;
       to: string;
@@ -209,6 +215,9 @@ export const handlers = [
         text: body.text,
         createdAt: new Date().toISOString(),
         direction: 'out',
+        read: false,
+        myReaction: null,
+        theirReaction: null,
         thread: body.to,
       },
       { status: 201 },
@@ -218,4 +227,18 @@ export const handlers = [
   http.patch('/api/messages/:roomId/read', () =>
     HttpResponse.json({ updated: 3 }),
   ),
+
+  http.put('/api/messages/:id/reaction', async ({ request, params }) => {
+    const { emoji } = (await request.json()) as { emoji: string | null };
+
+    return HttpResponse.json({
+      id: String(params.id),
+      text: 'hope you like puzzles!',
+      createdAt: new Date().toISOString(),
+      direction: 'out',
+      read: false,
+      myReaction: emoji,
+      theirReaction: null,
+    });
+  }),
 ];

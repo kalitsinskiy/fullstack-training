@@ -9,6 +9,7 @@ import {
   useSendMessage,
   useThreads,
   useMarkThreadRead,
+  useToggleReaction,
 } from '@/features/messages/hooks';
 import { useSocket } from '@/features/socket/SocketContext';
 import { cn } from '@/lib/utils';
@@ -21,6 +22,8 @@ import { format } from 'date-fns';
 import { Check, CheckCheck, Gift, MessageCircle, Send } from 'lucide-react';
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { ReactionPicker } from '@/features/messages/ReactionsPicker';
+import { ReactionList } from '@/features/messages/ReactionList';
 
 export function RoomMessagesPage() {
   const { id } = useParams<{ id: string }>();
@@ -34,6 +37,7 @@ export function RoomMessagesPage() {
   const markRead = useMarkThreadRead(id ?? '');
   const markThreadRead = markRead.mutate;
   const markedRef = useRef<string>('');
+  const toggleReaction = useToggleReaction(id ?? '', tab);
 
   useEffect(() => {
     if (!id || !data) return;
@@ -137,10 +141,15 @@ export function RoomMessagesPage() {
             <div
               key={m.id}
               className={cn(
-                'flex',
+                'group relative flex',
                 m.direction === 'out' ? 'justify-end' : 'justify-start',
               )}
             >
+              <ReactionPicker
+                current={m.myReaction}
+                outgoing={m.direction === 'out'}
+                onPick={(emoji) => toggleReaction.mutate({ id: m.id, emoji })}
+              />
               <div
                 className={cn(
                   'max-w-[75%] rounded-lg px-3 py-2 text-sm',
@@ -150,7 +159,7 @@ export function RoomMessagesPage() {
                 )}
               >
                 <p className="whitespace-pre-wrap break-words">{m.text}</p>
-                <p className="flex items-center gap-1 mt-1 text-[10px] opacity-70">
+                <p className="flex items-center gap-1 mt-3 text-[10px] opacity-70">
                   {format(new Date(m.createdAt), 'HH:mm')}
                   {m.direction === 'out' &&
                     (m.read ? (
@@ -164,6 +173,7 @@ export function RoomMessagesPage() {
                         aria-label="Sent"
                       />
                     ))}
+                  <ReactionList mine={m.myReaction} theirs={m.theirReaction} />
                 </p>
               </div>
             </div>

@@ -108,12 +108,17 @@ export interface NotificationList {
 
 export type MessageThreadKey = 'giftee' | 'santa';
 
+export const REACTIONS = ['👍', '👎', '🎁', '❤️', '😂', '🎉', '💩'] as const;
+export type Reaction = (typeof REACTIONS)[number];
+
 export interface ChatMessage {
   id: string;
   text: string;
   createdAt: string;
   direction: 'in' | 'out';
   read?: boolean;
+  myReaction: Reaction | null;
+  theirReaction: Reaction | null;
 }
 
 export interface MessageThreads {
@@ -130,6 +135,13 @@ export interface SendMessageInput {
 export interface IncomingMessage extends ChatMessage {
   roomId: string;
   thread: MessageThreadKey;
+}
+
+export interface IncomingReaction {
+  id: string;
+  roomId: string;
+  thread: MessageThreadKey;
+  theirReaction: Reaction | null;
 }
 
 export interface UnreadMessages {

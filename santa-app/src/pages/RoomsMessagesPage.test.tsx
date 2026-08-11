@@ -1,11 +1,21 @@
 import { describe, it, expect } from 'vitest';
-import { http, HttpResponse } from 'msw';
+import { delay, http, HttpResponse } from 'msw';
 import { Route, Routes } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders, screen, waitFor } from '@/test/render';
 import { server } from '@/test/mocks/server';
 import { tokenStore } from '@/lib/api';
 import { RoomMessagesPage } from './RoomMessagesPage';
+
+const soloMessage = {
+  id: 'm1',
+  text: 'hope you like puzzles!',
+  createdAt: new Date().toISOString(),
+  direction: 'out' as const,
+  read: false,
+  myReaction: null,
+  theirReaction: null,
+};
 
 function setup() {
   tokenStore.set('test-token');
@@ -106,6 +116,77 @@ describe('RoomMessagesPage', () => {
     expect(
       await screen.findByRole('heading', { name: /Office Party/ }),
     ).toBeInTheDocument();
+  });
+
+  it('shows the picked reaction before the request resolves (optimistic)', async () => {
+    server.use(
+      http.get('/api/messages/:roomId', () =>
+        HttpResponse.json({
+          giftee: { id: 'u2', name: 'Bob', messages: [soloMessage] },
+          santa: null,
+        }),
+      ),
+      http.put('/api/messages/:id/reaction', async () => {
+        await delay('infinite');
+
+        return HttpResponse.json({});
+      }),
+    );
+
+    setup();
+
+    await screen.findByText('hope you like puzzles!');
+    await userEvent.click(screen.getByLabelText('🎁'));
+
+    expect(await screen.findByLabelText('You reacted 🎁')).toBeInTheDocument();
+  });
+
+  it('rolls the reaction back when the request fails', async () => {
+    server.use(
+      http.get('/api/messages/:roomId', () =>
+        HttpResponse.json({
+          giftee: { id: 'u2', name: 'Bob', messages: [soloMessage] },
+          santa: null,
+        }),
+      ),
+      http.put(
+        '/api/messages/:id/reaction',
+        () => new HttpResponse(null, { status: 500 }),
+      ),
+    );
+
+    setup();
+
+    await screen.findByText('hope you like puzzles!');
+    await userEvent.click(screen.getByLabelText('🎁'));
+
+    await waitFor(() =>
+      expect(screen.queryByLabelText('You reacted 🎁')).not.toBeInTheDocument(),
+    );
+  });
+
+  it('renders a reaction from the counterparty without naming them', async () => {
+    server.use(
+      http.get('/api/messages/:roomId', () =>
+        HttpResponse.json({
+          giftee: null,
+          santa: {
+            messages: [
+              { ...soloMessage, direction: 'in', theirReaction: '😂' },
+            ],
+          },
+        }),
+      ),
+    );
+
+    setup();
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: /your secret santa/i }),
+    );
+
+    expect(await screen.findByLabelText('They reacted 😂')).toBeInTheDocument();
+    expect(screen.queryByLabelText(/You reacted/)).not.toBeInTheDocument();
   });
 
   it('marks the active thread read on open', async () => {

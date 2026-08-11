@@ -1,11 +1,14 @@
 import { notificationsApi } from '@/lib/notificationsApi';
 import type {
+  ChatMessage,
   MessageThreadKey,
   MessageThreads,
   SendMessageInput,
   UnreadMessages,
+  Reaction,
 } from '@/types/api';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { patchMessage } from './patch-message';
 
 export const messageKey = (roomId: string) =>
   ['rooms', roomId, 'messages'] as const;
@@ -57,5 +60,46 @@ export function useMarkThreadRead(roomId: string) {
       ).data,
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: unreadMessagesKey }),
+  });
+}
+
+export function useToggleReaction(roomId: string, thread: MessageThreadKey) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    meta: { errorMessage: 'Could not save your reaction' },
+    mutationFn: async ({ id, emoji }: { id: string; emoji: Reaction | null }) =>
+      (
+        await notificationsApi.put<ChatMessage>(
+          `/api/messages/${id}/reaction`,
+          { emoji },
+        )
+      ).data,
+
+    onMutate: async ({ id, emoji }) => {
+      const key = messageKey(roomId);
+
+      await queryClient.cancelQueries({ queryKey: key });
+
+      const previous = queryClient.getQueryData<MessageThreads>(key);
+
+      queryClient.setQueryData<MessageThreads>(key, (prev) =>
+        patchMessage(prev, thread, id, { myReaction: emoji }),
+      );
+      return { previous, key };
+    },
+
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.previous) queryClient.setQueryData(ctx.key, ctx.previous);
+    },
+
+    onSuccess: (updated) => {
+      queryClient.setQueryData<MessageThreads>(messageKey(roomId), (prev) =>
+        patchMessage(prev, thread, updated.id, {
+          myReaction: updated.myReaction,
+          theirReaction: updated.theirReaction,
+        }),
+      );
+    },
   });
 }

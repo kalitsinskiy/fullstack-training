@@ -1,20 +1,23 @@
 import { Types } from 'mongoose';
 import { FastifyInstance } from 'fastify';
-import { ForbiddenError } from '../errors';
+import { ForbiddenError, NotFoundError } from '../errors';
 import { directionFor, mirrorThread, Thread } from '../messages/thread';
-import { MessageDocument, MessageModel } from '../models/message';
+import { MessageDocument, MessageModel, Reaction, REACTIONS } from '../models/message';
 
 const objectIdSchema = { type: 'string', pattern: '^[a-fA-F0-9]{24}$' };
 
 function toChatMessage(doc: MessageDocument, me: string) {
   const direction = directionFor(doc.senderId.toString(), me);
+  const iAmSender = direction === 'out';
 
   return {
     id: doc._id.toString(),
     text: doc.text,
     createdAt: doc.createdAt.toISOString(),
     direction,
-    ...(direction === 'out' ? { read: doc.read } : {}),
+    ...(iAmSender ? { read: doc.read } : {}),
+    myReaction: (iAmSender ? doc.senderReaction : doc.recipientReaction) ?? null,
+    theirReaction: (iAmSender ? doc.recipientReaction : doc.senderReaction) ?? null,
   };
 }
 
@@ -191,6 +194,60 @@ export default async function messageRoutes(fastify: FastifyInstance) {
       }
 
       return updated;
+    }
+  );
+
+  fastify.put(
+    '/:id/reaction',
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        params: { type: 'object', required: ['id'], properties: { id: objectIdSchema } },
+        body: {
+          type: 'object',
+          required: ['emoji'],
+          properties: { emoji: { type: ['string', 'null'], enum: [...REACTIONS, null] } },
+          additionalProperties: false,
+        },
+      },
+    },
+    async (request) => {
+      const me = request.user.sub;
+      const { id } = request.params as { id: string };
+      const { emoji } = request.body as { emoji: Reaction | null };
+
+      const doc = await MessageModel.findById(id).exec();
+
+      if (!doc) throw new NotFoundError('Message', id);
+
+      const senderId = doc.senderId.toString();
+      const recipientId = doc.recipientId.toString();
+      const iAmSender = senderId === me;
+
+      if (!iAmSender && recipientId !== me) {
+        throw new NotFoundError('Message', id);
+      }
+
+      const other = iAmSender ? recipientId : senderId;
+      const roomId = doc.roomId.toString();
+
+      const { gifteeId, santaId } = await fastify.santaApi.getRelations(roomId, me);
+      const myThread: Thread | null =
+        other === gifteeId ? 'giftee' : other === santaId ? 'santa' : null;
+
+      if (!myThread) throw new NotFoundError('Message', id);
+
+      doc.set(iAmSender ? { senderReaction: emoji } : { recipientReaction: emoji });
+      await doc.save();
+
+      fastify.io?.to(`user:${other}`).emit('message:reaction', {
+        id,
+        roomId,
+        thread: mirrorThread(myThread),
+        theirReaction: emoji,
+      });
+
+      return toChatMessage(doc, me);
     }
   );
 }

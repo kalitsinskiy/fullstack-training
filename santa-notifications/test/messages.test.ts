@@ -204,4 +204,144 @@ describe('Anonymous messages', () => {
     expect(res.json()).toEqual(0);
     expect((await MessageModel.findOne({ recipientId: bob }).lean())?.read).toBe(false);
   });
+
+  describe('reactions', () => {
+    function relationsPerUser() {
+      jest
+        .spyOn(app.santaApi, 'getRelations')
+        .mockImplementation(async (_roomId: string, userId: string) =>
+          userId === alice ? { gifteeId: bob, santaId: alex } : { gifteeId: null, santaId: alice }
+        );
+    }
+
+    const react = (sub: string, id: string, emoji: string | null) =>
+      app.inject({
+        method: 'PUT',
+        url: `/api/messages/${id}/reaction`,
+        headers: { authorization: `Bearer ${tokenFor(app, sub)}` },
+        payload: { emoji },
+      });
+
+    async function aliceMessagedBob() {
+      const doc = await MessageModel.create({
+        senderId: alice,
+        recipientId: bob,
+        roomId,
+        text: 'Hello',
+      });
+
+      return doc._id.toString();
+    }
+
+    it('stores the sender reaction role-keyed and returns it as MY reaction', async () => {
+      relationsPerUser();
+      const id = await aliceMessagedBob();
+      const res = await react(alice, id, '🎁');
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toMatchObject({ myReaction: '🎁', theirReaction: null });
+
+      const stored = await MessageModel.findById(id).lean();
+
+      expect(stored?.senderReaction).toBe('🎁');
+      expect(stored?.recipientReaction).toBeUndefined();
+    });
+
+    it('notifies only the counterparty, in THEIR thread, with no user id', async () => {
+      relationsPerUser();
+      const { io, to, emit } = fakeIo();
+      app.io = io;
+      const id = await aliceMessagedBob();
+
+      await react(alice, id, '❤️');
+
+      expect(to).toHaveBeenCalledWith(`user:${bob}`);
+      expect(emit).toHaveBeenCalledWith(
+        'message:reaction',
+        expect.objectContaining({ thread: 'santa', theirReaction: '❤️' })
+      );
+
+      expect(JSON.stringify(emit.mock.calls[0][1])).not.toContain(alice);
+      expect(JSON.stringify(emit.mock.calls[0][1])).not.toContain(bob);
+    });
+
+    it('the counterparty sees my reaction as THEIRS, and still no identity', async () => {
+      relationsPerUser();
+      const id = await aliceMessagedBob();
+
+      await react(alice, id, '😂');
+
+      const res = await app.inject({
+        method: 'GET',
+        url: `/api/messages/${roomId}`,
+        headers: { authorization: `Bearer ${tokenFor(app, bob)}` },
+      });
+
+      const body = res.json();
+
+      expect(body.santa.messages[0]).toMatchObject({
+        direction: 'in',
+        myReaction: null,
+        theirReaction: '😂',
+      });
+      expect(body.santa.id).toBeUndefined();
+      expect(JSON.stringify(body)).not.toContain(alice);
+    });
+
+    it('lets the recipient react too, into the other slot', async () => {
+      relationsPerUser();
+      const id = await aliceMessagedBob();
+      const res = await react(bob, id, '👍');
+
+      expect(res.json()).toMatchObject({ myReaction: '👍' });
+
+      const stored = await MessageModel.findById(id).lean();
+
+      expect(stored?.recipientReaction).toBe('👍');
+      expect(stored?.senderReaction).toBeUndefined();
+    });
+
+    it('clears a reaction with null', async () => {
+      relationsPerUser();
+      const id = await aliceMessagedBob();
+
+      await react(alice, id, '🎉');
+      const res = await react(alice, id, null);
+
+      expect(res.json()).toMatchObject({ myReaction: null });
+      expect((await MessageModel.findById(id).lean())?.senderReaction).toBeNull();
+    });
+
+    it('rejects an emoji outside the allow-list', async () => {
+      relationsPerUser();
+
+      const id = await aliceMessagedBob();
+      const res = await react(alice, id, '🔥');
+
+      expect(res.statusCode).toBe(400);
+      expect((await MessageModel.findById(id).lean())?.senderReaction).toBeUndefined();
+    });
+
+    it('404s on a message you are not part of, without confirming it exists', async () => {
+      relationsPerUser();
+
+      const doc = await MessageModel.create({
+        senderId: alex,
+        recipientId: bob,
+        roomId,
+        text: 'not for alice',
+      });
+      const res = await react(alice, doc._id.toString(), '🎁');
+
+      expect(res.statusCode).toBe(404);
+    });
+
+    it('400s on a malformed message id', async () => {
+      relationsPerUser();
+
+      const res = await react(alice, 'not-an-object-id', '🎁');
+
+      expect(res.statusCode).toBe(400);
+    });
+  });
 });
