@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSocket } from './SocketContext';
-import { IncomingMessage } from '@/types/api';
+import { IncomingMessage, MessageThreadKey, MessageThreads } from '@/types/api';
 import { messageKey, unreadMessagesKey } from '../messages/hooks';
 import { notificationsKey } from '../notifications/hooks';
 
@@ -45,12 +45,32 @@ export function SocketNotifications() {
       void queryClient.invalidateQueries({ queryKey: unreadMessagesKey });
     };
 
+    const onRead = (p: { roomId: string; thread: MessageThreadKey }) => {
+      queryClient.setQueryData<MessageThreads>(messageKey(p.roomId), (prev) => {
+        if (!prev) return prev;
+        const t = prev[p.thread];
+        if (!t) return prev;
+
+        return {
+          ...prev,
+          [p.thread]: {
+            ...t,
+            messages: t.messages.map((m) =>
+              m.direction === 'out' ? { ...m, read: true } : m,
+            ),
+          },
+        };
+      });
+    };
+
     socket.on('notification', onNotification);
     socket.on('message:received', onMessage);
+    socket.on('message:read', onRead);
 
     return () => {
       socket.off('notification', onNotification);
       socket.off('message:received', onMessage);
+      socket.off('message:read', onRead);
     };
   }, [socket, queryClient]);
 

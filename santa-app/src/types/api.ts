@@ -113,6 +113,7 @@ export interface ChatMessage {
   text: string;
   createdAt: string;
   direction: 'in' | 'out';
+  read?: boolean;
 }
 
 export interface MessageThreads {

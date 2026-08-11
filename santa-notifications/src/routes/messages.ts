@@ -7,11 +7,14 @@ import { MessageDocument, MessageModel } from '../models/message';
 const objectIdSchema = { type: 'string', pattern: '^[a-fA-F0-9]{24}$' };
 
 function toChatMessage(doc: MessageDocument, me: string) {
+  const direction = directionFor(doc.senderId.toString(), me);
+
   return {
     id: doc._id.toString(),
     text: doc.text,
     createdAt: doc.createdAt.toISOString(),
-    direction: directionFor(doc.senderId.toString(), me),
+    direction,
+    ...(direction === 'out' ? { read: doc.read } : {}),
   };
 }
 
@@ -150,22 +153,44 @@ export default async function messageRoutes(fastify: FastifyInstance) {
       const { thread } = (request.body ?? {}) as { thread?: Thread };
 
       const { gifteeId, santaId } = await fastify.santaApi.getRelations(roomId, me);
-      const senders = (thread ? [thread === 'giftee' ? gifteeId : santaId] : [gifteeId, santaId])
-        .filter((id): id is string => !!id)
-        .map((id) => new Types.ObjectId(id));
 
-      if (senders.length === 0) return { updated: 0 };
+      const targets: Array<{ senderId: string; myThread: Thread }> = [];
 
-      const res = await MessageModel.updateMany(
-        {
-          roomId: new Types.ObjectId(roomId),
-          recipientId: new Types.ObjectId(me),
-          senderId: { $in: senders },
-        },
-        { $set: { read: true } }
-      );
+      if ((!thread || thread === 'giftee') && gifteeId) {
+        targets.push({ senderId: gifteeId, myThread: 'giftee' });
+      }
 
-      return { updated: res.modifiedCount };
+      if ((!thread || thread === 'santa') && santaId) {
+        targets.push({ senderId: santaId, myThread: 'santa' });
+      }
+
+      if (targets.length === 0) return { updated: 0 };
+
+      let updated = 0;
+
+      for (const { senderId, myThread } of targets) {
+        const res = await MessageModel.updateMany(
+          {
+            roomId: new Types.ObjectId(roomId),
+            recipientId: new Types.ObjectId(me),
+            senderId: new Types.ObjectId(senderId),
+            read: false,
+          },
+          { $set: { read: true } }
+        );
+
+        updated += res.modifiedCount;
+
+        if (res.modifiedCount > 0) {
+          fastify.io?.to(`user:${senderId}`).emit('message:read', {
+            roomId,
+            thread: mirrorThread(myThread),
+            count: res.modifiedCount,
+          });
+        }
+      }
+
+      return updated;
     }
   );
 }

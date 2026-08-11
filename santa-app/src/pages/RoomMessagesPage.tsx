@@ -18,7 +18,7 @@ import type {
   MessageThreadKey,
 } from '@/types/api';
 import { format } from 'date-fns';
-import { Gift, MessageCircle, Send } from 'lucide-react';
+import { Check, CheckCheck, Gift, MessageCircle, Send } from 'lucide-react';
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
@@ -150,8 +150,20 @@ export function RoomMessagesPage() {
                 )}
               >
                 <p className="whitespace-pre-wrap break-words">{m.text}</p>
-                <p className="mt-1 text-[10px] opacity-70">
+                <p className="flex items-center gap-1 mt-1 text-[10px] opacity-70">
                   {format(new Date(m.createdAt), 'HH:mm')}
+                  {m.direction === 'out' &&
+                    (m.read ? (
+                      <CheckCheck
+                        className={cn('size-3.5', 'text-background')}
+                        aria-label="Read"
+                      />
+                    ) : (
+                      <Check
+                        className={cn('size-3.5', 'text-background')}
+                        aria-label="Sent"
+                      />
+                    ))}
                 </p>
               </div>
             </div>
