@@ -184,7 +184,7 @@ describe('Anonymous messages', () => {
       headers,
       payload: { thread: 'giftee' },
     });
-    expect(patch.json()).toEqual({ updated: 1 });
+    expect(patch.json()).toEqual(1);
 
     const after = await app.inject({ method: 'GET', url: '/api/messages/unread', headers });
 
@@ -201,7 +201,7 @@ describe('Anonymous messages', () => {
       payload: {},
     });
 
-    expect(res.json()).toEqual({ updated: 0 });
+    expect(res.json()).toEqual(0);
     expect((await MessageModel.findOne({ recipientId: bob }).lean())?.read).toBe(false);
   });
 });
