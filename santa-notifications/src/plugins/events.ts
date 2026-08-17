@@ -161,8 +161,14 @@ async function buildNotifications(
         : [];
 
     case 'room.created':
-      return roomId
-        ? [{ type: 'room.created', roomId, message: `Room "${data.roomName}" was created` }]
+      return data.createdBy
+        ? [
+            {
+              type: 'room.created',
+              message: `Room "${data.roomName ?? ''}" was created`,
+              userId: toObjectId(data.createdBy as string),
+            },
+          ]
         : [];
 
     default:

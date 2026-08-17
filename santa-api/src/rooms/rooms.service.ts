@@ -100,9 +100,8 @@ export class RoomsService {
     });
     await this.redisService.set(`invite:${code}`, doc.id, INVITE_TTL);
     this.eventPublisherService.publish('room.created', {
-      roomId: doc._id,
       roomName: doc.name,
-      createdBy: await this.getDisplayName(creatorId),
+      createdBy: creatorId,
     });
     return this.toRoomView(doc, creatorId);
   }
