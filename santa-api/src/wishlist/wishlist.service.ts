@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Wishlist } from './wishlist.types';
@@ -41,6 +41,10 @@ export class WishlistService {
   }
 
   async get(roomId: string, userId: string): Promise<Wishlist> {
+    if (!Types.ObjectId.isValid(roomId) || !Types.ObjectId.isValid(userId)) {
+      throw new BadRequestException('Invalid id');
+    }
+
     const doc = await this.wishlistModel
       .findOne({
         roomId: new Types.ObjectId(roomId),
