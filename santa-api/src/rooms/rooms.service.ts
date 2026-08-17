@@ -249,8 +249,8 @@ export class RoomsService {
     }));
 
     const updated = await this.roomModel
-      .findByIdAndUpdate(
-        new Types.ObjectId(id),
+      .findOneAndUpdate(
+        { _id: new Types.ObjectId(id), status: 'pending' },
         {
           status: 'drawn',
           drawDate: new Date(),
@@ -263,12 +263,15 @@ export class RoomsService {
       )
       .exec();
 
+    if (!updated)
+      throw new BadRequestException('Draw has already been performed');
+
     await this.redisService.del(`room:${id}`);
     this.eventPublisherService.publish('draw.completed', {
       roomId: id,
       participantIds: doc.participants.map((p) => p.userId.toString()),
     });
-    return this.toRoomView(updated as unknown as RoomDocument, requesterId);
+    return this.toRoomView(updated, requesterId);
   }
 
   async getAssignment(id: string, userId: string): Promise<AssignmentView> {
