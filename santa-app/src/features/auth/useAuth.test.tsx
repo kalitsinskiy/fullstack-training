@@ -77,11 +77,20 @@ describe('useAuth', () => {
     expect(localStorage.getItem(TOKEN_KEY)).toBe('fake-token');
   });
 
-  test('logout clears token and user', async () => {
+  test('logout clears token, user, and query cache', async () => {
     localStorage.setItem(TOKEN_KEY, 'fake-token');
     server.use(http.get('/api/users/me', () => HttpResponse.json(FAKE_USER)));
 
-    const { result } = renderHook(() => useAuth(), { wrapper });
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    queryClient.setQueryData(['rooms', 1], { data: [], meta: {} });
+
+    const testWrapper = ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>{children}</AuthProvider>
+      </QueryClientProvider>
+    );
+
+    const { result } = renderHook(() => useAuth(), { wrapper: testWrapper });
     await waitFor(() => expect(result.current.isAuthenticated).toBe(true));
 
     act(() => result.current.logout());
@@ -89,5 +98,6 @@ describe('useAuth', () => {
     expect(result.current.isAuthenticated).toBe(false);
     expect(result.current.user).toBeNull();
     expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
+    expect(queryClient.getQueryData(['rooms', 1])).toBeUndefined();
   });
 });
