@@ -360,6 +360,9 @@ export class RoomsService {
       throw new NotFoundException('Room not found');
     const doc = await this.roomModel.findById(id).exec();
     if (!doc) throw new NotFoundException('Room not found');
+    if (doc.status === 'drawn') {
+      throw new BadRequestException('Cannot remove a member for a drawn room');
+    }
     const target = doc.participants.find(
       (p) => p.userId.toString() === targetUserId,
     );

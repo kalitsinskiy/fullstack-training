@@ -288,4 +288,14 @@ describe('RoomDetailPage', () => {
       ),
     ).toBeInTheDocument();
   });
+
+  it('cannot kick members on drawn room', async () => {
+    server.use(http.get('/api/rooms/:id', () => HttpResponse.json(DRAWN_ROOM)));
+    renderRoom();
+    const kickButtons = await screen.findAllByRole('button', { name: /kick/i });
+    expect(kickButtons).toHaveLength(2); //no button for owner
+    for (const button of kickButtons) {
+      expect(button).toBeDisabled();
+    }
+  });
 });

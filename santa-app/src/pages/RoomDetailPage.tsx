@@ -390,7 +390,9 @@ export function RoomDetailPage() {
                       size="sm"
                       variant="outline"
                       className="h-7 px-2 text-xs"
-                      disabled={kickMutation.isPending}
+                      disabled={
+                        kickMutation.isPending || room.status === 'drawn'
+                      }
                       onClick={() => kickMutation.mutate(p.id)}
                     >
                       Kick
