@@ -9,7 +9,7 @@ const sendBodySchema = {
   properties: {
     roomId: { type: 'string' },
     to: { type: 'string', enum: ['giftee', 'santa'] },
-    text: { type: 'string', minLength: 1, maxLength: 500 },
+    text: { type: 'string', minLength: 1, maxLength: 500, pattern: '\\S' },
   },
 };
 
@@ -28,10 +28,7 @@ export default async function messageRoutes(fastify: FastifyInstance) {
         text: string;
       };
 
-      const client = getSantaApiClient(
-        fastify.config.santaApiUrl,
-        fastify.config.serviceApiKey,
-      );
+      const client = getSantaApiClient(fastify.config.santaApiUrl, fastify.config.serviceApiKey);
 
       let relations: { gifteeId: string | null; santaId: string | null };
       try {
@@ -83,74 +80,63 @@ export default async function messageRoutes(fastify: FastifyInstance) {
         direction: 'out',
         thread: to,
       });
-    },
+    }
   );
 
-  fastify.get(
-    '/:roomId',
-    { preHandler: [fastify.authenticate] },
-    async (request, reply) => {
-      const me = request.user.sub;
-      const { roomId } = request.params as { roomId: string };
+  fastify.get('/:roomId', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const me = request.user.sub;
+    const { roomId } = request.params as { roomId: string };
 
-      const client = getSantaApiClient(
-        fastify.config.santaApiUrl,
-        fastify.config.serviceApiKey,
-      );
+    const client = getSantaApiClient(fastify.config.santaApiUrl, fastify.config.serviceApiKey);
 
-      let relations: { gifteeId: string | null; santaId: string | null };
+    let relations: { gifteeId: string | null; santaId: string | null };
+    try {
+      relations = await client.getRelations(roomId, me);
+    } catch {
+      return reply.status(403).send({ message: 'Unable to verify assignment' });
+    }
+
+    const { gifteeId, santaId } = relations;
+
+    async function fetchThread(other: string | null) {
+      if (!other) return [];
+      const docs = await Message.find({
+        roomId,
+        $or: [
+          { senderId: me, recipientId: other },
+          { senderId: other, recipientId: me },
+        ],
+      })
+        .sort({ createdAt: 1 })
+        .lean();
+
+      return docs.map((d) => ({
+        id: d._id.toString(),
+        roomId: d.roomId,
+        text: d.text,
+        createdAt: d.createdAt,
+        direction: d.senderId === me ? 'out' : 'in',
+      }));
+    }
+
+    let gifteeName: string | null = null;
+    if (gifteeId) {
       try {
-        relations = await client.getRelations(roomId, me);
+        const user = await client.getUserById(gifteeId);
+        gifteeName = user.displayName;
       } catch {
-        return reply.status(403).send({ message: 'Unable to verify assignment' });
+        gifteeName = null;
       }
+    }
 
-      const { gifteeId, santaId } = relations;
+    const [gifteeMessages, santaMessages] = await Promise.all([
+      fetchThread(gifteeId),
+      fetchThread(santaId),
+    ]);
 
-      async function fetchThread(other: string | null) {
-        if (!other) return [];
-        const docs = await Message.find({
-          roomId,
-          $or: [
-            { senderId: me, recipientId: other },
-            { senderId: other, recipientId: me },
-          ],
-        })
-          .sort({ createdAt: 1 })
-          .lean();
-
-        return docs.map((d) => ({
-          id: d._id.toString(),
-          roomId: d.roomId,
-          text: d.text,
-          createdAt: d.createdAt,
-          direction: d.senderId === me ? 'out' : 'in',
-        }));
-      }
-
-      let gifteeName: string | null = null;
-      if (gifteeId) {
-        try {
-          const user = await client.getUserById(gifteeId);
-          gifteeName = user.displayName;
-        } catch {
-          gifteeName = null;
-        }
-      }
-
-      const [gifteeMessages, santaMessages] = await Promise.all([
-        fetchThread(gifteeId),
-        fetchThread(santaId),
-      ]);
-
-      return {
-        giftee: gifteeId
-          ? { id: gifteeId, name: gifteeName, messages: gifteeMessages }
-          : null,
-        santa: santaId
-          ? { messages: santaMessages }
-          : null,
-      };
-    },
-  );
+    return {
+      giftee: gifteeId ? { id: gifteeId, name: gifteeName, messages: gifteeMessages } : null,
+      santa: santaId ? { messages: santaMessages } : null,
+    };
+  });
 }
