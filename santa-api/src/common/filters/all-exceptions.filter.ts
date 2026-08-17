@@ -24,10 +24,24 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     response.status(statusCode).send({
       success: false,
-      statusCode,
-      message,
+      error: {
+        code: this.statusToCode(statusCode),
+        message,
+      },
       timestamp: new Date().toISOString(),
     });
+  }
+
+  private statusToCode(status: number): string {
+    const map: Record<number, string> = {
+      400: 'BAD_REQUEST',
+      401: 'UNAUTHORIZED',
+      403: 'FORBIDDEN',
+      404: 'NOT_FOUND',
+      409: 'CONFLICT',
+      422: 'UNPROCESSABLE_ENTITY',
+    };
+    return map[status] ?? 'INTERNAL_ERROR';
   }
 
   private getHttpExceptionMessage(exception: HttpException): string | string[] {

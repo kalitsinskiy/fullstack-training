@@ -52,6 +52,8 @@ export function buildApp() {
   app.register(messageRoutes, { prefix: '/api/messages' });
 
   app.setErrorHandler((error: FastifyError, request, reply) => {
+    const timestamp = new Date().toISOString();
+
     if (error instanceof AppError) {
       request.log.warn({ err: error, code: error.code }, error.message);
       return reply.status(error.statusCode).send({
@@ -61,6 +63,7 @@ export function buildApp() {
           message: error.message,
           ...(error instanceof ValidationError && { details: error.details }),
         },
+        timestamp,
       });
     }
 
@@ -73,6 +76,7 @@ export function buildApp() {
           message: 'Request validation failed',
           details: error.validation,
         },
+        timestamp,
       });
     }
 
@@ -83,6 +87,7 @@ export function buildApp() {
         code: 'INTERNAL_ERROR',
         message: 'An unexpected error occurred',
       },
+      timestamp,
     });
   });
 

@@ -52,9 +52,10 @@ export const notificationsApi = addInterceptors(
 /** Narrow an unknown error into a user-facing message. */
 export function getApiErrorMessage(error: unknown, fallback = 'Something went wrong'): string {
   if (axios.isAxiosError(error)) {
-    const data = error.response?.data as { message?: string | string[] } | undefined;
-    if (Array.isArray(data?.message)) return data.message.join(', ');
-    if (data?.message) return data.message;
+    const msg = (error.response?.data as { error?: { message?: string | string[] } } | undefined)
+      ?.error?.message;
+    if (Array.isArray(msg)) return msg.join(', ');
+    if (msg) return msg;
   }
   return fallback;
 }
