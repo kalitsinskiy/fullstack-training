@@ -70,7 +70,10 @@ describe('MessagesPage', () => {
   it('shows an error message when the API call fails', async () => {
     server.use(
       http.get('/api/messages/:roomId', () =>
-        HttpResponse.json({ message: 'Unauthorized' }, { status: 401 }),
+        HttpResponse.json(
+          { success: false, error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } },
+          { status: 401 },
+        ),
       ),
     );
     renderPage();
@@ -153,7 +156,7 @@ describe('MessagesPage', () => {
       http.get('/api/messages/:roomId', () => HttpResponse.json(BASE_RESPONSE)),
       http.post('/api/messages', () =>
         HttpResponse.json(
-          { message: 'No assignment found for this room' },
+          { success: false, error: { code: 'FORBIDDEN', message: 'No assignment found for this room' } },
           { status: 403 },
         ),
       ),

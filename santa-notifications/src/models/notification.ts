@@ -33,7 +33,10 @@ const notificationSchema = new Schema<NotificationRecord>({
 });
 
 notificationSchema.index({ userId: 1, createdAt: -1 });
-notificationSchema.index({ messageId: 1, userId: 1 }, { unique: true, sparse: true });
+notificationSchema.index(
+  { messageId: 1, userId: 1 },
+  { unique: true, partialFilterExpression: { messageId: { $exists: true, $ne: null } } },
+);
 
 export type NotificationDocument = HydratedDocument<NotificationRecord>;
 

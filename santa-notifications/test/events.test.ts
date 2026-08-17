@@ -191,20 +191,21 @@ describe('santa-notifications events consumer', () => {
   // ---------------------------------------------------------------------------
   describe('idempotency', () => {
     it('does not re-process a message whose messageId was already stored', async () => {
-      const roomId = 'room-idem';
-      const msg = makeMsg('room.created', { roomId, roomName: 'Idem Room' }, 'msg-unique-001');
+      const createdBy = new Types.ObjectId().toString();
+      const messageId = 'msg-unique-001';
+      const msg = makeMsg('room.created', { roomName: 'Idem Room', createdBy }, messageId);
 
       const consume = await getConsumeCallback();
       await consume(msg);
 
       // First delivery creates the notification
-      const afterFirst = await NotificationModel.find({ roomId }).lean();
+      const afterFirst = await NotificationModel.find({ messageId }).lean();
       expect(afterFirst).toHaveLength(1);
 
       // Second delivery with the same messageId — must be a no-op
       await consume(msg);
 
-      const afterSecond = await NotificationModel.find({ roomId }).lean();
+      const afterSecond = await NotificationModel.find({ messageId }).lean();
       expect(afterSecond).toHaveLength(1);
       expect(amqpMocks.mockChannel.ack).toHaveBeenCalledTimes(2);
     });

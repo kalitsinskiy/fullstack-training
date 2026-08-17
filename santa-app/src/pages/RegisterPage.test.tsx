@@ -32,7 +32,10 @@ describe('RegisterPage', () => {
   it('shows error toast on 409 conflict', async () => {
     server.use(
       http.post('/api/auth/register', () =>
-        HttpResponse.json({ message: 'Email already in use' }, { status: 409 }),
+        HttpResponse.json(
+          { success: false, error: { code: 'CONFLICT', message: 'Email already in use' } },
+          { status: 409 },
+        ),
       ),
     );
 

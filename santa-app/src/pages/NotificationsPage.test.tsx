@@ -70,7 +70,10 @@ describe('NotificationsPage', () => {
   it('shows an error message when the API call fails', async () => {
     server.use(
       http.get('/api/notifications', () =>
-        HttpResponse.json({ message: 'Unauthorized' }, { status: 401 }),
+        HttpResponse.json(
+          { success: false, error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } },
+          { status: 401 },
+        ),
       ),
     );
     renderPage();

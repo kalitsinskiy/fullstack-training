@@ -111,7 +111,10 @@ describe('MessageListPage', () => {
   it('shows an error message when the API call fails', async () => {
     server.use(
       http.get('/api/rooms', () =>
-        HttpResponse.json({ message: 'Server error' }, { status: 500 }),
+        HttpResponse.json(
+          { success: false, error: { code: 'INTERNAL_ERROR', message: 'Server error' } },
+          { status: 500 },
+        ),
       ),
     );
     renderPage();

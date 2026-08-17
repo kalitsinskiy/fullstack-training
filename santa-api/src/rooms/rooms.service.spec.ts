@@ -28,9 +28,11 @@ describe('RoomsService', () => {
     find: jest.fn(),
     findOne: jest.fn(),
     findById: jest.fn(),
-    countDocuments: jest.fn(),
+    findOneAndUpdate: jest.fn(),
     findByIdAndUpdate: jest.fn(),
     findByIdAndDelete: jest.fn(),
+    countDocuments: jest.fn(),
+    exists: jest.fn().mockResolvedValue(null),
   };
 
   const mockRedisService = {
@@ -49,6 +51,7 @@ describe('RoomsService', () => {
     mockRedisService.get.mockResolvedValue(null);
     mockRedisService.set.mockResolvedValue(undefined);
     mockRedisService.del.mockResolvedValue(undefined);
+    mockRoomModel.exists.mockResolvedValue(null);
 
     mockUsersService.findById.mockImplementation((id: string) =>
       Promise.resolve({
@@ -231,18 +234,36 @@ describe('RoomsService', () => {
 
     it('adds the user as a member with the correct invite code', async () => {
       const doc = makeRoomDoc();
+      const updatedDoc = {
+        ...doc,
+        participants: [
+          ...doc.participants,
+          { userId: new Types.ObjectId(memberId), role: 'member' },
+        ],
+      };
       mockRoomModel.findById.mockReturnValue({
         exec: jest.fn().mockResolvedValue(doc),
+      });
+      mockRoomModel.findOneAndUpdate.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(updatedDoc),
       });
 
       const result = await service.join(roomId, 'JOIN01', memberId);
 
-      expect(doc.participants).toHaveLength(2);
-      expect(doc.participants[1]).toEqual({
-        userId: new Types.ObjectId(memberId),
-        role: 'member',
-      });
-      expect(doc.save).toHaveBeenCalled();
+      expect(mockRoomModel.findOneAndUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          'participants.userId': { $ne: new Types.ObjectId(memberId) },
+        }),
+        {
+          $push: {
+            participants: {
+              userId: new Types.ObjectId(memberId),
+              role: 'member',
+            },
+          },
+        },
+        { returnDocument: 'after' },
+      );
       expect(result.participantCount).toBe(2);
       expect(mockEventPublisher.publish).toHaveBeenCalledWith(
         'user.joined',
@@ -260,10 +281,16 @@ describe('RoomsService', () => {
       mockRoomModel.findById.mockReturnValue({
         exec: jest.fn().mockResolvedValue(doc),
       });
+      mockRoomModel.findOneAndUpdate.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(null),
+      });
 
       await service.join(roomId, 'JOIN01', memberId);
 
-      expect(doc.save).not.toHaveBeenCalled();
+      expect(mockEventPublisher.publish).not.toHaveBeenCalledWith(
+        'user.joined',
+        expect.anything(),
+      );
     });
 
     it('throws BadRequestException for wrong invite code', async () => {
@@ -300,8 +327,11 @@ describe('RoomsService', () => {
   });
 
   describe('joinByCode', () => {
-    it('throws BadRequestException when invite code is not in Redis', async () => {
+    it('throws BadRequestException when invite code is not in Redis or DB', async () => {
       mockRedisService.get.mockResolvedValue(null);
+      mockRoomModel.findOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(null),
+      });
       await expect(service.joinByCode('NOROOM', creatorId)).rejects.toThrow(
         BadRequestException,
       );
@@ -318,16 +348,24 @@ describe('RoomsService', () => {
           { userId: new Types.ObjectId(creatorId), role: 'owner' },
         ],
         status: 'pending',
-        save: jest.fn().mockResolvedValue(undefined),
+      };
+      const updatedDoc = {
+        ...doc,
+        participants: [
+          ...doc.participants,
+          { userId: new Types.ObjectId(memberId), role: 'member' },
+        ],
       };
       mockRedisService.get.mockResolvedValue(roomId);
       mockRoomModel.findById.mockReturnValue({
         exec: jest.fn().mockResolvedValue(doc),
       });
+      mockRoomModel.findOneAndUpdate.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(updatedDoc),
+      });
 
       const result = await service.joinByCode('JOIN42', memberId);
 
-      expect(doc.save).toHaveBeenCalled();
       expect(result.participantCount).toBe(2);
     });
   });
@@ -402,14 +440,14 @@ describe('RoomsService', () => {
       mockRoomModel.findById.mockReturnValue({
         exec: jest.fn().mockResolvedValue(doc),
       });
-      mockRoomModel.findByIdAndUpdate = jest.fn().mockReturnValue({
+      mockRoomModel.findOneAndUpdate.mockReturnValue({
         exec: jest.fn().mockResolvedValue(updatedDoc),
       });
 
       const result = await service.draw(roomId, creatorId, '2026-12-24');
 
-      expect(mockRoomModel.findByIdAndUpdate).toHaveBeenCalledWith(
-        new Types.ObjectId(roomId),
+      expect(mockRoomModel.findOneAndUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 'pending' }),
         expect.objectContaining({ status: 'drawn' }),
         { new: true },
       );
