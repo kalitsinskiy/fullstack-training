@@ -12,7 +12,6 @@ import timingPlugin from './plugins/timing';
 import healthRoutes from './routes/health';
 import notificationRoutes from './routes/notifications';
 import messageRoutes from './routes/messages';
-import usersRoutes from './routes/users';
 
 export function buildApp() {
   const app = Fastify({
@@ -51,7 +50,6 @@ export function buildApp() {
   app.register(healthRoutes);
   app.register(notificationRoutes, { prefix: '/api/notifications' });
   app.register(messageRoutes, { prefix: '/api/messages' });
-  app.register(usersRoutes, { prefix: '/users' });
 
   app.setErrorHandler((error: FastifyError, request, reply) => {
     if (error instanceof AppError) {
