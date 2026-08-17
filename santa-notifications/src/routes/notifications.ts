@@ -94,7 +94,7 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
       ).exec();
 
       if (!notification) {
-        return reply.status(404).send({ message: 'Notification not found' });
+        throw new NotFoundError('Notification', id);
       }
 
       request.log.info({ notificationId: id, read: true }, 'Notification marked as read');
