@@ -169,24 +169,7 @@ export class RoomsService {
       throw new BadRequestException('Invalid invite code');
     if (doc.status === 'drawn')
       throw new BadRequestException('Draw already completed');
-    const alreadyMember = doc.participants.some(
-      (p) => p.userId.toString() === userId,
-    );
-    if (!alreadyMember) {
-      doc.participants.push({
-        userId: new Types.ObjectId(userId),
-        role: 'member',
-      });
-      await doc.save();
-      await this.redisService.del(`room:${id}`);
-    }
-
-    this.eventPublisherService.publish('user.joined', {
-      roomId: id,
-      userId,
-      userName: await this.getDisplayName(userId),
-    });
-
+    await this.addMemberIfNeeded(doc, userId);
     return this.toRoomView(doc, userId);
   }
 
@@ -198,18 +181,29 @@ export class RoomsService {
     if (!doc) throw new NotFoundException('Room not found');
     if (doc.status === 'drawn')
       throw new BadRequestException('Draw already completed');
+    await this.addMemberIfNeeded(doc, userId);
+    return this.toRoomView(doc, userId);
+  }
+
+  private async addMemberIfNeeded(
+    doc: RoomDocument,
+    userId: string,
+  ): Promise<void> {
     const alreadyMember = doc.participants.some(
       (p) => p.userId.toString() === userId,
     );
-    if (!alreadyMember) {
-      doc.participants.push({
-        userId: new Types.ObjectId(userId),
-        role: 'member',
-      });
-      await doc.save();
-      await this.redisService.del(`room:${roomId}`);
-    }
-    return this.toRoomView(doc, userId);
+    if (alreadyMember) return;
+    doc.participants.push({
+      userId: new Types.ObjectId(userId),
+      role: 'member',
+    });
+    await doc.save();
+    await this.redisService.del(`room:${doc.id}`);
+    this.eventPublisherService.publish('user.joined', {
+      roomId: doc.id,
+      userId,
+      userName: await this.getDisplayName(userId),
+    });
   }
 
   async draw(
