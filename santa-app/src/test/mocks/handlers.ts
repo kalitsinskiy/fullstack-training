@@ -44,6 +44,8 @@ export const handlers = [
     }),
   ),
 
+  http.delete('/api/users/me', () => new HttpResponse(null, { status: 204 })),
+
   // Rooms
   http.get('/api/rooms', () =>
     HttpResponse.json({

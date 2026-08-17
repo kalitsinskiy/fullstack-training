@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Patch, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Patch,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -29,6 +38,16 @@ export class UsersController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   findCurrent(@CurrentUser('id') userId: string): Promise<User> {
     return this.usersService.findById(userId);
+  }
+
+  @Delete('me')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Delete the authenticated user account' })
+  @ApiResponse({ status: 204, description: 'Account deleted successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  deleteCurrent(@CurrentUser('id') userId: string): Promise<void> {
+    return this.usersService.deleteCurrentUser(userId);
   }
 
   @Patch('me')

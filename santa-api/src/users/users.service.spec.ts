@@ -13,6 +13,7 @@ describe('UsersService', () => {
     findOne: jest.fn(),
     findById: jest.fn(),
     findByIdAndUpdate: jest.fn(),
+    findByIdAndDelete: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -167,6 +168,37 @@ describe('UsersService', () => {
       await expect(
         service.findById('64e000000000000000000001'),
       ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('deleteCurrentUser', () => {
+    it('deletes the user for a valid id', async () => {
+      const id = new Types.ObjectId().toString();
+      mockUserModel.findByIdAndDelete.mockReturnValue({
+        exec: jest.fn().mockResolvedValue({ id }),
+      });
+
+      await expect(service.deleteCurrentUser(id)).resolves.toBeUndefined();
+      expect(mockUserModel.findByIdAndDelete).toHaveBeenCalledWith(
+        new Types.ObjectId(id),
+      );
+    });
+
+    it('throws NotFoundException for invalid ObjectId', async () => {
+      await expect(service.deleteCurrentUser('bad-id')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('throws NotFoundException when user does not exist', async () => {
+      const id = new Types.ObjectId().toString();
+      mockUserModel.findByIdAndDelete.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(null),
+      });
+
+      await expect(service.deleteCurrentUser(id)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 

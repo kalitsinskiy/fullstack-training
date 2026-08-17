@@ -58,6 +58,15 @@ export class UsersService {
     };
   }
 
+  async deleteCurrentUser(id: string): Promise<void> {
+    if (!Types.ObjectId.isValid(id))
+      throw new NotFoundException('User not found');
+    const doc = await this.userModel
+      .findByIdAndDelete(new Types.ObjectId(id))
+      .exec();
+    if (!doc) throw new NotFoundException('User not found');
+  }
+
   async updateCurrentUser(
     id: string,
     dto: UpdateCurrentUserDto,

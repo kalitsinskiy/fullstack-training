@@ -7,6 +7,7 @@ describe('UsersController', () => {
   const mockUsersService = {
     findById: jest.fn(),
     updateCurrentUser: jest.fn(),
+    deleteCurrentUser: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -38,6 +39,19 @@ describe('UsersController', () => {
 
       expect(mockUsersService.findById).toHaveBeenCalledWith('user-id');
       expect(result).toEqual(fakeUser);
+    });
+  });
+
+  describe('deleteCurrent', () => {
+    it('delegates to usersService.deleteCurrentUser and returns void', async () => {
+      mockUsersService.deleteCurrentUser.mockResolvedValue(undefined);
+
+      const result = await controller.deleteCurrent('user-id');
+
+      expect(mockUsersService.deleteCurrentUser).toHaveBeenCalledWith(
+        'user-id',
+      );
+      expect(result).toBeUndefined();
     });
   });
 
