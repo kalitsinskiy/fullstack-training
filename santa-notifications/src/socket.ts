@@ -2,6 +2,7 @@ import { Server } from 'socket.io';
 import { createAdapter } from '@socket.io/redis-adapter';
 import Redis from 'ioredis';
 import type { Server as HttpServer } from 'http';
+import { getSantaApiClient } from './services/santa-api-client';
 
 type VerifyToken = (token: string) => { sub: string; [key: string]: unknown };
 
@@ -53,8 +54,19 @@ export async function createSocketServer(
     // Personal room — used for direct user notifications
     socket.join(`user:${userId}`);
 
-    socket.on('join-room', (roomId: string) => {
+    socket.on('join-room', async (roomId: string) => {
       if (typeof roomId !== 'string' || !roomId) return;
+      const client = getSantaApiClient();
+      try {
+        const roomDetails = await client.getRoomById(roomId);
+        if (!roomDetails.memberIds.includes(userId)) {
+          socket.emit('error', { message: 'Not authorized for this room' });
+          return;
+        }
+      } catch {
+        socket.emit('error', { message: 'Could not verify user membership' });
+        return;
+      }
       socket.join(`room:${roomId}`);
     });
 
