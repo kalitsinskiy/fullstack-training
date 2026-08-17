@@ -7,7 +7,7 @@
 // Then run the assertions below — they should all pass.
 
 // Your code here:
-
+const { add, subtract, multiply, divide } = require('./math');
 // --- Tests (do not modify) ---
 const assert = require('assert');
 

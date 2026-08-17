@@ -11,7 +11,7 @@
 // capitalize('already') → 'Already'
 export function capitalize(_str: string): string {
   // TODO: implement
-  throw new Error('Not implemented');
+  return _str.charAt(0).toUpperCase() + _str.slice(1);
 }
 
 // 2. Convert camelCase to kebab-case
@@ -20,7 +20,10 @@ export function capitalize(_str: string): string {
 // camelToKebab('already') → 'already'
 export function camelToKebab(_str: string): string {
   // TODO: implement
-  throw new Error('Not implemented');
+  return _str
+    .replace(/([A-Z])/g, '-$1')
+    .toLowerCase()
+    .replace(/^-/, '');
 }
 
 // 3. Truncate a string to maxLength, adding '...' if cut
@@ -29,7 +32,7 @@ export function camelToKebab(_str: string): string {
 // truncate('Hello', 5) → 'Hello'  (exact length — no truncation)
 export function truncate(_str: string, _maxLength: number): string {
   // TODO: implement
-  throw new Error('Not implemented');
+  return _str.length <= _maxLength ? _str : `${_str.slice(0, _maxLength)}...`;
 }
 
 // 4. Count words in a string (split by whitespace)
@@ -39,7 +42,11 @@ export function truncate(_str: string, _maxLength: number): string {
 // countWords('   ') → 0
 export function countWords(_str: string): number {
   // TODO: implement
-  throw new Error('Not implemented');
+  if (_str.trim() === '') {
+    return 0;
+  }
+
+  return _str.trim().split(/\s+/).length;
 }
 
 // 5. Check if a string is a palindrome (case-insensitive, ignore spaces)
@@ -49,7 +56,8 @@ export function countWords(_str: string): number {
 // isPalindrome('') → true
 export function isPalindrome(_str: string): boolean {
   // TODO: implement
-  throw new Error('Not implemented');
+  const str = _str.toLowerCase().replace(/\s+/g, '');
+  return str === str.split('').reverse().join('');
 }
 
 // 6. Repeat a string n times with optional separator
@@ -57,7 +65,7 @@ export function isPalindrome(_str: string): boolean {
 // repeat('ab', 3, '-') → 'ab-ab-ab'
 // repeat('x', 1) → 'x'
 // repeat('x', 0) → ''
-export function repeat(_str: string, _times: number, _sep = ''): string {
+export function repeat(str: string, times: number, sep = ''): string {
   // TODO: implement
-  throw new Error('Not implemented');
+  return Array(times).fill(str).join(sep);
 }

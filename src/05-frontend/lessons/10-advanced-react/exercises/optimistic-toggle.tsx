@@ -23,10 +23,7 @@
  * need the optimistic behavior in one spot.
  */
 
-/* eslint-disable */
-// @ts-nocheck — exercise stub. Remove this directive after picking an approach.
-
-import { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 interface Notification {
   id: string;
@@ -37,9 +34,9 @@ interface Notification {
 // ---- Fake API ----
 
 let store: Notification[] = [
-  { id: '1', text: 'Welcome to santa-app!',        read: false },
-  { id: '2', text: 'Alice joined "Office Party"',  read: false },
-  { id: '3', text: 'Wishlist updated',             read: true  },
+  { id: '1', text: 'Welcome to santa-app!', read: false },
+  { id: '2', text: 'Alice joined "Office Party"', read: false },
+  { id: '3', text: 'Wishlist updated', read: true },
 ];
 const FAIL_RATE = 0.3;
 
@@ -49,43 +46,51 @@ async function listNotifications(): Promise<Notification[]> {
 }
 
 async function setRead(id: string, value: boolean): Promise<Notification> {
-  await new Promise((r) => setTimeout(r, 600));     // slow on purpose
+  await new Promise((r) => setTimeout(r, 600)); // slow on purpose
   if (Math.random() < FAIL_RATE) throw new Error('Server rejected the toggle');
   const idx = store.findIndex((n) => n.id === id);
   if (idx === -1) throw new Error('Not found');
-  const next = { ...store[idx], read: value };
+  const prev = store[idx]!;
+  const next: Notification = { ...prev, read: value };
   store = store.map((n, i) => (i === idx ? next : n));
   return next;
 }
 
-// ---- TODO: implement the optimistic toggle ----
+// ---- Implementation: Optimistic toggle with manual state management ----
 
 export default function OptimisticToggleDemo() {
-  // Approach A — useOptimistic
-  //   const [optimistic, addOptimistic] = useOptimistic(notifications, reducer);
-  //   const handleToggle = (id, next) => {
-  //     startTransition(async () => {
-  //       addOptimistic({ id, read: next });
-  //       try { await setRead(id, next); commitToList(); }
-  //       catch { setError(...); }
-  //     });
-  //   };
-  //
-  // Approach B — TanStack Query
-  //   const toggle = useMutation({
-  //     mutationFn: ({ id, value }) => setRead(id, value),
-  //     onMutate: ...,
-  //     onError: ...,
-  //     onSettled: ...,
-  //   });
-
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  // TODO: load notifications on mount (useQuery for B, useEffect+useState for A)
+  const [pending, setPending] = useState<Map<string, boolean>>(new Map());
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    listNotifications().then(setNotifications);
+  }, []);
+
+  const handleToggle = async (id: string, nextValue: boolean) => {
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: nextValue } : n)));
+
+    setPending((prev) => new Map(prev).set(id, true));
+    setError(null);
+
+    try {
+      await setRead(id, nextValue);
+    } catch (err) {
+      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: !nextValue } : n)));
+      setError((err as Error).message);
+    } finally {
+      setPending((prev) => {
+        const next = new Map(prev);
+        next.delete(id);
+        return next;
+      });
+    }
+  };
 
   return (
     <div style={{ padding: 24, fontFamily: 'system-ui, sans-serif', maxWidth: 480 }}>
       <h2>Notifications</h2>
-      <p>TODO: render notifications with an optimistic toggle.</p>
+      {error && <p style={{ color: '#d32f2f', marginBottom: 12 }}>Error: {error}</p>}
 
       <ul style={{ listStyle: 'none', padding: 0 }}>
         {notifications.map((n) => (
@@ -94,21 +99,34 @@ export default function OptimisticToggleDemo() {
             style={{
               padding: 8,
               borderBottom: '1px solid #eee',
-              opacity: n.read ? 0.6 : 1,
+              opacity: pending.has(n.id) ? 0.5 : n.read ? 0.6 : 1,
+              transition: 'opacity 0.2s',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
             }}
           >
             <span>{n.text}</span>
-            <button onClick={() => alert('TODO: implement toggle')}>
-              {n.read ? 'Mark unread' : 'Mark read'}
+            <button
+              onClick={() => handleToggle(n.id, !n.read)}
+              disabled={pending.has(n.id)}
+              style={{
+                opacity: pending.has(n.id) ? 0.6 : 1,
+              }}
+            >
+              {pending.has(n.id)
+                ? n.read
+                  ? 'Marking unread…'
+                  : 'Marking read…'
+                : n.read
+                  ? 'Mark unread'
+                  : 'Mark read'}
             </button>
           </li>
         ))}
       </ul>
 
-      <p style={{ color: '#666', fontSize: 13 }}>
+      <p style={{ color: '#777', fontSize: 14 }}>
         The fake API has a {Math.round(FAIL_RATE * 100)}% failure rate so you can verify rollback.
       </p>
     </div>

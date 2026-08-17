@@ -19,6 +19,16 @@ interface Bookmark {
   createdAt: string;
 }
 
+interface BookmarkStore {
+  bookmarks: Bookmark[];
+  nextId: number;
+}
+
+interface AppConfig {
+  port: number;
+  env: string;
+}
+
 // TODO 1: Declaration merging
 //
 // Tell TypeScript about the custom properties you'll add to FastifyInstance and FastifyRequest.
@@ -34,6 +44,17 @@ interface Bookmark {
 //   }
 // }
 
+declare module 'fastify' {
+  interface FastifyInstance {
+    store: BookmarkStore;
+    appConfig: AppConfig;
+  }
+
+  interface FastifyRequest {
+    startTime: number;
+  }
+}
+
 // TODO 2: Config plugin (wrap with fp)
 //
 // Create a plugin that decorates the Fastify instance with an `appConfig` object:
@@ -44,6 +65,15 @@ interface Bookmark {
 // }
 // export const configPluginWrapped = fp(configPlugin, { name: 'config' });
 
+async function configPlugin(fastify: FastifyInstance) {
+  fastify.decorate('appConfig', {
+    port: 3000,
+    env: process.env.NODE_ENV ?? 'development',
+  });
+}
+
+export const configPluginWrapped = fp(configPlugin, { name: 'config' });
+
 // TODO 3: Database plugin (wrap with fp)
 //
 // Create a plugin that decorates the Fastify instance with a `store` object:
@@ -53,6 +83,15 @@ interface Bookmark {
 //   fastify.decorate('store', { ... });
 // }
 // export const dbPluginWrapped = fp(dbPlugin, { name: 'db' });
+
+async function dbPlugin(fastify: FastifyInstance) {
+  fastify.decorate('store', {
+    bookmarks: [],
+    nextId: 1,
+  });
+}
+
+export const dbPluginWrapped = fp(dbPlugin, { name: 'db' });
 
 // TODO 4: Timing plugin (wrap with fp)
 //
@@ -66,6 +105,22 @@ interface Bookmark {
 //   fastify.addHook('onSend', async (request, reply) => { ... });
 // }
 // export const timingPluginWrapped = fp(timingPlugin, { name: 'timing' });
+
+async function timingPlugin(fastify: FastifyInstance) {
+  fastify.decorateRequest('startTime', 0);
+
+  fastify.addHook('onRequest', async (request) => {
+    request.startTime = Date.now();
+  });
+
+  fastify.addHook('onSend', async (request, reply, payload) => {
+    const elapsedMs = Date.now() - request.startTime;
+    reply.header('X-Response-Time', `${elapsedMs}ms`);
+    return payload;
+  });
+}
+
+export const timingPluginWrapped = fp(timingPlugin, { name: 'timing' });
 
 // TODO 5: Request counter plugin (DO NOT wrap with fp — test encapsulation)
 //
@@ -85,6 +140,16 @@ interface Bookmark {
 //   fastify.get('/stats', async () => ({ requestCount: count }));
 // }
 
+async function statsPlugin(fastify: FastifyInstance) {
+  let count = 0;
+
+  fastify.addHook('onRequest', async () => {
+    count += 1;
+  });
+
+  fastify.get('/stats', async () => ({ requestCount: count }));
+}
+
 // TODO 6: Bookmark routes plugin (DO NOT wrap with fp — routes stay encapsulated)
 //
 // Register with prefix '/api/bookmarks'. Endpoints:
@@ -102,6 +167,81 @@ interface Bookmark {
 //   const { store } = fastify;
 //   ...
 // }
+
+async function bookmarkRoutes(fastify: FastifyInstance) {
+  const { store } = fastify;
+
+  fastify.get<{ Querystring: { tag?: string } }>('/', async (request) => {
+    const { tag } = request.query;
+
+    if (!tag) {
+      return store.bookmarks;
+    }
+
+    return store.bookmarks.filter((bookmark) => bookmark.tags.includes(tag));
+  });
+
+  fastify.get<{ Params: { id: string } }>('/:id', async (request, reply) => {
+    const bookmarkId = Number(request.params.id);
+    const bookmark = store.bookmarks.find((entry) => entry.id === bookmarkId);
+
+    if (!bookmark) {
+      return reply.code(404).send({ message: 'Bookmark not found' });
+    }
+
+    return bookmark;
+  });
+
+  fastify.post<{
+    Body: { url: string; title: string; tags: string[] };
+  }>(
+    '/',
+    {
+      schema: {
+        body: {
+          type: 'object',
+          required: ['url', 'title', 'tags'],
+          additionalProperties: false,
+          properties: {
+            url: { type: 'string', format: 'uri' },
+            title: { type: 'string', minLength: 1 },
+            tags: {
+              type: 'array',
+              items: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const bookmark: Bookmark = {
+        id: store.nextId,
+        url: request.body.url,
+        title: request.body.title,
+        tags: request.body.tags,
+        createdAt: new Date().toISOString(),
+      };
+
+      store.bookmarks.push(bookmark);
+      store.nextId += 1;
+
+      return reply.code(201).send(bookmark);
+    }
+  );
+
+  fastify.delete<{ Params: { id: string } }>('/:id', async (request, reply) => {
+    const bookmarkId = Number(request.params.id);
+    const bookmarkIndex = store.bookmarks.findIndex((entry) => entry.id === bookmarkId);
+
+    if (bookmarkIndex === -1) {
+      return reply.code(404).send({ message: 'Bookmark not found' });
+    }
+
+    store.bookmarks.splice(bookmarkIndex, 1);
+
+    return reply.code(204).send();
+  });
+}
 
 // TODO 7: Assemble and start
 //
@@ -136,3 +276,40 @@ interface Bookmark {
 //   curl -v http://localhost:3000/health 2>&1 | grep x-response-time
 
 // Your code here:
+
+async function buildApp() {
+  const app = Fastify({ logger: true });
+
+  await app.register(configPluginWrapped);
+  await app.register(dbPluginWrapped);
+  await app.register(timingPluginWrapped);
+  await app.register(statsPlugin);
+  await app.register(bookmarkRoutes, { prefix: '/api/bookmarks' });
+
+  app.get('/health', async () => ({
+    status: 'ok',
+    env: app.appConfig.env,
+  }));
+
+  await app.ready();
+  console.log('Has store?', app.hasDecorator('store'));
+  console.log('Has appConfig?', app.hasDecorator('appConfig'));
+
+  return app;
+}
+
+async function start() {
+  const app = await buildApp();
+
+  try {
+    await app.listen({
+      port: app.appConfig.port,
+      host: '0.0.0.0',
+    });
+  } catch (error) {
+    app.log.error(error);
+    process.exit(1);
+  }
+}
+
+void start();

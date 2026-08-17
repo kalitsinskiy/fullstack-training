@@ -20,6 +20,7 @@ describe('Exercise 1: Basic snapshot', () => {
     // TODO: call formatUser(user) and use toMatchSnapshot()
     // Run the test once to create the snapshot
     // Then run again — it should pass
+    expect(formatUser(user)).toMatchSnapshot();
   });
 
   test('formatApiError matches snapshot', () => {
@@ -30,6 +31,9 @@ describe('Exercise 1: Basic snapshot', () => {
     };
 
     // TODO: call formatApiError(error) and use toMatchSnapshot()
+    expect(formatApiError(error)).toMatchSnapshot({
+      timestamp: expect.any(String),
+    });
   });
 });
 
@@ -42,6 +46,21 @@ describe('Exercise 2: Named snapshot', () => {
     // Run once to create, run again to verify
     // Note: toMatchInlineSnapshot() (auto-fills inline) is shown in the examples file
     // but requires an older Prettier version to work automatically
+    const rows: ReportRow[] = [
+      { label: 'Revenue', value: 5000 },
+      { label: 'Costs', value: 3000 },
+    ];
+
+    expect(generateReport('Q1 Report', rows)).toMatchSnapshot(
+      {
+        summary: {
+          generated: expect.any(String),
+          rowCount: 2,
+          total: 8000,
+        },
+      },
+      'Q1 report shape'
+    );
   });
 });
 
@@ -56,6 +75,7 @@ describe('Exercise 3: Know when NOT to use snapshots', () => {
 
     // TODO: instead of snapshot, use toBe to check report.summary.total === 300
     // Why? A snapshot for a single number is overkill
+    expect(report.summary.total).toBe(300);
   });
 
   test('use toMatchObject for partial shape validation', () => {
@@ -64,7 +84,7 @@ describe('Exercise 3: Know when NOT to use snapshots', () => {
       name: 'Charlie',
       email: 'charlie@example.com',
       role: 'guest',
-      createdAt: new Date(),  // dynamic — changes every run!
+      createdAt: new Date(), // dynamic — changes every run!
     };
 
     const formatted = formatUser(user) as Record<string, unknown>;
@@ -74,6 +94,11 @@ describe('Exercise 3: Know when NOT to use snapshots', () => {
     //   - accessLevel is 'guest'
     //   - isAdmin is false
     // Why? Because memberSince is derived from createdAt which is dynamic
+    expect(formatted).toMatchObject({
+      displayName: 'Charlie',
+      accessLevel: 'guest',
+      isAdmin: false,
+    });
   });
 });
 
@@ -95,5 +120,6 @@ describe('Exercise 4: Snapshot update workflow', () => {
     // 3. Review the diff in the output
     // 4. Run: npx jest --updateSnapshot to update it
     // This is the snapshot update workflow
+    expect(formatUser(adminUser)).toMatchSnapshot();
   });
 });

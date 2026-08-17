@@ -91,3 +91,109 @@ let nextId = 1; // eslint-disable-line @typescript-eslint/no-unused-vars, prefer
 //   curl http://localhost:3000/notes
 
 // Your code here:
+function parseBody(req: http.IncomingMessage): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+
+    req.on('data', (chunk) => chunks.push(chunk));
+    req.on('end', () => {
+      const raw = Buffer.concat(chunks).toString();
+
+      try {
+        resolve(raw ? JSON.parse(raw) : {});
+      } catch {
+        reject(new Error('Invalid JSON'));
+      }
+    });
+    req.on('error', reject);
+  });
+}
+
+function parseUrl(rawUrl: string): { pathname: string; searchParams: URLSearchParams } {
+  const parsed = new URL(rawUrl, 'http://localhost');
+
+  return {
+    pathname: parsed.pathname,
+    searchParams: parsed.searchParams,
+  };
+}
+
+function sendJson(res: http.ServerResponse, statusCode: number, data: unknown): void {
+  res.writeHead(statusCode, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify(data));
+}
+
+const server = http.createServer(async (req, res) => {
+  const method = req.method ?? 'GET';
+  const url = req.url ?? '/';
+  const { pathname, searchParams } = parseUrl(url);
+
+  console.log(`${method} ${url}`);
+
+  if (method === 'GET' && pathname === '/health') {
+    sendJson(res, 200, { status: 'ok', timestamp: new Date().toISOString() });
+    return;
+  }
+
+  if (method === 'GET' && pathname === '/notes') {
+    const search = searchParams.get('search')?.toLowerCase();
+    const filteredNotes = search
+      ? notes.filter((note) => note.text.toLowerCase().includes(search))
+      : notes;
+
+    sendJson(res, 200, filteredNotes);
+    return;
+  }
+
+  if (method === 'POST' && pathname === '/notes') {
+    try {
+      const body = (await parseBody(req)) as { text?: unknown };
+      const text = typeof body.text === 'string' ? body.text.trim() : '';
+
+      if (!text) {
+        sendJson(res, 400, { error: 'text is required' });
+        return;
+      }
+
+      const note: Note = {
+        id: nextId++,
+        text,
+        createdAt: new Date().toISOString(),
+      };
+
+      notes.push(note);
+      //HTTP responce status code 201 - 'Created'
+      sendJson(res, 201, note);
+      return;
+    } catch {
+      sendJson(res, 400, { error: 'Bad request' });
+      return;
+    }
+  }
+
+  if (method === 'DELETE' && pathname.startsWith('/notes/')) {
+    const id = Number(pathname.slice('/notes/'.length));
+
+    if (!Number.isInteger(id)) {
+      sendJson(res, 404, { error: 'Note not found' });
+      return;
+    }
+
+    const noteIndex = notes.findIndex((note) => note.id === id);
+
+    if (noteIndex === -1) {
+      sendJson(res, 404, { error: 'Note not found' });
+      return;
+    }
+
+    notes.splice(noteIndex, 1);
+    sendJson(res, 200, { deleted: true });
+    return;
+  }
+
+  sendJson(res, 404, { error: 'Not Found' });
+});
+
+server.listen(PORT, () => {
+  console.log(`Server listening on http://localhost:${PORT}`);
+});

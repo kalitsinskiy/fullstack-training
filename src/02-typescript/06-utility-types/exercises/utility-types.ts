@@ -30,13 +30,24 @@ console.log('=== Exercise 1: Partial for updates ===');
 // Then write function 'patchArticle(article: Article, update: ArticleUpdate): Article'
 
 // Your code here:
+type ArticleUpdate = Partial<Omit<Article, 'id' | 'createdAt' | 'authorId'>>;
 
-// const article: Article = {
-//   id: 'a1', title: 'Hello', body: 'World', authorId: 'u1',
-//   tags: [], published: false, createdAt: new Date(), updatedAt: new Date()
-// };
-// const patched = patchArticle(article, { title: 'Updated Title', published: true });
-// console.log(patched.title, patched.published);
+function patchArticle(article: Article, update: ArticleUpdate): Article {
+  return { ...article, ...update };
+}
+
+const article: Article = {
+  id: 'a1',
+  title: 'Hello',
+  body: 'World',
+  authorId: 'u1',
+  tags: [],
+  published: false,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
+const patched = patchArticle(article, { title: 'Updated Title', published: true });
+console.log(patched.title, patched.published);
 
 console.log('\n=== Exercise 2: Pick for API responses ===');
 // TODO: Create these types using Pick:
@@ -47,10 +58,22 @@ console.log('\n=== Exercise 2: Pick for API responses ===');
 // Write a function 'toListItem(article: Article): ArticleListItem'
 
 // Your code here:
+type ArticleListItem = Pick<Article, 'id' | 'title' | 'tags' | 'published' | 'createdAt'>;
+type AuthorPublic = Pick<Author, 'id' | 'name' | 'bio'>;
 
-// const item = toListItem(article);
-// console.log(item.title);
-// console.log(item.body); // ❌ should not exist on ArticleListItem
+function toListItem(article: Article): ArticleListItem {
+  return {
+    id: article.id,
+    title: article.title,
+    tags: article.tags,
+    published: article.published,
+    createdAt: article.createdAt,
+  };
+}
+
+const item = toListItem(article);
+console.log(item.title);
+//console.log(item.body); // ❌ should not exist on ArticleListItem
 
 console.log('\n=== Exercise 3: Omit for create DTOs ===');
 // TODO: Create these types using Omit:
@@ -59,12 +82,25 @@ console.log('\n=== Exercise 3: Omit for create DTOs ===');
 // Write 'createArticle(dto: CreateArticleDto): Article' that auto-assigns id + timestamps
 
 // Your code here:
-
-// const dto: CreateArticleDto = {
-//   title: 'New Post', body: '...', authorId: 'u1', tags: ['ts'], published: false
-// };
-// const newArticle = createArticle(dto);
-// console.log(newArticle.id, newArticle.createdAt);
+type CreateArticleDto = Omit<Article, 'id' | 'createdAt' | 'updatedAt'>;
+type CreateAuthorDto = Omit<Author, 'id'>;
+function createArticle(dto: CreateArticleDto): Article {
+  return {
+    ...dto,
+    id: `a_${Date.now()}`,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+}
+const dto: CreateArticleDto = {
+  title: 'New Post',
+  body: '...',
+  authorId: 'u1',
+  tags: ['ts'],
+  published: false,
+};
+const newArticle = createArticle(dto);
+console.log(newArticle.id, newArticle.createdAt);
 
 console.log('\n=== Exercise 4: Record ===');
 // TODO: Create the following using Record:
@@ -76,10 +112,22 @@ console.log('\n=== Exercise 4: Record ===');
 //   c) Function 'hasPermission(role, action)': checks if role can perform action
 
 // Your code here:
+type ArticleById = Record<'id', Article>;
+type RoleToPermissions = Record<'admin' | 'editor' | 'viewer', string[]>;
 
-// console.log(hasPermission('editor', 'delete')); // false
-// console.log(hasPermission('admin', 'delete'));  // true
-// console.log(hasPermission('viewer', 'read'));   // true
+const rolePermissions: RoleToPermissions = {
+  admin: ['create', 'read', 'update', 'delete'],
+  editor: ['create', 'read', 'update'],
+  viewer: ['read'],
+};
+
+function hasPermission(role: keyof RoleToPermissions, action: string): boolean {
+  return rolePermissions[role].includes(action);
+}
+
+console.log(hasPermission('editor', 'delete')); // false
+console.log(hasPermission('admin', 'delete')); // true
+console.log(hasPermission('viewer', 'read')); // true
 
 console.log('\n=== Exercise 5: Exclude and Extract ===');
 // TODO: Given the union below:
@@ -100,6 +148,14 @@ type EventType =
 // d) Create 'FocusEvents' — Extract focus and blur
 
 // Your code here:
+//a
+type KeyboardEvents = Extract<EventType, 'keydown' | 'keyup'>;
+//b
+type MouseEvents = Extract<EventType, `mouse${string}`>;
+//c
+type NonMouseEvents = Exclude<EventType, `mouse${string}`>;
+//d
+type FocusEvents = Extract<EventType, 'focus' | 'blur'>;
 
 console.log('\n=== Exercise 6: ReturnType and Parameters ===');
 // TODO: Given these functions (don't modify them):
@@ -125,15 +181,19 @@ async function loadAuthorWithArticles(
 // d) Extract the type of just the 'articles' property from (c)
 
 // Your type aliases here:
-// type SearchFirstParam = ...
-// type SearchResult = ...
-// type LoadedResult = ...
-// type ArticleList = ...
+type SearchFirstParam = Parameters<typeof searchArticles>[0];
+type SearchResult = ReturnType<typeof searchArticles>;
+type LoadedResult = Awaited<ReturnType<typeof loadAuthorWithArticles>>;
+type ArticleList = LoadedResult['articles'];
 
 // Verify:
-// const param: SearchFirstParam = 'typescript';
-// const result: SearchResult = [];
-// const loaded: LoadedResult = { author: {} as Author, articles: [] };
+const param: SearchFirstParam = 'typescript';
+const result: SearchResult = [];
+const loaded: LoadedResult = { author: {} as Author, articles: [] };
+
+console.log(param);
+console.log(result);
+console.log(loaded);
 
 console.log('\n=== Exercise 7: Readonly for immutability ===');
 // TODO: Write a function 'freeze<T>(obj: T): Readonly<T>'
@@ -143,9 +203,26 @@ console.log('\n=== Exercise 7: Readonly for immutability ===');
 //       Hint: type DeepReadonly<T> = { readonly [K in keyof T]: T[K] extends object ? DeepReadonly<T[K]> : T[K] }
 
 // Your code here:
+function freeze<T>(obj: T): Readonly<T> {
+  return Object.freeze(obj);
+}
 
-// const frozen = freeze({ name: 'Alice', tags: ['ts'] });
-// frozen.name = 'Bob'; // ❌ should be readonly at compile time
+type DeepReadonly<T> = {
+  readonly [K in keyof T]: T[K] extends object ? DeepReadonly<T[K]> : T[K];
+};
+
+function deepFreeze<T>(obj: T): DeepReadonly<T> {
+  Object.freeze(obj);
+  Object.getOwnPropertyNames(obj).forEach((prop) => {
+    const value = (obj as any)[prop];
+    if (value && typeof value === 'object' && !Object.isFrozen(value)) {
+      deepFreeze(value);
+    }
+  });
+  return obj as DeepReadonly<T>;
+}
+const frozen = freeze({ name: 'Alice', tags: ['ts'] });
+//frozen.name = 'Bob'; // ❌ should be readonly at compile time
 
 console.log('\n=== 🎯 Challenge: Build utility types from scratch ===');
 // TODO: Implement these utility types YOURSELF (without using the built-in versions):
@@ -166,12 +243,34 @@ console.log('\n=== 🎯 Challenge: Build utility types from scratch ===');
 //    Hint: { [P in K]: V }
 
 // Your implementations here:
+//a
+type MyPartial<T> = {
+  [K in keyof T]?: T[K];
+};
 
-// Verify they work like the built-ins:
-// type A = MyPartial<Article>;         // all optional
-// type B = MyReadonly<Author>;         // all readonly
-// type C = MyPick<Article, 'id' | 'title'>;  // { id: string; title: string }
-// type D = MyOmit<Article, 'body' | 'authorId'>; // everything else
+//b
+type MyReadonly<T> = {
+  readonly [K in keyof T]: T[K];
+};
+
+//c
+type MyPick<T, K extends keyof T> = {
+  [P in K]: T[P];
+};
+
+//d
+type MyOmit<T, K extends keyof T> = MyPick<T, Exclude<keyof T, K>>;
+
+//e
+type MyRecord<K extends string, V> = {
+  [P in K]: V;
+};
+
+//Verify they work like the built-ins:
+type A = MyPartial<Article>; // all optional
+type B = MyReadonly<Author>; // all readonly
+type C = MyPick<Article, 'id' | 'title'>; // { id: string; title: string }
+type D = MyOmit<Article, 'body' | 'authorId'>; // everything else
 
 console.log('\n✅ Exercises completed! Check your answers with a mentor.');
 

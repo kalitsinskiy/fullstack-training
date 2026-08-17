@@ -1,0 +1,66 @@
+.santa-cal {
+  --rdp-accent-color: hsl(var(--primary));
+  --rdp-background-color: hsl(var(--primary) / 0.1);
+  font-family: inherit;
+}
+
+.santa-cal .rdp-head_cell {
+  color: hsl(var(--muted-foreground));
+  font-weight: 500;
+  font-size: 0.875rem;
+  padding: 0.5rem 0;
+}
+
+.santa-cal .rdp-cell {
+  padding: 0.25rem;
+}
+
+.santa-cal .rdp-day {
+  border-radius: 0.375rem;
+  padding: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.santa-cal .rdp-day_selected {
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  font-weight: 600;
+}
+
+.santa-cal .rdp-day_today {
+  font-weight: 600;
+  color: hsl(var(--primary));
+}
+
+.santa-cal .rdp-day_disabled {
+  color: hsl(var(--muted-foreground));
+  opacity: 0.5;
+}
+
+.santa-cal .rdp-caption {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+}
+
+.santa-cal .rdp-caption_label {
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.santa-cal .rdp-button_reset {
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 0.25rem;
+  color: hsl(var(--primary));
+}
+
+.santa-cal .rdp-button_reset:hover {
+  opacity: 0.8;
+}
+
+.santa-cal .rdp-month {
+  width: 100%;
+}

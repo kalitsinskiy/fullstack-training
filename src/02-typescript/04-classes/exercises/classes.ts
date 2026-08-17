@@ -16,13 +16,39 @@ console.log('=== Exercise 1: Basic typed class ===');
 //     - getBalance(): number — returns current balance
 
 // Your code here:
+class BankAccount {
+  readonly id: string;
+  public owner: string;
+  private balance: number = 0;
 
-// const account = new BankAccount('acc_1', 'Alice');
-// account.deposit(1000);
-// account.withdraw(250);
-// console.log(account.getBalance()); // 750
-// console.log(account.id, account.owner);
+  constructor(id: string, owner: string) {
+    this.id = id;
+    this.owner = owner;
+  }
 
+  deposit(amount: number): void {
+    if (amount <= 0) {
+      throw new Error();
+    }
+    this.balance += amount;
+  }
+
+  withdraw(amount: number): void {
+    if (amount > this.balance) {
+      throw new Error();
+    }
+    this.balance -= amount;
+  }
+  getBalance(): number {
+    return this.balance;
+  }
+}
+
+const account = new BankAccount('acc_1', 'Alice');
+account.deposit(1000);
+account.withdraw(250);
+console.log(account.getBalance()); // 750
+console.log(account.id, account.owner);
 
 console.log('\n=== Exercise 2: Parameter properties ===');
 // TODO: Rewrite the following class using TypeScript parameter property shorthand
@@ -41,15 +67,28 @@ class Person {
     this.country = country;
   }
 
-  getEmail(): string { return this.email; }
+  getEmail(): string {
+    return this.email;
+  }
 }
 const _personExample = new Person('Alice', 30, 'alice@example.com', 'UA');
 console.log('Person (before refactor):', _personExample.name, _personExample.getEmail());
 
 // Your refactored version:
-// class PersonV2 { ... }
-// const p = new PersonV2('Alice', 30, 'alice@example.com', 'UA');
+class PersonV2 {
+  constructor(
+    public name: string,
+    public age: number,
+    private email: string,
+    protected country: string
+  ) {}
 
+  getEmail(): string {
+    return this.email;
+  }
+}
+const p = new PersonV2('Alice', 30, 'alice@example.com', 'UA');
+console.log(p);
 
 console.log('\n=== Exercise 3: Inheritance + access modifiers ===');
 // TODO: Create an abstract class 'Vehicle' with:
@@ -64,14 +103,51 @@ console.log('\n=== Exercise 3: Inheritance + access modifiers ===');
 //   - 'GasCar' extends Vehicle — fuelType returns 'gasoline', maxSpeed 180
 
 // Your code here:
+abstract class Vehicle {
+  protected speed: number = 0;
+  constructor(protected maxSpeed: number = 300) {}
+  abstract fuelType(): string;
+  accelerate(amount: number): void {
+    this.speed += amount;
+    if (this.speed > this.maxSpeed) {
+      this.speed = this.maxSpeed;
+    }
+  }
+  brake(amount: number): void {
+    this.speed -= amount;
+    if (this.speed <= 0) {
+      this.speed = 0;
+    }
+  }
+  getSpeed(): number {
+    return this.speed;
+  }
+}
 
-// const tesla = new ElectricCar();
-// tesla.accelerate(60);
-// tesla.accelerate(60);
-// console.log(tesla.getSpeed(), tesla.fuelType()); // 120 electric
-// tesla.brake(200); // capped at 0
-// console.log(tesla.getSpeed()); // 0
+class ElectricCar extends Vehicle {
+  constructor() {
+    super(200);
+  }
+  fuelType(): string {
+    return 'electric';
+  }
+}
 
+class GasCar extends Vehicle {
+  constructor() {
+    super(180);
+  }
+  fuelType(): string {
+    return 'gasoline';
+  }
+}
+
+const tesla = new ElectricCar();
+tesla.accelerate(60);
+tesla.accelerate(60);
+console.log(tesla.getSpeed(), tesla.fuelType()); // 120 electric
+tesla.brake(200); // capped at 0
+console.log(tesla.getSpeed()); // 0
 
 console.log('\n=== Exercise 4: Implement interface ===');
 // TODO: Create an interface 'Logger' with:
@@ -84,13 +160,25 @@ console.log('\n=== Exercise 4: Implement interface ===');
 //   - getLogs() returns all stored messages
 
 // Your code here:
+interface Logger {
+  log(level: 'info' | 'warn' | 'error', message: string): void;
+  getLogs(): string[];
+}
+class ConsoleLogger implements Logger {
+  private logs: string[] = [];
+  log(level: 'info' | 'warn' | 'error', message: string): void {
+    this.logs.push(`[${level.toUpperCase()}] ${message}`);
+  }
+  getLogs(): string[] {
+    return this.logs;
+  }
+}
 
-// const logger = new ConsoleLogger();
-// logger.log('info', 'Server started');
-// logger.log('warn', 'High memory usage');
-// logger.log('error', 'Database connection failed');
-// console.log(logger.getLogs());
-
+const logger = new ConsoleLogger();
+logger.log('info', 'Server started');
+logger.log('warn', 'High memory usage');
+logger.log('error', 'Database connection failed');
+console.log(logger.getLogs());
 
 console.log('\n=== Exercise 5: Getters and setters ===');
 // TODO: Create a class 'Circle' with:
@@ -103,12 +191,37 @@ console.log('\n=== Exercise 5: Getters and setters ===');
 //   - static method 'fromDiameter(d: number)': Circle — creates from diameter
 
 // Your code here:
-
-// const c = Circle.fromDiameter(10);
-// console.log(c.radius);       // 5
-// console.log(c.area.toFixed(2));          // 78.54
-// console.log(c.circumference.toFixed(2)); // 31.42
-
+class Circle {
+  private _radius: number;
+  constructor(radius: number) {
+    if (radius <= 0) {
+      throw new Error();
+    }
+    this._radius = radius;
+  }
+  get radius(): number {
+    return this._radius;
+  }
+  set radius(value: number) {
+    if (value <= 0) {
+      throw new Error();
+    }
+    this._radius = value;
+  }
+  get area(): number {
+    return Math.PI * this._radius * this._radius;
+  }
+  get circumference(): number {
+    return Math.PI * 2 * this._radius;
+  }
+  static fromDiameter(d: number): Circle {
+    return new Circle(d / 2);
+  }
+}
+const c = Circle.fromDiameter(10);
+console.log(c.radius); // 5
+console.log(c.area.toFixed(2)); // 78.54
+console.log(c.circumference.toFixed(2)); // 31.42
 
 console.log('\n=== Exercise 6: Generic class ===');
 // TODO: Create a generic class 'Queue<T>' (FIFO — first in, first out):
@@ -120,16 +233,35 @@ console.log('\n=== Exercise 6: Generic class ===');
 //   - toArray(): T[] — returns a copy of all items
 
 // Your code here:
+class Queue<T> {
+  private queue: T[] = [];
+  enqueue(item: T): void {
+    this.queue.push(item);
+  }
+  dequeue(): T | undefined {
+    return this.queue.shift();
+  }
+  peek(): T | undefined {
+    return this.queue[0];
+  }
+  readonly size: number = this.queue.length;
 
-// const queue = new Queue<string>();
-// queue.enqueue('first');
-// queue.enqueue('second');
-// queue.enqueue('third');
-// console.log(queue.peek());     // 'first'
-// console.log(queue.dequeue());  // 'first'
-// console.log(queue.size);       // 2
-// console.log(queue.toArray());  // ['second', 'third']
+  isEmpty(): boolean {
+    return this.queue.length === 0;
+  }
+  toArray(): T[] {
+    return [...this.queue];
+  }
+}
 
+const queue = new Queue<string>();
+queue.enqueue('first');
+queue.enqueue('second');
+queue.enqueue('third');
+console.log(queue.peek()); // 'first'
+console.log(queue.dequeue()); // 'first'
+console.log(queue.size); // 2
+console.log(queue.toArray()); // ['second', 'third']
 
 console.log('\n=== 🎯 Challenge: Event Emitter ===');
 // TODO: Create a type-safe event emitter:
@@ -146,7 +278,7 @@ console.log('\n=== 🎯 Challenge: Event Emitter ===');
 //   logout: [userId: string];
 //   error: [message: string, code: number];
 // };
-//
+
 // const emitter = new EventEmitter<AppEvents>();
 // emitter.on('login', (userId, timestamp) => {
 //   console.log(`User ${userId} logged in at ${timestamp}`);
@@ -154,5 +286,37 @@ console.log('\n=== 🎯 Challenge: Event Emitter ===');
 // emitter.emit('login', 'user_1', new Date());
 
 // Your code here:
+class EventEmitter<TEvents extends Record<string, unknown[]>> {
+  private listeners: { [key: string]: Function[] } = {};
+
+  on<K extends keyof TEvents>(event: K, listener: (...args: TEvents[K]) => void): void {
+    const key = event as string;
+    if (!this.listeners[key]) {
+      this.listeners[key] = [];
+    }
+    this.listeners[key].push(listener);
+  }
+
+  off<K extends keyof TEvents>(event: K, listener: (...args: TEvents[K]) => void): void {
+    const key = event as string;
+    this.listeners[key] = (this.listeners[key] || []).filter((l) => l !== listener);
+  }
+
+  emit<K extends keyof TEvents>(event: K, ...args: TEvents[K]): void {
+    const key = event as string;
+    (this.listeners[key] || []).forEach((l) => l(...args));
+  }
+}
+type AppEvents = {
+  login: [userId: string, timestamp: Date];
+  logout: [userId: string];
+  error: [message: string, code: number];
+};
+
+const emitter = new EventEmitter<AppEvents>();
+emitter.on('login', (userId, timestamp) => {
+  console.log(`User ${userId} logged in at ${timestamp}`);
+});
+emitter.emit('login', 'user_1', new Date());
 
 console.log('\n✅ Exercises completed! Check your answers with a mentor.');

@@ -1,13 +1,12 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Secret Santa — Gift Catalog</title>
-</head>
-<body>
-
-  <!--
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Secret Santa — Gift Catalog</title>
+  </head>
+  <body>
+    <!--
     TODO: Build a product catalog page for gift ideas.
 
     Requirements:
@@ -70,5 +69,104 @@
     [ ] Optional: paste source into https://validator.w3.org/ — should pass
   -->
 
-</body>
+    <header>
+      <h1>Secret Santa</h1>
+      <nav>
+        <ul>
+          <li><a href="#">Home</a></li>
+          <li><a href="#">Catalog</a></li>
+          <li><a href="#">My Wishlist</a></li>
+          <li><a href="#">My Room</a></li>
+        </ul>
+      </nav>
+    </header>
+
+    <main>
+      <h2>Gift Ideas</h2>
+
+      <section>
+        <article data-product-id="1">
+          <img
+            src="https://via.placeholder.com/300x200"
+            alt="Drone 7 inch"
+            width="300"
+            height="200"
+          />
+          <h3>Drone 7 inch</h3>
+          <p>Compact 7-inch racing drone, perfect for outdoor adventures.</p>
+          <p><strong>$229.99</strong></p>
+          <button>Add to Wishlist</button>
+        </article>
+
+        <article data-product-id="2">
+          <img
+            src="https://via.placeholder.com/300x200"
+            alt="Drone 10 inch"
+            width="300"
+            height="200"
+          />
+          <h3>Drone 10 inch</h3>
+          <p>Larger 10-inch drone with extended flight time and HD camera.</p>
+          <p><strong>$334.99</strong></p>
+          <button>Add to Wishlist</button>
+        </article>
+
+        <article data-product-id="3">
+          <img
+            src="https://via.placeholder.com/300x200"
+            alt="Motorola walkie-talkie"
+            width="300"
+            height="200"
+          />
+          <h3>Motorola Walkie-Talkie</h3>
+          <p>Rugged two-way radio with 35 km range, ideal for field communication.</p>
+          <p><strong>$99.99</strong></p>
+          <button>Add to Wishlist</button>
+        </article>
+
+        <article data-product-id="4">
+          <img
+            src="https://via.placeholder.com/300x200"
+            alt="Turniket Sich"
+            width="300"
+            height="200"
+          />
+          <h3>Turniket Sich</h3>
+          <p>High-quality tactical tourniquet, lightweight and easy to apply.</p>
+          <p><strong>$19.99</strong></p>
+          <button>Add to Wishlist</button>
+        </article>
+
+        <article data-product-id="5">
+          <img
+            src="https://via.placeholder.com/300x200"
+            alt="Scented Candle Pack"
+            width="300"
+            height="200"
+          />
+          <h3>Scented Candle Pack</h3>
+          <p>Set of 6 hand-poured soy candles in calming lavender and cedar scents.</p>
+          <p><strong>$14.99</strong></p>
+          <button>Add to Wishlist</button>
+        </article>
+
+        <article data-product-id="6">
+          <img
+            src="https://via.placeholder.com/300x200"
+            alt="Gourmet Chocolate Box"
+            width="300"
+            height="200"
+          />
+          <h3>Gourmet Chocolate Box</h3>
+          <p>Assorted Belgian chocolates in a decorative gift box, 24 pieces.</p>
+          <p><strong>$22.99</strong></p>
+          <button>Add to Wishlist</button>
+        </article>
+      </section>
+    </main>
+
+    <footer>
+      <p>&copy; 2026 Secret Santa. All rights reserved.</p>
+    </footer>
+  </body>
 </html>

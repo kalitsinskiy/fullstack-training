@@ -7,7 +7,7 @@ export {};
 // Implement custom error classes and a Fastify error handler that maps them
 // to proper HTTP responses with consistent formatting.
 
-import Fastify from 'fastify';
+import Fastify, { FastifyError } from 'fastify';
 
 // ============================================
 // Part 1: Custom Error Classes
@@ -23,6 +23,18 @@ import Fastify from 'fastify';
 //   - Call super(message)
 //   - Set this.name = this.constructor.name
 //   - Set all properties
+
+class AppError extends Error {
+  constructor(
+    message: string,
+    public readonly statusCode: number = 500,
+    public readonly code: string = 'INTERNAL_ERROR',
+    public readonly isOperational: boolean = true
+  ) {
+    super(message);
+    this.name = this.constructor.name;
+  }
+}
 
 // TODO 2: Create these subclasses of AppError:
 //
@@ -53,6 +65,45 @@ import Fastify from 'fastify';
 //   statusCode: 429, code: 'RATE_LIMITED'
 //   message: `Too many requests. Retry after ${retryAfterSeconds} seconds`
 //   Additional property: retryAfter number
+
+class NotFoundError extends AppError {
+  constructor(resource: string, id: string) {
+    super(`${resource} with id "${id}" not found`, 404, 'NOT_FOUND');
+  }
+}
+
+class ValidationError extends AppError {
+  constructor(
+    message: string,
+    public readonly details: Array<{ field: string; message: string }>
+  ) {
+    super(message, 400, 'VALIDATION_ERROR');
+  }
+}
+
+class ConflictError extends AppError {
+  constructor(message: string) {
+    super(message, 409, 'CONFLICT');
+  }
+}
+
+class UnauthorizedError extends AppError {
+  constructor(message: string = 'Authentication required') {
+    super(message, 401, 'UNAUTHORIZED');
+  }
+}
+
+class ForbiddenError extends AppError {
+  constructor(message: string = 'Access denied') {
+    super(message, 403, 'FORBIDDEN');
+  }
+}
+
+class RateLimitError extends AppError {
+  constructor(public readonly retryAfter: number) {
+    super(`Too many requests. Retry after ${retryAfter} seconds`, 429, 'RATE_LIMITED');
+  }
+}
 
 // ============================================
 // Part 2: Fastify App with Error Handler
@@ -85,6 +136,50 @@ const app = Fastify({
 //    - Return 500 with { success: false, error: { code: 'INTERNAL_ERROR', message: 'An unexpected error occurred' } }
 //    - NEVER expose internal error details to the client
 
+app.setErrorHandler((error: FastifyError | AppError, request, reply) => {
+  if (error instanceof AppError && error.isOperational) {
+    const response: Record<string, unknown> = {
+      success: false,
+      error: {
+        code: error.code,
+        message: error.message,
+      },
+    };
+
+    // Known business errors can safely return structured details.
+    if (error instanceof ValidationError && error.details.length > 0) {
+      (response.error as Record<string, unknown>).details = error.details;
+    }
+
+    if (error instanceof RateLimitError) {
+      reply.header('Retry-After', String(error.retryAfter));
+    }
+
+    request.log.warn({ err: error, code: error.code }, error.message);
+    return reply.status(error.statusCode).send(response);
+  }
+
+  if ('validation' in error && error.validation) {
+    return reply.status(400).send({
+      success: false,
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'Request validation failed',
+        details: (error as FastifyError).validation,
+      },
+    });
+  }
+
+  request.log.error({ err: error }, 'Unexpected error');
+  return reply.status(500).send({
+    success: false,
+    error: {
+      code: 'INTERNAL_ERROR',
+      message: 'An unexpected error occurred',
+    },
+  });
+});
+
 // ============================================
 // Test Routes (provided — do not modify)
 // ============================================
@@ -94,56 +189,54 @@ const app = Fastify({
 app.get('/items/:id', async (request) => {
   const { id } = request.params as { id: string };
   if (id === '999') {
-    // TODO: throw new NotFoundError('Item', id)
-    throw new Error('Replace me with NotFoundError');
+    throw new NotFoundError('Item', id);
   }
   return { id, name: 'Widget' };
 });
 
-app.post('/items', {
-  schema: {
-    body: {
-      type: 'object',
-      required: ['name', 'price'],
-      properties: {
-        name: { type: 'string', minLength: 1 },
-        price: { type: 'number', minimum: 0 },
+app.post(
+  '/items',
+  {
+    schema: {
+      body: {
+        type: 'object',
+        required: ['name', 'price'],
+        properties: {
+          name: { type: 'string', minLength: 1 },
+          price: { type: 'number', minimum: 0 },
+        },
       },
     },
   },
-}, async (request) => {
-  const { name } = request.body as { name: string; price: number };
-  if (name === 'duplicate') {
-    // TODO: throw new ConflictError(`Item "${name}" already exists`)
-    throw new Error('Replace me with ConflictError');
+  async (request) => {
+    const { name } = request.body as { name: string; price: number };
+    if (name === 'duplicate') {
+      throw new ConflictError(`Item "${name}" already exists`);
+    }
+    return { id: crypto.randomUUID().slice(0, 8), ...(request.body as object) };
   }
-  return { id: crypto.randomUUID().slice(0, 8), ...request.body as object };
-});
+);
 
 app.post('/items/:id/validate', async (_request) => {
-  // TODO: throw new ValidationError('Item validation failed', [
-  //   { field: 'price', message: 'Price must be positive' },
-  //   { field: 'category', message: 'Invalid category' },
-  // ]);
-  throw new Error('Replace me with ValidationError');
+  throw new ValidationError('Item validation failed', [
+    { field: 'price', message: 'Price must be positive' },
+    { field: 'category', message: 'Invalid category' },
+  ]);
 });
 
 app.get('/secret', async (request) => {
   const token = request.headers.authorization;
   if (!token) {
-    // TODO: throw new UnauthorizedError()
-    throw new Error('Replace me with UnauthorizedError');
+    throw new UnauthorizedError();
   }
   if (token !== 'Bearer admin-token') {
-    // TODO: throw new ForbiddenError('Admin access required')
-    throw new Error('Replace me with ForbiddenError');
+    throw new ForbiddenError('Admin access required');
   }
   return { secret: 42 };
 });
 
 app.get('/rate-limited', async () => {
-  // TODO: throw new RateLimitError(60)
-  throw new Error('Replace me with RateLimitError');
+  throw new RateLimitError(60);
 });
 
 app.get('/crash', async () => {

@@ -24,7 +24,7 @@ interface User {
 }
 
 const users = new Map<string, User>();
-const nextId = 1;
+let nextId = 1;
 
 const JWT_SECRET = 'exercise-secret-key';
 const JWT_EXPIRES_IN = '1h';
@@ -61,9 +61,38 @@ interface AuthResult {
   accessToken: string;
 }
 
-async function register(_input: RegisterInput): Promise<AuthResult> {
-  // TODO: Rename _input back to input and implement this function
-  throw new Error('Not implemented');
+async function register(input: RegisterInput): Promise<AuthResult> {
+  const email = input.email.toLowerCase();
+
+  if (users.has(email)) {
+    throw new Error('Email already registered');
+  }
+
+  // Store only a salted password hash, never the raw password.
+  const passwordHash = await bcrypt.hash(input.password, SALT_ROUNDS);
+  const user: User = {
+    id: String(nextId++),
+    email,
+    passwordHash,
+    displayName: input.displayName,
+    role: 'user',
+  };
+
+  users.set(email, user);
+
+  const accessToken = jwt.sign({ sub: user.id, email: user.email, role: user.role }, JWT_SECRET, {
+    expiresIn: JWT_EXPIRES_IN,
+  });
+
+  return {
+    user: {
+      id: user.id,
+      email: user.email,
+      displayName: user.displayName,
+      role: user.role,
+    },
+    accessToken,
+  };
 }
 
 // ============================================
@@ -83,9 +112,32 @@ interface LoginInput {
   password: string;
 }
 
-async function login(_input: LoginInput): Promise<AuthResult> {
-  // TODO: Rename _input back to input and implement this function
-  throw new Error('Not implemented');
+async function login(input: LoginInput): Promise<AuthResult> {
+  const email = input.email.toLowerCase();
+  const user = users.get(email);
+
+  if (!user) {
+    throw new Error('Invalid credentials');
+  }
+
+  const passwordMatches = await bcrypt.compare(input.password, user.passwordHash);
+  if (!passwordMatches) {
+    throw new Error('Invalid credentials');
+  }
+
+  const accessToken = jwt.sign({ sub: user.id, email: user.email, role: user.role }, JWT_SECRET, {
+    expiresIn: JWT_EXPIRES_IN,
+  });
+
+  return {
+    user: {
+      id: user.id,
+      email: user.email,
+      displayName: user.displayName,
+      role: user.role,
+    },
+    accessToken,
+  };
 }
 
 // ============================================
@@ -103,9 +155,18 @@ interface TokenPayload {
   role: string;
 }
 
-function verifyToken(_token: string): TokenPayload {
-  // TODO: Rename _token back to token and implement this function
-  throw new Error('Not implemented');
+function verifyToken(token: string): TokenPayload {
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as jwt.JwtPayload;
+
+    return {
+      id: String(decoded.sub),
+      email: String(decoded.email),
+      role: String(decoded.role),
+    };
+  } catch {
+    throw new Error('Invalid or expired token');
+  }
 }
 
 // ============================================
@@ -120,12 +181,26 @@ function verifyToken(_token: string): TokenPayload {
 //   Throw appropriate errors if user not found or old password is wrong.
 
 async function changePassword(
-  _email: string,
-  _oldPassword: string,
-  _newPassword: string
+  email: string,
+  oldPassword: string,
+  newPassword: string
 ): Promise<boolean> {
-  // TODO: Rename parameters (remove _ prefix) and implement this function
-  throw new Error('Not implemented');
+  const normalizedEmail = email.toLowerCase();
+  const user = users.get(normalizedEmail);
+
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  const passwordMatches = await bcrypt.compare(oldPassword, user.passwordHash);
+  if (!passwordMatches) {
+    throw new Error('Invalid credentials');
+  }
+
+  user.passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+  users.set(normalizedEmail, user);
+
+  return true;
 }
 
 // --- Test your implementations ---
@@ -135,6 +210,10 @@ async function changePassword(
 // "correctly rejected".
 function isStub(err: unknown): boolean {
   return err instanceof Error && err.message === 'Not implemented';
+}
+
+function getErrorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
 }
 
 async function main(): Promise<void> {
@@ -150,9 +229,9 @@ async function main(): Promise<void> {
     });
     console.log('Registered:', result1.user);
     console.log('Token received:', result1.accessToken.substring(0, 30) + '...');
-  } catch (err: any) {
+  } catch (err: unknown) {
     if (isStub(err)) console.log('TODO: register() not implemented yet');
-    else console.error('Register failed:', err.message);
+    else console.error('Register failed:', getErrorMessage(err));
   }
 
   // Test duplicate registration
@@ -164,9 +243,9 @@ async function main(): Promise<void> {
       displayName: 'Alice2',
     });
     console.error('FAIL: Should have thrown');
-  } catch (err: any) {
+  } catch (err: unknown) {
     if (isStub(err)) console.log('TODO: register() not implemented yet');
-    else console.log('Correctly rejected:', err.message);
+    else console.log('Correctly rejected:', getErrorMessage(err));
   }
 
   // Test login
@@ -183,13 +262,13 @@ async function main(): Promise<void> {
     try {
       const payload = verifyToken(result2.accessToken);
       console.log('Token payload:', payload);
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (isStub(err)) console.log('TODO: verifyToken() not implemented yet');
-      else console.error('Verify failed:', err.message);
+      else console.error('Verify failed:', getErrorMessage(err));
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     if (isStub(err)) console.log('TODO: login() not implemented yet');
-    else console.error('Login failed:', err.message);
+    else console.error('Login failed:', getErrorMessage(err));
   }
 
   // Test wrong password
@@ -197,9 +276,9 @@ async function main(): Promise<void> {
   try {
     await login({ email: 'alice@example.com', password: 'WrongPassword' });
     console.error('FAIL: Should have thrown');
-  } catch (err: any) {
+  } catch (err: unknown) {
     if (isStub(err)) console.log('TODO: login() not implemented yet');
-    else console.log('Correctly rejected:', err.message);
+    else console.log('Correctly rejected:', getErrorMessage(err));
   }
 
   // Test invalid token
@@ -207,9 +286,9 @@ async function main(): Promise<void> {
   try {
     verifyToken('invalid.token.here');
     console.error('FAIL: Should have thrown');
-  } catch (err: any) {
+  } catch (err: unknown) {
     if (isStub(err)) console.log('TODO: verifyToken() not implemented yet');
-    else console.log('Correctly rejected:', err.message);
+    else console.log('Correctly rejected:', getErrorMessage(err));
   }
 
   // Test change password
@@ -222,7 +301,7 @@ async function main(): Promise<void> {
     try {
       await login({ email: 'alice@example.com', password: 'AlicePass123!' });
       console.error('FAIL: Old password should not work');
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (isStub(err)) console.log('TODO: login() not implemented yet');
       else console.log('Old password correctly rejected');
     }
@@ -230,9 +309,9 @@ async function main(): Promise<void> {
     // New password should work
     const result3 = await login({ email: 'alice@example.com', password: 'NewPassword456!' });
     console.log('Login with new password:', result3.user.email);
-  } catch (err: any) {
+  } catch (err: unknown) {
     if (isStub(err)) console.log('TODO: changePassword() not implemented yet');
-    else console.error('Change password failed:', err.message);
+    else console.error('Change password failed:', getErrorMessage(err));
   }
 
   console.log('\nDone.');

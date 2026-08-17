@@ -22,9 +22,19 @@
  */
 
 /* eslint-disable */
-// @ts-nocheck — exercise file. Pick one path, remove the no-check directive after you fill it in.
+// @ts-nocheck — exercise file. Path A implemented; Path B stub kept intentionally.
 
 import { useState } from 'react';
+import {
+  Card,
+  CardContent,
+  CardActions,
+  Typography,
+  Button,
+  Chip,
+  Box,
+  Stack,
+} from '@mui/material';
 
 interface Room {
   id: string;
@@ -40,9 +50,9 @@ interface RoomCardProps {
 }
 
 const sampleRooms: Room[] = [
-  { id: '1', name: 'Office Party 2025', code: 'ABC123', memberCount: 8,  status: 'pending' },
-  { id: '2', name: 'Family Exchange',   code: 'DEF456', memberCount: 5,  status: 'drawn'   },
-  { id: '3', name: 'Friends Christmas', code: 'GHI789', memberCount: 12, status: 'closed'  },
+  { id: '1', name: 'Office Party 2026', code: 'ABC123', memberCount: 8, status: 'pending' },
+  { id: '2', name: 'Family Exchange', code: 'DEF456', memberCount: 5, status: 'drawn' },
+  { id: '3', name: 'Friends Christmas', code: 'GHI789', memberCount: 12, status: 'closed' },
 ];
 
 // ================================================
@@ -56,11 +66,46 @@ const sampleRooms: Room[] = [
 //
 // Tip: <Chip color="warning|success|default" label={room.status} size="small" />
 
-// TODO PATH A: implement RoomCardMUI using MUI components.
-// Replace this stub with your implementation.
+// Chip color maps to MUI's built-in palette tokens
+const statusColor: Record<Room['status'], 'warning' | 'success' | 'default'> = {
+  pending: 'warning',
+  drawn: 'success',
+  closed: 'default',
+};
 
-function RoomCardMUI(_props: RoomCardProps) {
-  return null; // TODO
+function RoomCardMUI({ room, onOpen }: RoomCardProps) {
+  return (
+    <Card
+      variant="outlined"
+      sx={{
+        transition: 'box-shadow 0.2s',
+        '&:hover': { boxShadow: 4 },
+      }}
+    >
+      <CardContent>
+        <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'flex-start', gap: 1 }}>
+          <Typography variant="h6" component="h3" noWrap sx={{ flexGrow: 1 }}>
+            {room.name}
+          </Typography>
+          <Chip label={room.status} color={statusColor[room.status]} size="small" />
+        </Stack>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+          Code:{' '}
+          <Box component="span" sx={{ fontFamily: 'monospace' }}>
+            {room.code}
+          </Box>
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          {room.memberCount} members
+        </Typography>
+      </CardContent>
+      <CardActions sx={{ justifyContent: 'flex-end', pt: 0 }}>
+        <Button size="small" variant="contained" onClick={onOpen}>
+          Open
+        </Button>
+      </CardActions>
+    </Card>
+  );
 }
 
 // ================================================
@@ -96,8 +141,12 @@ export function RoomCardDemo() {
     <div style={{ padding: 24, fontFamily: 'system-ui, sans-serif' }}>
       <header style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
         <h2 style={{ margin: 0 }}>RoomCard exercise</h2>
-        <button onClick={() => setPath('A')} disabled={path === 'A'}>Path A — MUI</button>
-        <button onClick={() => setPath('B')} disabled={path === 'B'}>Path B — Tailwind</button>
+        <button onClick={() => setPath('A')} disabled={path === 'A'}>
+          Path A — MUI
+        </button>
+        <button onClick={() => setPath('B')} disabled={path === 'B'}>
+          Path B — Tailwind
+        </button>
       </header>
 
       <div

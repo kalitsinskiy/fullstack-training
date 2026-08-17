@@ -1,73 +1,125 @@
-/*
-  TODO: Style a responsive navbar.
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
 
-  Requirements:
+body {
+  margin: 0;
+  padding: 0;
+  font-family: system-ui, sans-serif;
+}
 
-  1. RESET & BASE
-     - Apply box-sizing: border-box to all elements
-     - Remove default margin/padding from body
-     - Set font-family to system-ui, sans-serif
+.navbar {
+  background: #300a24;
+  display: flex;
+  align-items: center;
+  padding: 0 1.5rem;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  flex-wrap: wrap;
+}
 
-  2. NAVBAR (.navbar)
-     - Background: dark green (#2d5a27)
-     - Display: flex
-     - Align items: center
-     - Padding: 0 1.5rem
-     - Position: sticky, top: 0 (stays at top on scroll)
-     - z-index: 100 (above other content)
-     - Flex-wrap: wrap (so links can drop below on mobile)
+.navbar-logo {
+  color: white;
+  font-size: 1.25rem;
+  font-weight: bold;
+  text-decoration: none;
+  padding: 1rem 0;
+}
 
-  3. LOGO (.navbar-logo)
-     - Color: white
-     - Font-size: 1.25rem
-     - Font-weight: bold
-     - Text-decoration: none
-     - Padding: 1rem 0
+.navbar-links {
+  list-style: none;
+  display: flex;
+  gap: 0.25rem;
+  margin-left: auto;
+  padding: 0;
+}
 
-  4. NAV LINKS (.navbar-links)
-     - List-style: none
-     - Display: flex
-     - Gap: 0.25rem
-     - Margin-left: auto (pushes links to the right)
+.nav-link {
+  color: #ddb8d8;
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  display: block;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
 
-  5. INDIVIDUAL LINKS (.nav-link)
-     - Color: #cde6ca (light green)
-     - Text-decoration: none
-     - Padding: 0.5rem 1rem
-     - Border-radius: 4px
-     - Transition: background-color and color
-     - On hover: background rgba(255,255,255,0.1), color white
+.nav-link:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
 
-  6. CTA LINK (.nav-link-cta)
-     - Background: #c0392b (red)
-     - Color: white
-     - On hover: background #e74c3c
+.nav-link-cta {
+  background: #77216f;
+  color: white;
+}
 
-  7. HAMBURGER TOGGLE (CSS-only, no JavaScript)
-     - The <input type="checkbox"> (.nav-toggle) should be hidden (display: none)
-     - The <label> (.nav-toggle-label) should also be hidden on desktop (display: none)
-     - The .hamburger span inside the label represents the middle bar
-       of the hamburger icon. Use ::before and ::after pseudo-elements
-       for the top and bottom bars.
-     - Each bar: width 24px, height 2px, background white
-     - Space the bars vertically using transform: translateY()
+.nav-link-cta:hover {
+  background: #5e2750;
+}
 
-  8. MOBILE LAYOUT (max-width: 768px)
-     - Show the hamburger label (display: block)
-     - .navbar-links:
-       - Take full width (flex-basis: 100%)
-       - Stack vertically (flex-direction: column)
-       - Hidden by default: max-height: 0; overflow: hidden
-       - Transition max-height for a smooth open/close animation
-     - When the hidden checkbox is checked:
-       .nav-toggle:checked ~ .navbar-links { max-height: 300px; }
-       This reveals the links menu
-     - Each .nav-link on mobile should be full-width with more padding
+.nav-toggle {
+  display: none;
+}
 
-  Hints:
-  - The checkbox hack: a hidden <input type="checkbox"> + <label for="...">
-    lets you toggle state with pure CSS using the :checked pseudo-class
-    and the ~ (general sibling) combinator.
-  - Look at examples/flexbox-layouts.html for navbar patterns
-  - Test by resizing the browser below 768px width
-*/
+.nav-toggle-label {
+  display: none;
+  cursor: pointer;
+  padding: 1rem 0;
+  margin-left: auto;
+}
+
+.hamburger,
+.hamburger::before,
+.hamburger::after {
+  display: block;
+  width: 24px;
+  height: 2px;
+  background: white;
+}
+
+.hamburger {
+  position: relative;
+}
+
+.hamburger::before {
+  content: '';
+  position: absolute;
+  transform: translateY(-8px);
+}
+
+.hamburger::after {
+  content: '';
+  position: absolute;
+  transform: translateY(8px);
+}
+
+@media (max-width: 768px) {
+  .nav-toggle-label {
+    display: block;
+  }
+
+  .navbar-links {
+    flex-basis: 100%;
+    flex-direction: column;
+    gap: 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+    margin-left: 0;
+  }
+
+  .nav-toggle:checked ~ .navbar-links {
+    max-height: 300px;
+  }
+
+  .nav-link {
+    padding: 0.75rem 1rem;
+    width: 100%;
+    border-radius: 0;
+  }
+}
