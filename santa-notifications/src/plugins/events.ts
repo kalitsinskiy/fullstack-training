@@ -7,7 +7,7 @@ import { getSantaApiClient } from '../services/santa-api-client';
 import { getIo } from '../io-instance';
 
 interface NotificationInsert {
-  userId?: Types.ObjectId;
+  userId: Types.ObjectId;
   type: NotificationType;
   roomId?: string;
   message: string;
@@ -105,15 +105,8 @@ async function buildNotifications(
           );
         }
       }
-      return roomId
-        ? [
-            {
-              type: 'user.joined',
-              roomId,
-              message: `${data.userName ?? 'Someone'} joined the room`,
-            },
-          ]
-        : [];
+      // Recipients are room members — not available in the payload; skip rather than persist a recipient-less row
+      return [];
 
     case 'draw.completed':
       if (roomId) {
@@ -135,15 +128,8 @@ async function buildNotifications(
           }
         }
       }
-      return roomId
-        ? [
-            {
-              type: 'draw.completed',
-              roomId,
-              message: 'The draw is complete! Check your assignment',
-            },
-          ]
-        : [];
+      // participantIds fallback above covers the recoverable case; nothing more to do
+      return [];
 
     case 'wishlist.updated':
       if (roomId && data.userId) {
@@ -156,9 +142,8 @@ async function buildNotifications(
           );
         }
       }
-      return roomId
-        ? [{ type: 'wishlist.updated', roomId, message: 'A wishlist was updated in your room' }]
-        : [];
+      // Recipients are room members — not available in the payload; skip rather than persist a recipient-less row
+      return [];
 
     case 'room.created':
       return data.createdBy
@@ -236,12 +221,13 @@ async function eventsPlugin(fastify: FastifyInstance) {
 
         const notifications = await buildNotifications(routingKey, data, fastify);
 
-        if (notifications.length > 0) {
+        const toSave = notifications.filter((n) => n.userId != null);
+        if (toSave.length > 0) {
           // Stamp messageId only on single-notification events to preserve idempotency key.
-          if (notifications.length === 1) {
-            notifications[0].messageId = messageId;
+          if (toSave.length === 1) {
+            toSave[0].messageId = messageId;
           }
-          const saved = await NotificationModel.insertMany(notifications, { ordered: false });
+          const saved = await NotificationModel.insertMany(toSave, { ordered: false });
 
           // Push each saved notification to its recipient via Socket.IO
           try {
