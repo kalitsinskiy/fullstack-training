@@ -17,17 +17,22 @@ interface RoomsResponse {
   meta: { total: number; page: number; limit: number; totalPages: number };
 }
 
+const PAGE_LIMIT = 10;
+
 export function RoomListPage() {
   const queryClient = useQueryClient();
+  const [page, setPage] = useState(1);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showJoinForm, setShowJoinForm] = useState(false);
   const [newRoomName, setNewRoomName] = useState('');
   const [inviteCode, setInviteCode] = useState('');
 
   const { data: roomsResponse, isLoading } = useQuery<RoomsResponse>({
-    queryKey: ['rooms'],
+    queryKey: ['rooms', page],
     queryFn: async () => {
-      const { data } = await api.get<RoomsResponse>('/api/rooms');
+      const { data } = await api.get<RoomsResponse>('/api/rooms', {
+        params: { page, limit: PAGE_LIMIT },
+      });
       return data;
     },
   });
@@ -165,31 +170,56 @@ export function RoomListPage() {
           }
         />
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {rooms.map((room) => (
-            <Link key={room.id} to={`/rooms/${room.id}`}>
-              <Card className="transition-shadow hover:shadow-md">
-                <CardHeader>
-                  <CardTitle className="text-lg">{room.name}</CardTitle>
-                </CardHeader>
-                <CardContent className="flex items-center gap-3">
-                  <span
-                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                      room.status === 'drawn'
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-yellow-100 text-yellow-700'
-                    }`}
-                  >
-                    {room.status}
-                  </span>
-                  <span className="text-sm text-muted-foreground">
-                    {room.participantCount} participant{room.participantCount !== 1 ? 's' : ''}
-                  </span>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {rooms.map((room) => (
+              <Link key={room.id} to={`/rooms/${room.id}`}>
+                <Card className="transition-shadow hover:shadow-md">
+                  <CardHeader>
+                    <CardTitle className="text-lg">{room.name}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex items-center gap-3">
+                    <span
+                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                        room.status === 'drawn'
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-yellow-100 text-yellow-700'
+                      }`}
+                    >
+                      {room.status}
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      {room.participantCount} participant{room.participantCount !== 1 ? 's' : ''}
+                    </span>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+          {roomsResponse && roomsResponse.meta.totalPages > 1 && (
+            <div className="mt-6 flex items-center justify-center gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page <= 1}
+                onClick={() => setPage((p) => p - 1)}
+              >
+                Previous
+              </Button>
+              <span className="text-sm text-muted-foreground">
+                Page {roomsResponse.meta.page} of {roomsResponse.meta.totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page >= roomsResponse.meta.totalPages}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                Next
+              </Button>
+            </div>
+          )}
+        </>
       )}
     </>
   );

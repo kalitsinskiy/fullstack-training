@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { MessageCircle } from 'lucide-react';
 import { api, getApiErrorMessage } from '@/lib/api';
@@ -5,6 +6,7 @@ import { useUnreadMessages } from '@/features/messages/useUnreadMessages';
 import { RoomChatRow } from '@/features/messages/RoomChatRow';
 import { PageHeader } from '@/components/PageHeader';
 import { EmptyState } from '@/components/EmptyState';
+import { Button } from '@/components/ui/button';
 import type { RoomDetail } from '@/types/api';
 
 interface RoomsResponse {
@@ -12,13 +14,18 @@ interface RoomsResponse {
   meta: { total: number; page: number; limit: number; totalPages: number };
 }
 
+const PAGE_LIMIT = 10;
+
 export function MessageListPage() {
   const { counts } = useUnreadMessages();
+  const [page, setPage] = useState(1);
 
   const { data, isLoading, isError, error } = useQuery<RoomsResponse>({
-    queryKey: ['rooms'],
+    queryKey: ['rooms', 'messages', page],
     queryFn: async () => {
-      const { data } = await api.get<RoomsResponse>('/api/rooms');
+      const { data } = await api.get<RoomsResponse>('/api/rooms', {
+        params: { page, limit: PAGE_LIMIT },
+      });
       return data;
     },
   });
@@ -74,6 +81,29 @@ export function MessageListPage() {
               unread={counts[room.id] ?? 0}
             />
           ))}
+        </div>
+      )}
+      {data && data.meta.totalPages > 1 && (
+        <div className="mt-6 flex items-center justify-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page <= 1}
+            onClick={() => setPage((p) => p - 1)}
+          >
+            Previous
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            Page {data.meta.page} of {data.meta.totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page >= data.meta.totalPages}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            Next
+          </Button>
         </div>
       )}
     </>

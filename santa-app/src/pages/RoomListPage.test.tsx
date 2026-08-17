@@ -62,6 +62,99 @@ describe('RoomListPage', () => {
     expect(screen.getByText('3 participants')).toBeInTheDocument();
   });
 
+  it('hides pagination controls when there is only one page', async () => {
+    server.use(
+      http.get('/api/rooms', () =>
+        HttpResponse.json({
+          data: [{ id: 'room-1', name: 'Solo Room', inviteCode: 'A', creatorId: 'u1', status: 'pending', participants: [], participantCount: 1 }],
+          meta: { total: 1, page: 1, limit: 10, totalPages: 1 },
+        }),
+      ),
+    );
+
+    renderWithProviders(<RoomListPage />);
+
+    await screen.findByText('Solo Room');
+    expect(screen.queryByRole('button', { name: /previous/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /next/i })).not.toBeInTheDocument();
+  });
+
+  it('shows pagination controls with correct disabled state on page 1 of 2', async () => {
+    server.use(
+      http.get('/api/rooms', () =>
+        HttpResponse.json({
+          data: [{ id: 'room-1', name: 'Room One', inviteCode: 'A', creatorId: 'u1', status: 'pending', participants: [], participantCount: 2 }],
+          meta: { total: 15, page: 1, limit: 10, totalPages: 2 },
+        }),
+      ),
+    );
+
+    renderWithProviders(<RoomListPage />);
+
+    await screen.findByText('Room One');
+    expect(screen.getByText(/page 1 of 2/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /previous/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /next/i })).not.toBeDisabled();
+  });
+
+  it('loads page 2 when Next is clicked and disables Next on the last page', async () => {
+    server.use(
+      http.get('/api/rooms', ({ request }) => {
+        const p = new URL(request.url).searchParams.get('page');
+        if (p === '2') {
+          return HttpResponse.json({
+            data: [{ id: 'room-11', name: 'Room Eleven', inviteCode: 'B', creatorId: 'u1', status: 'pending', participants: [], participantCount: 3 }],
+            meta: { total: 15, page: 2, limit: 10, totalPages: 2 },
+          });
+        }
+        return HttpResponse.json({
+          data: [{ id: 'room-1', name: 'Room One', inviteCode: 'A', creatorId: 'u1', status: 'pending', participants: [], participantCount: 2 }],
+          meta: { total: 15, page: 1, limit: 10, totalPages: 2 },
+        });
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderWithProviders(<RoomListPage />);
+
+    await screen.findByText('Room One');
+    await user.click(screen.getByRole('button', { name: /next/i }));
+
+    await screen.findByText('Room Eleven');
+    expect(screen.getByText(/page 2 of 2/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /previous/i })).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: /next/i })).toBeDisabled();
+  });
+
+  it('goes back to page 1 when Previous is clicked', async () => {
+    server.use(
+      http.get('/api/rooms', ({ request }) => {
+        const p = new URL(request.url).searchParams.get('page');
+        if (p === '2') {
+          return HttpResponse.json({
+            data: [{ id: 'room-11', name: 'Room Eleven', inviteCode: 'B', creatorId: 'u1', status: 'pending', participants: [], participantCount: 3 }],
+            meta: { total: 15, page: 2, limit: 10, totalPages: 2 },
+          });
+        }
+        return HttpResponse.json({
+          data: [{ id: 'room-1', name: 'Room One', inviteCode: 'A', creatorId: 'u1', status: 'pending', participants: [], participantCount: 2 }],
+          meta: { total: 15, page: 1, limit: 10, totalPages: 2 },
+        });
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderWithProviders(<RoomListPage />);
+
+    await screen.findByText('Room One');
+    await user.click(screen.getByRole('button', { name: /next/i }));
+    await screen.findByText('Room Eleven');
+
+    await user.click(screen.getByRole('button', { name: /previous/i }));
+    await screen.findByText('Room One');
+    expect(screen.getByText(/page 1 of 2/i)).toBeInTheDocument();
+  });
+
   it('create room form submits and room appears', async () => {
     let createCalled = false;
     server.use(
