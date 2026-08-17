@@ -21,6 +21,7 @@ import { AssignmentView, Room, RoomParticipant } from './room.types';
 import { Room as RoomModel, RoomDocument } from './schemas/room.schema';
 import { permissionsForRole } from './permissions';
 import { EventPublisherService } from 'src/events/eventPublisher.service';
+import { randomInt } from 'crypto';
 
 const ROOM_TTL = 300; // 5 minutes
 const INVITE_TTL = 48 * 60 * 60; // 48 hours
@@ -87,7 +88,7 @@ export class RoomsService {
   }
 
   async create(dto: CreateRoomDto, creatorId: string): Promise<Room> {
-    const code = this.generateCode();
+    const code = await this.generateUniqueCode();
     const doc = await this.roomModel.create({
       name: dto.name,
       creatorId: new Types.ObjectId(creatorId),
@@ -369,7 +370,7 @@ export class RoomsService {
     const doc = await this.roomModel.findById(id).exec();
     if (!doc) throw new NotFoundException('Room not found');
     const oldCode = doc.inviteCode;
-    const code = this.generateCode();
+    const code = await this.generateUniqueCode();
     const updated = await this.roomModel
       .findByIdAndUpdate(
         new Types.ObjectId(id),
@@ -385,8 +386,26 @@ export class RoomsService {
     return this.toRoomView(updated as unknown as RoomDocument, userId);
   }
 
+  private static readonly CODE_ALPHABET =
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+
   private generateCode(): string {
-    return Math.random().toString(36).slice(2, 8).toUpperCase();
+    return Array.from(
+      { length: 6 },
+      () =>
+        RoomsService.CODE_ALPHABET[
+          randomInt(RoomsService.CODE_ALPHABET.length)
+        ],
+    ).join('');
+  }
+
+  private async generateUniqueCode(): Promise<string> {
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const code = this.generateCode();
+      const exists = await this.roomModel.exists({ inviteCode: code });
+      if (!exists) return code;
+    }
+    throw new Error('Failed to generate a unique invite code');
   }
 
   private async getDisplayName(id: string): Promise<string> {
