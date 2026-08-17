@@ -7,7 +7,21 @@ import { publish } from '../services/publisher';
 export async function messageRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/',
-    { preHandler: [fastify.authenticate] },
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        body: {
+          type: 'object',
+          required: ['roomId', 'to', 'text'],
+          additionalProperties: false,
+          properties: {
+            roomId: { type: 'string', minLength: 1 },
+            to: { type: 'string', enum: ['giftee', 'santa'] },
+            text: { type: 'string', minLength: 1, maxLength: 500 },
+          },
+        },
+      },
+    },
     async (request, reply) => {
       const senderId = request.user.sub;
       const { roomId, to, text } = request.body as {
@@ -15,16 +29,6 @@ export async function messageRoutes(fastify: FastifyInstance) {
         to: 'giftee' | 'santa';
         text: string;
       };
-
-      if (!roomId || (to !== 'giftee' && to !== 'santa') || !text?.trim()) {
-        return reply
-          .status(400)
-          .send({ message: 'roomId, to (giftee|santa), and text are required' });
-      }
-
-      if (text.length > 500) {
-        return reply.status(400).send({ message: 'Message must be 500 characters or less' });
-      }
 
       let relations: { gifteeId: string | null; santaId: string | null };
       try {

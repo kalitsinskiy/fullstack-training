@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { EventPublisherService } from '../events/event-publisher.service';
@@ -13,11 +13,18 @@ export class WishlistService {
     private readonly eventPublisher: EventPublisherService,
   ) {}
 
+  private validateIds(roomId: string, userId: string): void {
+    if (!Types.ObjectId.isValid(roomId) || !Types.ObjectId.isValid(userId)) {
+      throw new BadRequestException('Invalid room or user id');
+    }
+  }
+
   async set(
     roomId: string,
     userId: string,
     items: string[],
   ): Promise<Wishlist> {
+    this.validateIds(roomId, userId);
     const doc = await this.wishlistModel
       .findOneAndUpdate(
         {
@@ -39,6 +46,7 @@ export class WishlistService {
   }
 
   async get(roomId: string, userId: string): Promise<Wishlist> {
+    this.validateIds(roomId, userId);
     const doc = await this.wishlistModel
       .findOne({
         userId: new Types.ObjectId(userId),

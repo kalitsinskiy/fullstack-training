@@ -1,4 +1,5 @@
 import * as amqp from 'amqplib';
+import { assertTopology } from '../consumer';
 
 const EXCHANGE = 'santa.events';
 
@@ -7,7 +8,9 @@ let _channel: amqp.Channel | null = null;
 export async function initPublisher(rabbitmqUrl: string): Promise<void> {
   const connection = await amqp.connect(rabbitmqUrl);
   const channel = await connection.createChannel();
-  await channel.assertExchange(EXCHANGE, 'topic', { durable: true });
+  // Assert the full topology (exchange + queue + bindings) here so events
+  // published before the consumer starts are routed to the queue, not dropped.
+  await assertTopology(channel);
   _channel = channel;
 }
 

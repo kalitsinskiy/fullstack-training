@@ -41,46 +41,53 @@ export class RoomsService {
   ) {}
 
   async create(dto: CreateRoomDto, creatorId: string): Promise<Room> {
-    const inviteCode = this.generateInviteCode();
+    const MAX_ATTEMPTS = 5;
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+      const inviteCode = this.generateInviteCode();
+      try {
+        const doc = await this.roomModel.create({
+          name: dto.name.trim(),
+          creatorId: new Types.ObjectId(creatorId),
+          inviteCode,
+          participants: [
+            { userId: new Types.ObjectId(creatorId), role: 'owner' },
+          ],
+          status: 'pending',
+          budget: dto.budget,
+          currency: dto.currency,
+        });
 
-    try {
-      const doc = await this.roomModel.create({
-        name: dto.name.trim(),
-        creatorId: new Types.ObjectId(creatorId),
-        inviteCode,
-        participants: [
-          { userId: new Types.ObjectId(creatorId), role: 'owner' },
-        ],
-        status: 'pending',
-        budget: dto.budget,
-        currency: dto.currency,
-      });
+        await this.redisService.set(
+          `invite:${inviteCode}`,
+          doc._id.toString(),
+          INVITE_CODE_TTL,
+        );
 
-      await this.redisService.set(
-        `invite:${inviteCode}`,
-        doc._id.toString(),
-        INVITE_CODE_TTL,
-      );
+        this.eventPublisher.publish('room.created', {
+          roomId: doc._id.toString(),
+          roomName: doc.name,
+          createdBy: creatorId,
+        });
 
-      this.eventPublisher.publish('room.created', {
-        roomId: doc._id.toString(),
-        roomName: doc.name,
-        createdBy: creatorId,
-      });
-
-      const displayNames = await this.resolveDisplayNames(doc);
-      return this.toRoom(doc, creatorId, displayNames);
-    } catch (err: unknown) {
-      if (
-        typeof err === 'object' &&
-        err !== null &&
-        'code' in err &&
-        err.code === 11000
-      ) {
-        throw new ConflictException('A room with this name already exists');
+        const displayNames = await this.resolveDisplayNames(doc);
+        return this.toRoom(doc, creatorId, displayNames);
+      } catch (err: unknown) {
+        const isCollision =
+          typeof err === 'object' &&
+          err !== null &&
+          'code' in err &&
+          err.code === 11000;
+        if (isCollision && attempt < MAX_ATTEMPTS - 1) continue;
+        if (isCollision)
+          throw new ConflictException(
+            'Failed to generate unique invite code — please try again',
+          );
+        throw err;
       }
-      throw err;
     }
+    throw new ConflictException(
+      'Failed to generate unique invite code — please try again',
+    );
   }
 
   async findByUser(
@@ -177,11 +184,11 @@ export class RoomsService {
 
   async joinByCode(inviteCode: string, userId: string): Promise<Room> {
     const roomId = await this.redisService.get(`invite:${inviteCode}`);
-    if (!roomId) {
-      throw new BadRequestException('Invalid or expired invite code');
-    }
 
-    const doc = await this.roomModel.findById(roomId).exec();
+    let doc = roomId ? await this.roomModel.findById(roomId).exec() : null;
+    if (!doc) {
+      doc = await this.roomModel.findOne({ inviteCode }).exec();
+    }
     if (!doc) {
       throw new BadRequestException('Invalid or expired invite code');
     }
@@ -253,9 +260,10 @@ export class RoomsService {
       receiverId: shuffled[index],
     }));
 
+    // Atomic write: only succeeds if the room is still pending (guards against double-draw)
     const updatedDoc = await this.roomModel
-      .findByIdAndUpdate(
-        id,
+      .findOneAndUpdate(
+        { _id: id, status: 'pending' },
         {
           status: 'drawn',
           drawDate: new Date(),
@@ -267,7 +275,7 @@ export class RoomsService {
       .exec();
 
     if (!updatedDoc) {
-      throw new NotFoundException('Room not found');
+      throw new BadRequestException('Draw has already been performed');
     }
 
     await this.redisService.del(`room:${id}`);
@@ -339,6 +347,12 @@ export class RoomsService {
     userId: string,
   ): Promise<void> {
     const doc = await this.findRoomForParticipant(id, userId);
+
+    if (doc.status === 'drawn') {
+      throw new BadRequestException(
+        'Cannot kick a member after the draw has been done',
+      );
+    }
 
     const target = doc.participants.find(
       (p) => p.userId.toString() === targetUserId,

@@ -1,8 +1,17 @@
 import { Module } from '@nestjs/common';
-import { EventPublisherService } from './event-publisher.service';
+import { ConfigService } from '@nestjs/config';
+import { EventPublisherService, RABBITMQ_URL } from './event-publisher.service';
 
 @Module({
-  providers: [EventPublisherService],
+  providers: [
+    {
+      provide: RABBITMQ_URL,
+      useFactory: (config: ConfigService) =>
+        config.get<string>('RABBITMQ_URL')!,
+      inject: [ConfigService],
+    },
+    EventPublisherService,
+  ],
   exports: [EventPublisherService],
 })
 export class EventsModule {}

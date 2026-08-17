@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { isValidObjectId, Model } from 'mongoose';
 import { REQUIRE_PERMISSIONS_KEY } from '../decorators/require-permissions.decorator';
 import { Room as RoomModel } from '../schemas/room.schema';
 import { permissionsForRole } from '../permissions';
@@ -38,7 +38,7 @@ export class RoomPermissionsGuard implements CanActivate {
     const userId = request.user?.id;
     const roomId = request.params.id ?? request.params.roomId;
 
-    if (!userId || !roomId) {
+    if (!userId || !roomId || !isValidObjectId(roomId)) {
       throw new NotFoundException('Room not found');
     }
 

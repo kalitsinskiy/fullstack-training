@@ -26,7 +26,7 @@ export function DrawDialog({
 
   const handleConfirm = () => {
     if (selectedDate) {
-      onDraw(selectedDate.toISOString().split('T')[0]);
+      onDraw(format(selectedDate, 'yyyy-MM-dd'));
     }
   };
 

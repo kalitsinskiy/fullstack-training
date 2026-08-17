@@ -7,13 +7,11 @@
 #   cd santa-app && npm install && npm run dev   (http://localhost:5173)
 #   point it at the API with VITE_API_URL=http://localhost:3001 in santa-app/.env
 
-name: santa
-
 services:
   # --- Databases ---
 
   mongodb:
-    image: mongo:8
+    image: mongo:7
     container_name: santa-mongodb
     ports:
       - "27017:27017"
@@ -26,7 +24,7 @@ services:
       retries: 5
 
   redis:
-    image: redis:8-alpine
+    image: redis:7-alpine
     container_name: santa-redis
     ports:
       - "6379:6379"
@@ -83,9 +81,9 @@ services:
       REDIS_URL: redis://redis:6379
       RABBITMQ_URL: amqp://santa:santa123@rabbitmq:5672
       CORS_ORIGIN: http://localhost:5173
-      JWT_SECRET: ${JWT_SECRET}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
       JWT_EXPIRATION: 7d
-      SERVICE_API_KEY: ${SERVICE_API_KEY}
+      SERVICE_API_KEY: ${SERVICE_API_KEY:?SERVICE_API_KEY is required}
     depends_on:
       mongodb:
         condition: service_healthy
@@ -116,8 +114,8 @@ services:
       RABBITMQ_URL: amqp://santa:santa123@rabbitmq:5672
       CORS_ORIGIN: http://localhost:5173
       SANTA_API_URL: http://santa-api:3001
-      JWT_SECRET: ${JWT_SECRET}
-      SERVICE_API_KEY: ${SERVICE_API_KEY}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      SERVICE_API_KEY: ${SERVICE_API_KEY:?SERVICE_API_KEY is required}
     depends_on:
       mongodb:
         condition: service_healthy
@@ -133,6 +131,8 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_API_URL: http://localhost:3001
+        VITE_NOTIFICATIONS_URL: http://localhost:3002
+        VITE_WS_URL: http://localhost:3002
     container_name: santa-app
     restart: unless-stopped
     ports:

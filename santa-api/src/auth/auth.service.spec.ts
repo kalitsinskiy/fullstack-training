@@ -75,7 +75,10 @@ describe('AuthService', () => {
   it('register rejects duplicate emails', async () => {
     usersService.findByEmail.mockResolvedValue({
       id: 'existing-user',
-    } as never);
+      email: 'alice@test.com',
+      displayName: 'Alice',
+      role: 'user',
+    } as Awaited<ReturnType<UsersService['findByEmail']>>);
 
     await expect(
       service.register({

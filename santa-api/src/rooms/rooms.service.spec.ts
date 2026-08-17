@@ -247,7 +247,11 @@ describe('RoomsService', () => {
     });
 
     roomModel.findById.mockReturnValue(createQueryMock(roomDocument));
-    roomModel.findByIdAndUpdate.mockReturnValue(createQueryMock(updatedRoom));
+    roomModel.findOneAndUpdate.mockReturnValue(createQueryMock(updatedRoom));
+    usersService.findById.mockResolvedValue({
+      id: participants[0].toString(),
+      displayName: 'User',
+    } as never);
 
     const room = await service.draw(
       roomId,
@@ -255,8 +259,8 @@ describe('RoomsService', () => {
       '2025-12-24',
     );
 
-    expect(roomModel.findByIdAndUpdate).toHaveBeenCalledWith(
-      roomId,
+    expect(roomModel.findOneAndUpdate).toHaveBeenCalledWith(
+      { _id: roomId, status: 'pending' },
       expect.objectContaining({
         status: 'drawn',
         drawDate: expect.any(Date) as Date,
@@ -267,8 +271,8 @@ describe('RoomsService', () => {
       { new: true },
     );
 
-    const [, updateArg] = roomModel.findByIdAndUpdate.mock.calls[0] as [
-      string,
+    const [, updateArg] = roomModel.findOneAndUpdate.mock.calls[0] as [
+      unknown,
       { assignments: RoomDocumentStub['assignments'] },
       unknown,
     ];
@@ -288,6 +292,10 @@ describe('RoomsService', () => {
 
     roomModel.find.mockReturnValue(createFindMock([roomDocument]));
     roomModel.countDocuments.mockReturnValue(createQueryMock(1));
+    usersService.findById.mockResolvedValue({
+      id: userId,
+      displayName: 'User',
+    } as never);
 
     const result = await service.findByUser(userId, { page: 1, limit: 10 });
 
@@ -303,6 +311,10 @@ describe('RoomsService', () => {
     const roomDocument = createRoomDocument({ participants: [userId] });
 
     roomModel.findById.mockReturnValue(createQueryMock(roomDocument));
+    usersService.findById.mockResolvedValue({
+      id: userId.toString(),
+      displayName: 'User',
+    } as never);
 
     await expect(
       service.findByIdForUser(roomDocument._id.toString(), userId.toString()),
@@ -364,19 +376,20 @@ describe('RoomsService', () => {
     ).rejects.toThrow(BadRequestException);
   });
 
-  it('draw throws NotFoundException when findByIdAndUpdate returns null', async () => {
+  it('draw throws BadRequestException when already drawn (atomic update returns null)', async () => {
     const participants = [
       new Types.ObjectId(),
       new Types.ObjectId(),
       new Types.ObjectId(),
     ];
     const roomDocument = createRoomDocument({
+      creatorId: participants[0],
       participants,
       status: 'pending',
     });
 
     roomModel.findById.mockReturnValue(createQueryMock(roomDocument));
-    roomModel.findByIdAndUpdate.mockReturnValue(createQueryMock(null));
+    roomModel.findOneAndUpdate.mockReturnValue(createQueryMock(null));
 
     await expect(
       service.draw(
@@ -384,6 +397,6 @@ describe('RoomsService', () => {
         participants[0].toString(),
         '2025-12-24',
       ),
-    ).rejects.toThrow(NotFoundException);
+    ).rejects.toThrow(BadRequestException);
   });
 });

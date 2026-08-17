@@ -10,6 +10,13 @@ export interface RoomDetails {
   memberIds: string[];
 }
 
+class ClientError extends Error {
+  constructor(public readonly status: number, message: string) {
+    super(message);
+    this.name = 'ClientError';
+  }
+}
+
 class CircuitBreaker {
   private state: 'CLOSED' | 'OPEN' | 'HALF_OPEN' = 'CLOSED';
   private failureCount = 0;
@@ -34,6 +41,8 @@ class CircuitBreaker {
       this.onSuccess();
       return result;
     } catch (error) {
+      // 4xx errors are deterministic client mistakes — don't penalise the breaker
+      if (error instanceof ClientError) throw error;
       this.onFailure();
       throw error;
     }
@@ -62,6 +71,8 @@ async function withRetry<T>(
     try {
       return await fn();
     } catch (error) {
+      // 4xx responses are deterministic — retrying won't help
+      if (error instanceof ClientError) throw error;
       if (attempt === maxRetries) throw error;
       const delay = baseDelay * Math.pow(2, attempt);
       const jitter = delay * (0.5 + Math.random() * 0.5);
@@ -116,7 +127,12 @@ class SantaApiClient {
         headers: { 'X-Service-Key': this.serviceKey },
         signal: controller.signal,
       });
-      if (!res.ok) throw new Error(`santa-api responded with ${res.status}`);
+      if (!res.ok) {
+        if (res.status >= 400 && res.status < 500) {
+          throw new ClientError(res.status, `santa-api responded with ${res.status}`);
+        }
+        throw new Error(`santa-api responded with ${res.status}`);
+      }
       return res.json() as Promise<T>;
     } finally {
       clearTimeout(timeoutId);

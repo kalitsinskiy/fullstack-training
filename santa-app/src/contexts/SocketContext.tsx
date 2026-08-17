@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { tokenStore } from '@/lib/api';
 import { useAuth } from '@/features/auth/useAuth';
@@ -21,6 +21,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const joinedRooms = useRef(new Set<string>());
 
   useEffect(() => {
     const token = tokenStore.get();
@@ -34,7 +35,11 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       reconnectionAttempts: 10,
     });
 
-    s.on('connect', () => setIsConnected(true));
+    s.on('connect', () => {
+      setIsConnected(true);
+      // Re-join all rooms after every reconnect
+      joinedRooms.current.forEach((roomId) => s.emit('join-room', roomId));
+    });
     s.on('disconnect', () => setIsConnected(false));
     s.on('connect_error', (err) => {
       if (err.message === 'Invalid or expired token') {
@@ -51,10 +56,12 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   }, [isAuthenticated]);
 
   const joinRoom = useCallback((roomId: string) => {
+    joinedRooms.current.add(roomId);
     socket?.emit('join-room', roomId);
   }, [socket]);
 
   const leaveRoom = useCallback((roomId: string) => {
+    joinedRooms.current.delete(roomId);
     socket?.emit('leave-room', roomId);
   }, [socket]);
 

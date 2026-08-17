@@ -21,11 +21,8 @@
   },
   "plugins": ["react", "react-hooks", "@typescript-eslint"],
   "rules": {
-    "no-constant-condition": "off",
-    "no-redeclare": "off",
     "semi": ["error", "always"],
-    //"quotes": ["error", "single", { "avoidEscape": true }],
-    "quotes": "off",
+    "quotes": ["error", "single", { "avoidEscape": true }],
     "no-console": "off",
     "no-unused-vars": "off",
     "@typescript-eslint/no-unused-vars": [

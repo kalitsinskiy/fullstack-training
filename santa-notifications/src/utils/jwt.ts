@@ -1,4 +1,4 @@
-import { createHmac } from 'crypto';
+import { createHmac, timingSafeEqual } from 'crypto';
 
 export interface JwtPayload {
   sub: string;
@@ -17,13 +17,17 @@ export function verifyHs256(token: string, secret: string): JwtPayload {
     .update(`${headerB64}.${payloadB64}`)
     .digest('base64url');
 
-  if (expected !== sigB64) throw new Error('Invalid JWT signature');
+  const expectedBuf = Buffer.from(expected);
+  const actualBuf = Buffer.from(sigB64);
+  if (expectedBuf.length !== actualBuf.length || !timingSafeEqual(expectedBuf, actualBuf)) {
+    throw new Error('Invalid JWT signature');
+  }
 
   const payload = JSON.parse(
     Buffer.from(payloadB64.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8'),
   ) as JwtPayload;
 
-  if (payload.exp && Date.now() / 1000 > payload.exp) throw new Error('JWT expired');
+  if (!payload.exp || Date.now() / 1000 > payload.exp) throw new Error('JWT expired');
 
   return payload;
 }

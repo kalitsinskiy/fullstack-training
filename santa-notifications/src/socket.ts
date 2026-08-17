@@ -41,14 +41,21 @@ export async function createSocketServer(
     socket.join(`user:${userId}`);
     void redisClient.sadd('online:users', userId);
 
-    socket.on('join-room', async (roomId: string) => {
-      if (typeof roomId !== 'string' || !roomId.length) return;
+    socket.on('join-room', async (roomId: string, ack?: (ok: boolean) => void) => {
+      if (typeof roomId !== 'string' || !roomId.length) {
+        ack?.(false);
+        return;
+      }
       try {
         const room = await getSantaApiClient().getRoomById(roomId);
-        if (!room.memberIds.includes(userId)) return;
+        if (!room.memberIds.includes(userId)) {
+          ack?.(false);
+          return;
+        }
         socket.join(`room:${roomId}`);
+        ack?.(true);
       } catch {
-        // room not found or internal API unavailable — deny silently
+        ack?.(false);
       }
     });
 

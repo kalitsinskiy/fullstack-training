@@ -191,14 +191,7 @@ async function handleWishlistUpdated(
   }
 }
 
-export async function startConsumer(
-  rabbitmqUrl: string,
-  io: SocketServer,
-  log: (msg: string) => void,
-): Promise<void> {
-  const connection = await amqp.connect(rabbitmqUrl);
-  const channel = await connection.createChannel();
-
+async function assertTopology(channel: amqp.Channel): Promise<void> {
   await channel.assertExchange(DLX, 'fanout', { durable: true });
   await channel.assertQueue(DLQ, { durable: true });
   await channel.bindQueue(DLQ, DLX, '');
@@ -209,6 +202,37 @@ export async function startConsumer(
   for (const key of ROUTING_KEYS) {
     await channel.bindQueue(QUEUE, EXCHANGE, key);
   }
+}
+
+function isTransientError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  return (
+    error.message.startsWith('Circuit is OPEN') ||
+    error.message.includes('ECONNREFUSED') ||
+    error.message.includes('ETIMEDOUT') ||
+    error.message.includes('ENOTFOUND') ||
+    (error.message.startsWith('santa-api responded with') && /5\d\d/.test(error.message))
+  );
+}
+
+const retryCounters = new Map<string, number>();
+const MAX_RETRIES = 3;
+
+export async function startConsumer(
+  rabbitmqUrl: string,
+  io: SocketServer,
+  log: (msg: string) => void,
+): Promise<void> {
+  const connection = await amqp.connect(rabbitmqUrl);
+
+  connection.on('error', (err) => log(`RabbitMQ connection error: ${err.message}`));
+  connection.on('close', () => {
+    log('RabbitMQ connection closed, reconnecting in 5s…');
+    setTimeout(() => void startConsumer(rabbitmqUrl, io, log), 5000);
+  });
+
+  const channel = await connection.createChannel();
+  await assertTopology(channel);
 
   await channel.consume(QUEUE, async (msg) => {
     if (!msg) return;
@@ -235,11 +259,24 @@ export async function startConsumer(
           log(`Unhandled routing key: ${routingKey}`);
       }
 
+      const msgKey = msg.properties.messageId ?? String(msg.fields.deliveryTag);
+      retryCounters.delete(msgKey);
       log(`Processed event: ${routingKey}`);
       channel.ack(msg);
     } catch (error) {
-      log(`Failed to process RabbitMQ message: ${error instanceof Error ? error.message : String(error)}`);
-      channel.nack(msg, false, false);
+      const errMsg = error instanceof Error ? error.message : String(error);
+      log(`Failed to process RabbitMQ message: ${errMsg}`);
+
+      const msgKey = msg.properties.messageId ?? String(msg.fields.deliveryTag);
+      const retries = retryCounters.get(msgKey) ?? 0;
+
+      if (isTransientError(error) && retries < MAX_RETRIES) {
+        retryCounters.set(msgKey, retries + 1);
+        channel.nack(msg, false, true);
+      } else {
+        retryCounters.delete(msgKey);
+        channel.nack(msg, false, false);
+      }
     }
   });
 
@@ -250,3 +287,5 @@ export async function startConsumer(
     await connection.close();
   });
 }
+
+export { assertTopology };

@@ -1,4 +1,5 @@
 import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import axios from 'axios';
 import { api, tokenStore } from '@/lib/api';
 import type { User } from '@/types/api';
 
@@ -25,9 +26,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { data } = await api.get<User>('/api/users/me');
       setUser(data);
-    } catch {
-      tokenStore.clear();
-      setUser(null);
+    } catch (err) {
+      // The axios interceptor already handles 401 (clears token + redirects).
+      // Only clear state here for explicit auth rejections; keep the token for
+      // transient failures (network blips, 5xx during deploys) so the user
+      // isn't silently logged out.
+      const status = axios.isAxiosError(err) ? err.response?.status : undefined;
+      if (status === 401 || status === 403) {
+        tokenStore.clear();
+        setUser(null);
+      }
     } finally {
       setIsLoading(false);
     }

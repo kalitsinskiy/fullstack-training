@@ -1,6 +1,7 @@
 import {
   ConflictException,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -22,22 +23,26 @@ export type LoginResponse = {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
   ) {}
 
   async register(dto: RegisterDto): Promise<RegisterResponse> {
-    const existing = await this.usersService.findByEmail(dto.email);
+    const email = dto.email.toLowerCase();
+    const existing = await this.usersService.findByEmail(email);
     if (existing) {
       throw new ConflictException('Email already registered');
     }
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
     const user = await this.usersService.create({
-      email: dto.email,
+      email,
       displayName: dto.displayName,
       passwordHash,
+      role: 'user',
     });
 
     const accessToken = this.jwtService.sign({
@@ -54,15 +59,18 @@ export class AuthService {
   }
 
   async login(dto: LoginDto): Promise<LoginResponse> {
-    const user = await this.usersService.findByEmail(dto.email, {
+    const email = dto.email.toLowerCase();
+    const user = await this.usersService.findByEmail(email, {
       withPassword: true,
     });
     if (!user) {
+      this.logger.warn(`Login failed: no account for ${email}`);
       throw new UnauthorizedException('Invalid credentials');
     }
 
     const valid = await bcrypt.compare(dto.password, user.passwordHash);
     if (!valid) {
+      this.logger.warn(`Login failed: wrong password for ${email}`);
       throw new UnauthorizedException('Invalid credentials');
     }
 

@@ -1,6 +1,7 @@
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, useEffect, useRef, type FormEvent } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { format, parseISO } from 'date-fns';
 import { RefreshCw, UserMinus, Wallet, CalendarDays, Trash2, Gift, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, getApiErrorMessage } from '@/lib/api';
@@ -41,8 +42,11 @@ export function RoomDetailPage() {
 
   const [wishlistText, setWishlistText] = useState('');
   const [drawDialogOpen, setDrawDialogOpen] = useState(false);
+  const wishlistDirty = useRef(false);
   useEffect(() => {
-    if (myWishlist) setWishlistText(myWishlist.items.join('\n'));
+    if (myWishlist && !wishlistDirty.current) {
+      setWishlistText(myWishlist.items.join('\n'));
+    }
   }, [myWishlist]);
 
   const { socket, joinRoom, leaveRoom } = useSocket();
@@ -51,8 +55,8 @@ export function RoomDetailPage() {
     joinRoom(id);
 
     const refetchRoom = () => {
-      qc.invalidateQueries({ queryKey: ['rooms', id] });
-      qc.invalidateQueries({ queryKey: ['rooms', id, 'assignment'] });
+      qc.invalidateQueries({ queryKey: ['rooms', id], exact: true });
+      qc.invalidateQueries({ queryKey: ['rooms', id, 'assignment'], exact: true });
     };
 
     socket.on('room:member-joined', refetchRoom);
@@ -69,6 +73,7 @@ export function RoomDetailPage() {
     mutationFn: (items: string[]) =>
       api.put(`/api/rooms/${id}/wishlist`, { items }).then((r) => r.data),
     onSuccess: () => {
+      wishlistDirty.current = false;
       qc.invalidateQueries({ queryKey: ['rooms', id, 'wishlist', user?.id] });
       toast.success('Wishlist saved');
     },
@@ -228,12 +233,7 @@ export function RoomDetailPage() {
                 <p className="mb-1 text-sm font-medium">Gift exchange</p>
                 <p className="flex items-center gap-2 text-sm text-muted-foreground">
                   <CalendarDays className="size-4" />
-                  {new Date(room.exchangeDate).toLocaleDateString('en-GB', {
-                    weekday: 'long',
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric',
-                  })}
+                  {format(parseISO(room.exchangeDate.slice(0, 10)), 'EEEE, d MMM yyyy')}
                 </p>
               </div>
             )}
@@ -265,7 +265,7 @@ export function RoomDetailPage() {
                 className="h-36 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-y"
                 placeholder="One gift idea per line"
                 value={wishlistText}
-                onChange={(e) => setWishlistText(e.target.value)}
+                onChange={(e) => { wishlistDirty.current = true; setWishlistText(e.target.value); }}
               />
               <Button type="submit" disabled={saveWishlist.isPending}>
                 {saveWishlist.isPending ? 'Saving…' : 'Save wishlist'}
