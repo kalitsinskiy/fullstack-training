@@ -223,9 +223,8 @@ async function eventsPlugin(fastify: FastifyInstance) {
 
         const toSave = notifications.filter((n) => n.userId != null);
         if (toSave.length > 0) {
-          // Stamp messageId only on single-notification events to preserve idempotency key.
-          if (toSave.length === 1) {
-            toSave[0].messageId = messageId;
+          if (messageId) {
+            toSave.forEach((n) => (n.messageId = messageId));
           }
           const saved = await NotificationModel.insertMany(toSave, { ordered: false });
 

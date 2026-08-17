@@ -28,11 +28,12 @@ const notificationSchema = new Schema<NotificationRecord>({
   payload: { type: Schema.Types.Mixed },
   message: { type: String, required: true },
   read: { type: Boolean, default: false },
-  messageId: { type: String, sparse: true, unique: true },
+  messageId: { type: String },
   createdAt: { type: Date, default: Date.now },
 });
 
 notificationSchema.index({ userId: 1, createdAt: -1 });
+notificationSchema.index({ messageId: 1, userId: 1 }, { unique: true, sparse: true });
 
 export type NotificationDocument = HydratedDocument<NotificationRecord>;
 
