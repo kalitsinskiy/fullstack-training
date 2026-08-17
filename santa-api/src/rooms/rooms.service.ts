@@ -169,8 +169,8 @@ export class RoomsService {
       throw new BadRequestException('Invalid invite code');
     if (doc.status === 'drawn')
       throw new BadRequestException('Draw already completed');
-    await this.addMemberIfNeeded(doc, userId);
-    return this.toRoomView(doc, userId);
+    const current = await this.addMemberIfNeeded(doc, userId);
+    return this.toRoomView(current, userId);
   }
 
   async joinByCode(inviteCode: string, userId: string): Promise<Room> {
@@ -181,29 +181,45 @@ export class RoomsService {
     if (!doc) throw new NotFoundException('Room not found');
     if (doc.status === 'drawn')
       throw new BadRequestException('Draw already completed');
-    await this.addMemberIfNeeded(doc, userId);
-    return this.toRoomView(doc, userId);
+    const current = await this.addMemberIfNeeded(doc, userId);
+    return this.toRoomView(current, userId);
   }
 
   private async addMemberIfNeeded(
     doc: RoomDocument,
     userId: string,
-  ): Promise<void> {
-    const alreadyMember = doc.participants.some(
-      (p) => p.userId.toString() === userId,
-    );
-    if (alreadyMember) return;
-    doc.participants.push({
-      userId: new Types.ObjectId(userId),
-      role: 'member',
-    });
-    await doc.save();
+  ): Promise<RoomDocument> {
+    if (!Types.ObjectId.isValid(userId))
+      throw new BadRequestException('Invalid user id');
+
+    const updated = await this.roomModel
+      .findOneAndUpdate(
+        {
+          _id: doc._id,
+          'participants.userId': { $ne: new Types.ObjectId(userId) },
+        },
+        {
+          $push: {
+            participants: {
+              userId: new Types.ObjectId(userId),
+              role: 'member',
+            },
+          },
+        },
+        { returnDocument: 'after' },
+      )
+      .exec();
+
+    if (!updated) return doc;
+
     await this.redisService.del(`room:${doc.id}`);
     this.eventPublisherService.publish('user.joined', {
       roomId: doc.id,
       userId,
       userName: await this.getDisplayName(userId),
     });
+
+    return updated;
   }
 
   async draw(
