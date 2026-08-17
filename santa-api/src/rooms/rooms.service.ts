@@ -175,11 +175,21 @@ export class RoomsService {
   }
 
   async joinByCode(inviteCode: string, userId: string): Promise<Room> {
-    const roomId = await this.redisService.get(`invite:${inviteCode}`);
-    if (!roomId)
-      throw new BadRequestException('Invalid or expired invite code');
-    const doc = await this.roomModel.findById(roomId).exec();
-    if (!doc) throw new NotFoundException('Room not found');
+    const cachedRoomId = await this.redisService.get(`invite:${inviteCode}`);
+    let doc: RoomDocument | null = null;
+
+    if (cachedRoomId) {
+      doc = await this.roomModel.findById(cachedRoomId).exec();
+    } else {
+      doc = await this.roomModel
+        .findOne({ inviteCode: { $eq: inviteCode } })
+        .exec();
+      if (doc) {
+        await this.redisService.set(`invite:${inviteCode}`, doc.id, INVITE_TTL);
+      }
+    }
+
+    if (!doc) throw new BadRequestException('Invalid or expired invite code');
     if (doc.status === 'drawn')
       throw new BadRequestException('Draw already completed');
     const current = await this.addMemberIfNeeded(doc, userId);
