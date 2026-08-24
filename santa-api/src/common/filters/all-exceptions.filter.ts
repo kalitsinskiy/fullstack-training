@@ -4,13 +4,18 @@ import {
   ExceptionFilter,
   HttpException,
   HttpStatus,
+  Logger,
 } from '@nestjs/common';
-import { FastifyReply } from 'fastify';
+import { FastifyReply, FastifyRequest } from 'fastify';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
+  private readonly logger = new Logger(AllExceptionsFilter.name);
+
   catch(exception: unknown, host: ArgumentsHost): void {
-    const response = host.switchToHttp().getResponse<FastifyReply>();
+    const http = host.switchToHttp();
+    const response = http.getResponse<FastifyReply>();
+    const request = http.getRequest<FastifyRequest>();
 
     const statusCode =
       exception instanceof HttpException
@@ -21,6 +26,16 @@ export class AllExceptionsFilter implements ExceptionFilter {
       exception instanceof HttpException
         ? this.getHttpExceptionMessage(exception)
         : 'Internal server error';
+
+    // Server-side failures (any 5xx — always the case for non-HttpException
+    // errors) must not be swallowed: capture the stack so a production 500 has a
+    // trace. 4xx are client errors and aren't logged here.
+    if (statusCode >= 500) {
+      this.logger.error(
+        `Unhandled exception on ${request.method} ${request.url}`,
+        exception instanceof Error ? exception.stack : String(exception),
+      );
+    }
 
     response.status(statusCode).send({
       success: false,
