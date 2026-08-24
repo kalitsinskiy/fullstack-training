@@ -4,4 +4,6 @@ import { SocketContextValue } from './SocketProvider';
 export const SocketContext = createContext<SocketContextValue>({
   socket: null,
   isConnected: false,
+  joinRoom: () => {},
+  leaveRoom: () => {},
 });

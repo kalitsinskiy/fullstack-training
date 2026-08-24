@@ -1,22 +1,9 @@
-import { useCallback } from 'react';
 import { useSocketContext } from '@/features/socket/useSocketContext';
 
 export function useSocket() {
-  const { socket, isConnected } = useSocketContext();
-
-  const joinRoom = useCallback(
-    (roomId: string) => {
-      socket?.emit('join-room', roomId);
-    },
-    [socket],
-  );
-
-  const leaveRoom = useCallback(
-    (roomId: string) => {
-      socket?.emit('leave-room', roomId);
-    },
-    [socket],
-  );
+  // joinRoom/leaveRoom come from the provider, which tracks memberships and
+  // replays them on every reconnect so room:* events survive a connection blip.
+  const { socket, isConnected, joinRoom, leaveRoom } = useSocketContext();
 
   return { socket, isConnected, joinRoom, leaveRoom };
 }
