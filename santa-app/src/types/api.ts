@@ -54,6 +54,11 @@ export interface RoomDetail {
   viewerPermissions?: Permission[];
 }
 
+export interface RoomsResponse {
+  data: RoomDetail[];
+  meta: { total: number; page: number; limit: number; totalPages: number };
+}
+
 export interface Wishlist {
   userId: string;
   roomId: string;

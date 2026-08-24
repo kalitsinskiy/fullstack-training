@@ -10,12 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import type { RoomDetail } from '@/types/api';
-
-interface RoomsResponse {
-  data: RoomDetail[];
-  meta: { total: number; page: number; limit: number; totalPages: number };
-}
+import type { RoomsResponse } from '@/types/api';
 
 const PAGE_LIMIT = 10;
 
@@ -82,7 +77,10 @@ export function RoomListPage() {
   if (isLoading) {
     return (
       <>
-        <PageHeader title="Your rooms" description="Rooms you created or joined." />
+        <PageHeader
+          title="Your rooms"
+          description="Rooms you created or joined."
+        />
         <p className="text-sm text-muted-foreground">Loading...</p>
       </>
     );
@@ -98,7 +96,10 @@ export function RoomListPage() {
             <Button onClick={() => setShowCreateForm(!showCreateForm)}>
               <Plus /> New room
             </Button>
-            <Button variant="outline" onClick={() => setShowJoinForm(!showJoinForm)}>
+            <Button
+              variant="outline"
+              onClick={() => setShowJoinForm(!showJoinForm)}
+            >
               Join with code
             </Button>
           </div>
@@ -189,7 +190,8 @@ export function RoomListPage() {
                       {room.status}
                     </span>
                     <span className="text-sm text-muted-foreground">
-                      {room.participantCount} participant{room.participantCount !== 1 ? 's' : ''}
+                      {room.participantCount} participant
+                      {room.participantCount !== 1 ? 's' : ''}
                     </span>
                   </CardContent>
                 </Card>
@@ -207,7 +209,8 @@ export function RoomListPage() {
                 Previous
               </Button>
               <span className="text-sm text-muted-foreground">
-                Page {roomsResponse.meta.page} of {roomsResponse.meta.totalPages}
+                Page {roomsResponse.meta.page} of{' '}
+                {roomsResponse.meta.totalPages}
               </span>
               <Button
                 variant="outline"

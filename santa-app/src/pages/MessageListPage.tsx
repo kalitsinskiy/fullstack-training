@@ -7,12 +7,7 @@ import { RoomChatRow } from '@/features/messages/RoomChatRow';
 import { PageHeader } from '@/components/PageHeader';
 import { EmptyState } from '@/components/EmptyState';
 import { Button } from '@/components/ui/button';
-import type { RoomDetail } from '@/types/api';
-
-interface RoomsResponse {
-  data: RoomDetail[];
-  meta: { total: number; page: number; limit: number; totalPages: number };
-}
+import type { RoomsResponse } from '@/types/api';
 
 const PAGE_LIMIT = 10;
 

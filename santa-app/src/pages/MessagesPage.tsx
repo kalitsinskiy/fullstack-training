@@ -12,6 +12,28 @@ import { PageHeader } from '@/components/PageHeader';
 import { EmptyState } from '@/components/EmptyState';
 import type { ChatMessage, MessagesResponse } from '@/types/api';
 
+/** Append a message to its thread, returning a new response (or prev unchanged). */
+function appendMessageToThread(
+  prev: MessagesResponse | undefined,
+  thread: 'giftee' | 'santa',
+  message: ChatMessage,
+): MessagesResponse | undefined {
+  if (!prev) return prev;
+  if (thread === 'giftee' && prev.giftee) {
+    return {
+      ...prev,
+      giftee: { ...prev.giftee, messages: [...prev.giftee.messages, message] },
+    };
+  }
+  if (thread === 'santa' && prev.santa) {
+    return {
+      ...prev,
+      santa: { ...prev.santa, messages: [...prev.santa.messages, message] },
+    };
+  }
+  return prev;
+}
+
 export function MessagesPage() {
   const { roomId } = useParams<{ roomId: string }>();
   const { socket } = useSocket();
@@ -44,25 +66,8 @@ export function MessagesPage() {
       msg: ChatMessage & { thread: 'giftee' | 'santa' },
     ) => {
       if (msg.roomId !== roomId) return;
-      queryClient.setQueryData<MessagesResponse>(
-        ['messages', roomId],
-        (prev) => {
-          if (!prev) return prev;
-          const incomingThread = msg.thread;
-          const updated = { ...prev };
-          if (incomingThread === 'giftee' && updated.giftee) {
-            updated.giftee = {
-              ...updated.giftee,
-              messages: [...updated.giftee.messages, msg],
-            };
-          } else if (incomingThread === 'santa' && updated.santa) {
-            updated.santa = {
-              ...updated.santa,
-              messages: [...updated.santa.messages, msg],
-            };
-          }
-          return updated;
-        },
+      queryClient.setQueryData<MessagesResponse>(['messages', roomId], (prev) =>
+        appendMessageToThread(prev, msg.thread, msg),
       );
     };
 
@@ -76,29 +81,16 @@ export function MessagesPage() {
     if (!roomId) return;
     setSending(true);
     try {
-      const { data: sent } = await notificationsApi.post<ChatMessage>('/api/messages', {
-        roomId,
-        to: activeThread,
-        text,
-      });
-      queryClient.setQueryData<MessagesResponse>(
-        ['messages', roomId],
-        (prev) => {
-          if (!prev) return prev;
-          const updated = { ...prev };
-          if (activeThread === 'giftee' && updated.giftee) {
-            updated.giftee = {
-              ...updated.giftee,
-              messages: [...updated.giftee.messages, sent],
-            };
-          } else if (activeThread === 'santa' && updated.santa) {
-            updated.santa = {
-              ...updated.santa,
-              messages: [...updated.santa.messages, sent],
-            };
-          }
-          return updated;
+      const { data: sent } = await notificationsApi.post<ChatMessage>(
+        '/api/messages',
+        {
+          roomId,
+          to: activeThread,
+          text,
         },
+      );
+      queryClient.setQueryData<MessagesResponse>(['messages', roomId], (prev) =>
+        appendMessageToThread(prev, activeThread, sent),
       );
     } catch (err) {
       toast.error(getApiErrorMessage(err, 'Failed to send message'));

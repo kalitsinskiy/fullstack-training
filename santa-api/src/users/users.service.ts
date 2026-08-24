@@ -19,6 +19,16 @@ export class UsersService {
     private readonly userModel: Model<UserModel>,
   ) {}
 
+  /** Map a persisted user document to the public view shape. */
+  private toView(doc: UserDocument): User {
+    return {
+      id: doc.id,
+      email: doc.email,
+      displayName: doc.displayName,
+      role: doc.role,
+    };
+  }
+
   async create(input: CreateUserInput): Promise<User> {
     const doc = await this.userModel.create({
       email: input.email.toLowerCase(),
@@ -26,12 +36,7 @@ export class UsersService {
       passwordHash: input.passwordHash,
       role: input.role ?? 'user',
     });
-    return {
-      id: doc.id,
-      email: doc.email,
-      displayName: doc.displayName,
-      role: doc.role,
-    };
+    return this.toView(doc);
   }
 
   async findByEmail(
@@ -50,12 +55,7 @@ export class UsersService {
       throw new NotFoundException('User not found');
     const doc = await this.userModel.findById(id).exec();
     if (!doc) throw new NotFoundException('User not found');
-    return {
-      id: doc.id,
-      email: doc.email,
-      displayName: doc.displayName,
-      role: doc.role,
-    };
+    return this.toView(doc);
   }
 
   async deleteCurrentUser(id: string): Promise<void> {
@@ -81,11 +81,6 @@ export class UsersService {
       )
       .exec();
     if (!doc) throw new NotFoundException('User not found');
-    return {
-      id: doc.id,
-      email: doc.email,
-      displayName: doc.displayName,
-      role: doc.role,
-    };
+    return this.toView(doc);
   }
 }
