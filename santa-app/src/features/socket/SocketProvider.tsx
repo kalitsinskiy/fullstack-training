@@ -11,28 +11,31 @@ export interface SocketContextValue {
 }
 
 export function SocketProvider({ children }: { children: React.ReactNode }) {
-  const socketRef = useRef<Socket | null>(null);
+  const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
-  // Rooms this client wants to be in. socket.io auto-reconnects spin up a fresh
-  // server-side connection with no room memberships, so we replay these on
-  // every 'connect' — otherwise a blip silently stops room:* events.
   const joinedRoomsRef = useRef<Set<string>>(new Set());
 
-  const joinRoom = useCallback((roomId: string) => {
-    joinedRoomsRef.current.add(roomId);
-    socketRef.current?.emit('join-room', roomId);
-  }, []);
+  const joinRoom = useCallback(
+    (roomId: string) => {
+      joinedRoomsRef.current.add(roomId);
+      socket?.emit('join-room', roomId);
+    },
+    [socket],
+  );
 
-  const leaveRoom = useCallback((roomId: string) => {
-    joinedRoomsRef.current.delete(roomId);
-    socketRef.current?.emit('leave-room', roomId);
-  }, []);
+  const leaveRoom = useCallback(
+    (roomId: string) => {
+      joinedRoomsRef.current.delete(roomId);
+      socket?.emit('leave-room', roomId);
+    },
+    [socket],
+  );
 
   useEffect(() => {
     const token = tokenStore.get();
     if (!token) return;
 
-    const socket = io(import.meta.env.VITE_WS_URL || undefined, {
+    const instance = io(import.meta.env.VITE_WS_URL || undefined, {
       auth: { token },
       reconnection: true,
       reconnectionDelay: 1000,
@@ -40,34 +43,34 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       reconnectionAttempts: 10,
     });
 
-    socket.on('connect', () => {
+    instance.on('connect', () => {
       setIsConnected(true);
       // Re-join every room after a (re)connect; the server only auto-joins
       // user:{id}, so room memberships must be restored by the client.
       for (const roomId of joinedRoomsRef.current) {
-        socket.emit('join-room', roomId);
+        instance.emit('join-room', roomId);
       }
     });
-    socket.on('disconnect', () => setIsConnected(false));
-    socket.on('connect_error', (err) => {
+    instance.on('disconnect', () => setIsConnected(false));
+    instance.on('connect_error', (err) => {
       console.error('Socket connection error:', err.message);
       if (err.message === 'Invalid or expired token') {
-        socket.disconnect();
+        instance.disconnect();
       }
     });
 
-    socketRef.current = socket;
+    setSocket(instance);
 
     return () => {
-      socket.disconnect();
-      socketRef.current = null;
+      instance.disconnect();
+      setSocket(null);
       setIsConnected(false);
     };
   }, []);
 
   return (
     <SocketContext.Provider
-      value={{ socket: socketRef.current, isConnected, joinRoom, leaveRoom }}
+      value={{ socket, isConnected, joinRoom, leaveRoom }}
     >
       {children}
     </SocketContext.Provider>
