@@ -90,7 +90,7 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
       const notification = await NotificationModel.findOneAndUpdate(
         { _id: id, userId: new Types.ObjectId(userId) },
         { read: true },
-        { new: true }
+        { returnDocument: 'after' }
       ).exec();
 
       if (!notification) {
