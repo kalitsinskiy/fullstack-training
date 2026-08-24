@@ -8,7 +8,7 @@ export class User {
   @Prop({ required: true, unique: true, lowercase: true, trim: true })
   email!: string;
 
-  @Prop({ required: true, select: false }) // never returned by default
+  @Prop({ required: true, select: false })
   passwordHash!: string;
 
   @Prop({ required: true })
@@ -19,14 +19,3 @@ export class User {
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
-
-// Convert _id -> id and remove __v when serializing
-UserSchema.set('toJSON', {
-  virtuals: true,
-  transform: (_doc, ret: any) => {
-    ret.id = ret._id?.toString?.() || ret.id;
-    delete ret._id;
-    delete ret.__v;
-    return ret;
-  },
-});

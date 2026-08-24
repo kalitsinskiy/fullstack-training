@@ -1,6 +1,11 @@
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import {
+  ExecutionContext,
+  INestApplication,
+  ValidationPipe,
+} from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
+import type { Server } from 'http';
 import { Types } from 'mongoose';
 import { AppController } from '../src/app.controller';
 import { AppService } from '../src/app.service';
@@ -11,39 +16,49 @@ import { UsersService } from '../src/users/users.service';
 import { WishlistController } from '../src/wishlist/wishlist.controller';
 import { WishlistService } from '../src/wishlist/wishlist.service';
 import { JwtAuthGuard } from '../src/auth/guards/jwt-auth.guard';
+import { RoomPermissionsGuard } from '../src/rooms/guards/room-permissions.guard';
 
 describe('App (e2e)', () => {
   let app: INestApplication;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+  const server = (): Server => app.getHttpServer();
 
   const usersServiceMock = {
-    create: jest.fn(),
     findById: jest.fn(),
-    updateById: jest.fn(),
-    deleteById: jest.fn(),
+    updateCurrentUser: jest.fn(),
   };
 
   const roomsServiceMock = {
     create: jest.fn(),
-    findAll: jest.fn(),
-    findById: jest.fn(),
-    findByCode: jest.fn(),
-    addMember: jest.fn(),
-    updateById: jest.fn(),
-    deleteById: jest.fn(),
+    findByUser: jest.fn(),
+    findByIdForUser: jest.fn(),
+    join: jest.fn(),
+    joinByCode: jest.fn(),
+    draw: jest.fn(),
+    getAssignment: jest.fn(),
+    editRoom: jest.fn(),
+    deleteRoom: jest.fn(),
+    kickMember: jest.fn(),
+    regenerateInviteCode: jest.fn(),
   };
 
   const wishlistServiceMock = {
     set: jest.fn(),
     get: jest.fn(),
-    delete: jest.fn(),
   };
 
   const authGuardMock = {
-    canActivate: jest.fn((context) => {
-      const request = context.switchToHttp().getRequest();
+    canActivate: jest.fn((context: ExecutionContext) => {
+      const request = context
+        .switchToHttp()
+        .getRequest<{ user: { id: string } }>();
       request.user = { id: '64e000000000000000000001' };
       return true;
     }),
+  };
+
+  const roomPermissionsGuardMock = {
+    canActivate: jest.fn(() => true),
   };
 
   beforeEach(async () => {
@@ -58,22 +73,15 @@ describe('App (e2e)', () => {
       ],
       providers: [
         AppService,
-        {
-          provide: UsersService,
-          useValue: usersServiceMock,
-        },
-        {
-          provide: RoomsService,
-          useValue: roomsServiceMock,
-        },
-        {
-          provide: WishlistService,
-          useValue: wishlistServiceMock,
-        },
+        { provide: UsersService, useValue: usersServiceMock },
+        { provide: RoomsService, useValue: roomsServiceMock },
+        { provide: WishlistService, useValue: wishlistServiceMock },
       ],
     })
       .overrideGuard(JwtAuthGuard)
       .useValue(authGuardMock)
+      .overrideGuard(RoomPermissionsGuard)
+      .useValue(roomPermissionsGuardMock)
       .compile();
 
     app = moduleFixture.createNestApplication();
@@ -92,206 +100,126 @@ describe('App (e2e)', () => {
   });
 
   it('/ (GET) returns hello world', async () => {
-    await request(app.getHttpServer())
-      .get('/')
-      .expect(200)
-      .expect('Hello World!');
+    await request(server()).get('/').expect(200).expect('Hello World!');
   });
 
   it('/health (GET) returns status ok', async () => {
-    await request(app.getHttpServer())
-      .get('/health')
-      .expect(200)
-      .expect({ status: 'ok' });
+    await request(server()).get('/health').expect(200).expect({ status: 'ok' });
   });
 
-  it('/users (POST) creates a user', async () => {
-    const dto = {
-      displayName: 'Alice',
+  it('/users/me (GET) returns the current user', async () => {
+    const id = '64e000000000000000000001';
+    const user = {
+      id,
       email: 'alice@example.com',
-      passwordHash: 'supersecret123',
+      displayName: 'Alice',
+      role: 'user',
     };
-    const createdUser = {
-      _id: '64e000000000000000000001',
-      ...dto,
-    };
-    usersServiceMock.create.mockResolvedValue(createdUser);
-
-    await request(app.getHttpServer())
-      .post('/users')
-      .send(dto)
-      .expect(201)
-      .expect(createdUser);
-
-    expect(usersServiceMock.create).toHaveBeenCalledWith(dto);
-  });
-
-  it('/users/:id (GET) returns 404 when user does not exist', async () => {
-    usersServiceMock.findById.mockResolvedValue(null);
-
-    await request(app.getHttpServer())
-      .get('/users/64e000000000000000000099')
-      .expect(404);
-  });
-
-  it('/rooms (POST) validates ownerId format', async () => {
-    await request(app.getHttpServer())
-      .post('/rooms')
-      .send({ name: 'My Room', ownerId: 'not-a-uuid' })
-      .expect(400);
-  });
-
-  it('/rooms/:code/join (POST) returns 404 when room does not exist', async () => {
-    roomsServiceMock.findByCode.mockResolvedValue(null);
-
-    await request(app.getHttpServer())
-      .post('/rooms/ABC123/join')
-      .send({ userId: '8ad26f7f-b1a5-4e90-8e74-79f4f34b0d9c' })
-      .expect(404);
-  });
-
-  it('/rooms/:roomCode/wishlist (POST) validates wishlist item structure', async () => {
-    await request(app.getHttpServer())
-      .post('/rooms/ABC123/wishlist')
-      .send({
-        userId: '64e000000000000000000001',
-        items: ['book'],
-      })
-      .expect(400);
-  });
-
-  it('/rooms/:roomCode/wishlist (POST) upserts wishlist when room and user exist', async () => {
-    const roomId = '64e000000000000000000010';
-    const userId = '64e000000000000000000001';
-    const room = { _id: roomId, inviteCode: 'ABC123' };
-    const user = { _id: userId, email: 'alice@example.com' };
-    const wishlist = {
-      _id: '64e000000000000000000200',
-      roomId,
-      userId,
-      items: [{ name: 'book', priority: 1 }],
-    };
-
-    roomsServiceMock.findByCode.mockResolvedValue(room);
     usersServiceMock.findById.mockResolvedValue(user);
-    wishlistServiceMock.set.mockResolvedValue(wishlist);
 
-    await request(app.getHttpServer())
-      .post('/rooms/ABC123/wishlist')
-      .send({ userId, items: [{ name: 'book', priority: 1 }] })
-      .expect(201)
-      .expect(wishlist);
+    await request(server()).get('/users/me').expect(200).expect(user);
 
-    expect(roomsServiceMock.findByCode).toHaveBeenCalledWith('ABC123');
-    expect(usersServiceMock.findById).toHaveBeenCalledWith(userId);
-    expect(wishlistServiceMock.set).toHaveBeenCalledWith(
-      new Types.ObjectId(room._id),
-      new Types.ObjectId(user._id),
-      [{ name: 'book', priority: 1, url: undefined }],
-    );
+    expect(usersServiceMock.findById).toHaveBeenCalledWith(id);
   });
 
-  it('/users/me (PATCH) updates current user', async () => {
+  it('/users/me (PATCH) updates the current user', async () => {
     const id = '64e000000000000000000001';
     const updates = { displayName: 'Alice Updated' };
-    const updatedUser = { _id: id, email: 'alice@example.com', displayName: 'Alice Updated' };
-    usersServiceMock.updateById.mockResolvedValue(updatedUser);
+    const updatedUser = {
+      id,
+      email: 'alice@example.com',
+      displayName: 'Alice Updated',
+      role: 'user',
+    };
+    usersServiceMock.updateCurrentUser.mockResolvedValue(updatedUser);
 
-    await request(app.getHttpServer())
+    await request(server())
       .patch('/users/me')
       .send(updates)
       .expect(200)
       .expect(updatedUser);
 
-    expect(usersServiceMock.updateById).toHaveBeenCalledWith(id, updates);
+    expect(usersServiceMock.updateCurrentUser).toHaveBeenCalledWith(
+      id,
+      updates,
+    );
   });
 
-  it('/users/me (DELETE) deletes current user', async () => {
-    const id = '64e000000000000000000001';
-    usersServiceMock.deleteById.mockResolvedValue(true);
+  it('/rooms (POST) validates request body', async () => {
+    await request(server()).post('/rooms').send({}).expect(400);
+  });
 
-    await request(app.getHttpServer())
-      .delete('/users/me')
-      .expect(200)
-      .expect({ success: true });
+  it('/rooms (POST) creates a room', async () => {
+    const room = {
+      id: '64e000000000000000000010',
+      name: 'My Room',
+      status: 'pending',
+    };
+    roomsServiceMock.create.mockResolvedValue(room);
 
-    expect(usersServiceMock.deleteById).toHaveBeenCalledWith(id);
+    await request(server())
+      .post('/rooms')
+      .send({ name: 'My Room' })
+      .expect(201)
+      .expect(room);
+
+    expect(roomsServiceMock.create).toHaveBeenCalledWith(
+      { name: 'My Room' },
+      '64e000000000000000000001',
+    );
   });
 
   it('/rooms/:id (PATCH) updates a room', async () => {
     const id = '64e000000000000000000010';
     const updates = { name: 'Updated Room Name' };
-    const updatedRoom = { _id: id, name: 'Updated Room Name' };
-    roomsServiceMock.updateById.mockResolvedValue(updatedRoom);
+    const updatedRoom = { id, name: 'Updated Room Name', status: 'pending' };
+    roomsServiceMock.editRoom.mockResolvedValue(updatedRoom);
 
-    await request(app.getHttpServer())
+    await request(server())
       .patch(`/rooms/${id}`)
       .send(updates)
       .expect(200)
       .expect(updatedRoom);
 
-    expect(roomsServiceMock.updateById).toHaveBeenCalledWith(id, updates);
+    expect(roomsServiceMock.editRoom).toHaveBeenCalledWith(
+      id,
+      updates,
+      '64e000000000000000000001',
+    );
   });
 
   it('/rooms/:id (DELETE) removes a room', async () => {
     const id = '64e000000000000000000010';
-    roomsServiceMock.deleteById.mockResolvedValue(true);
+    roomsServiceMock.deleteRoom.mockResolvedValue(undefined);
 
-    await request(app.getHttpServer())
-      .delete(`/rooms/${id}`)
-      .expect(200)
-      .expect({ success: true });
+    await request(server()).delete(`/rooms/${id}`).expect(204);
 
-    expect(roomsServiceMock.deleteById).toHaveBeenCalledWith(id);
+    expect(roomsServiceMock.deleteRoom).toHaveBeenCalledWith(id);
   });
 
-  it('/rooms/:roomCode/wishlist/:userId (PATCH) updates wishlist items', async () => {
-    const roomId = '64e000000000000000000010';
+  it('/rooms/:roomId/wishlist (PUT) upserts wishlist', async () => {
+    const roomId = new Types.ObjectId().toString();
     const userId = '64e000000000000000000001';
-    const room = { _id: roomId, inviteCode: 'ABC123' };
-    const user = { _id: userId, email: 'alice@example.com' };
-    const updatedWishlist = {
-      _id: '64e000000000000000000200',
-      roomId,
-      userId,
-      items: [{ name: 'updated-book', priority: 2 }],
-    };
+    const wishlist = { roomId, userId, items: ['book'] };
+    wishlistServiceMock.set.mockResolvedValue(wishlist);
 
-    roomsServiceMock.findByCode.mockResolvedValue(room);
-    usersServiceMock.findById.mockResolvedValue(user);
-    wishlistServiceMock.set.mockResolvedValue(updatedWishlist);
-
-    await request(app.getHttpServer())
-      .patch('/rooms/ABC123/wishlist/64e000000000000000000001')
-      .send({ items: [{ name: 'updated-book', priority: 2 }] })
+    await request(server())
+      .put(`/rooms/${roomId}/wishlist`)
+      .send({ items: ['book'] })
       .expect(200)
-      .expect(updatedWishlist);
+      .expect(wishlist);
 
-    expect(wishlistServiceMock.set).toHaveBeenCalledWith(
-      new Types.ObjectId(room._id),
-      new Types.ObjectId(user._id),
-      [{ name: 'updated-book', priority: 2, url: undefined }],
-    );
+    expect(wishlistServiceMock.set).toHaveBeenCalledWith(roomId, userId, [
+      'book',
+    ]);
   });
 
-  it('/rooms/:roomCode/wishlist/:userId (DELETE) removes wishlist', async () => {
-    const roomId = '64e000000000000000000010';
-    const userId = '64e000000000000000000001';
-    const room = { _id: roomId, inviteCode: 'ABC123' };
-    const user = { _id: userId, email: 'alice@example.com' };
+  it('/rooms/:roomId/wishlist (PUT) validates item structure', async () => {
+    const roomId = new Types.ObjectId().toString();
 
-    roomsServiceMock.findByCode.mockResolvedValue(room);
-    usersServiceMock.findById.mockResolvedValue(user);
-    wishlistServiceMock.delete.mockResolvedValue(true);
-
-    await request(app.getHttpServer())
-      .delete('/rooms/ABC123/wishlist/64e000000000000000000001')
-      .expect(200)
-      .expect({ success: true });
-
-    expect(wishlistServiceMock.delete).toHaveBeenCalledWith(
-      new Types.ObjectId(room._id),
-      new Types.ObjectId(user._id),
-    );
+    await request(server())
+      .put(`/rooms/${roomId}/wishlist`)
+      .send({ items: [{ notAString: true }] })
+      .expect(400);
   });
 });

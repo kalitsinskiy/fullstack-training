@@ -1,0 +1,30 @@
+# Dev overlay for the backends — hot reload (watch mode) on top of the base stack.
+#
+#   Prod (default):  docker compose up --build
+#   Dev (hot reload): docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+#
+# It swaps each backend to its Dockerfile.dev (watch command) and bind-mounts the
+# source into the container. The anonymous `/app/node_modules` volume keeps the
+# container's Linux-built deps instead of the host's, so native modules don't clash.
+name: santa
+
+services:
+  santa-api:
+    build:
+      context: ./santa-api
+      dockerfile: Dockerfile.dev
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ./santa-api:/app
+      - /app/node_modules
+
+  santa-notifications:
+    build:
+      context: ./santa-notifications
+      dockerfile: Dockerfile.dev
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ./santa-notifications:/app
+      - /app/node_modules

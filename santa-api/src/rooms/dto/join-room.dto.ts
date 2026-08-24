@@ -1,11 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsUUID } from 'class-validator';
+import { IsString, Length } from 'class-validator';
 
-export default class JoinRoomDto {
+export class JoinRoomDto {
   @ApiProperty({
-    description: 'The ID of the user joining the room',
-    example: '550e8400-e29b-41d4-a716-446655440000',
+    description: 'Invite code that authorises joining the room',
+    example: 'Q7X4LM',
   })
-  @IsUUID()
-  userId: string;
+  @IsString()
+  @Length(6, 6)
+  inviteCode!: string;
 }

@@ -1,5 +1,16 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Types } from 'mongoose';
+import { HydratedDocument, Types } from 'mongoose';
+
+export type RoomDocument = HydratedDocument<Room>;
+
+@Schema({ _id: false })
+export class RoomAssignment {
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  giverId!: Types.ObjectId;
+
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  receiverId!: Types.ObjectId;
+}
 
 @Schema({ timestamps: true })
 export class Room {
@@ -12,30 +23,45 @@ export class Room {
   @Prop({ required: true, unique: true })
   inviteCode!: string;
 
-  @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
-  participants!: Types.ObjectId[];
+  @Prop({
+    type: [
+      {
+        userId: { type: Types.ObjectId, ref: 'User', required: true },
+        role: { type: String, enum: ['owner', 'member'], required: true },
+      },
+    ],
+    default: [],
+  })
+  participants!: { userId: Types.ObjectId; role: 'owner' | 'member' }[];
 
   @Prop({ enum: ['pending', 'drawn'], default: 'pending' })
   status!: 'pending' | 'drawn';
 
   @Prop()
   drawDate?: Date;
+
+  // Suggested per-gift budget (optional): amount + currency symbol.
+  @Prop()
+  budget?: number;
+
+  @Prop()
+  currency?: string;
+
+  // The day participants exchange gifts — set when the owner runs the draw,
+  // editable afterwards.
+  @Prop()
+  exchangeDate?: Date;
+
+  @Prop({
+    type: [
+      {
+        giverId: { type: Types.ObjectId, ref: 'User', required: true },
+        receiverId: { type: Types.ObjectId, ref: 'User', required: true },
+      },
+    ],
+    default: [],
+  })
+  assignments!: RoomAssignment[];
 }
 
 export const RoomSchema = SchemaFactory.createForClass(Room);
-
-// Convert _id -> id and remove __v when serializing
-RoomSchema.set('toJSON', {
-  virtuals: true,
-  transform: (_doc, ret: any) => {
-    ret.id = ret._id?.toString?.() || ret.id;
-    // convert ObjectId arrays to strings
-    if (Array.isArray(ret.participants)) {
-      ret.participants = ret.participants.map((p) => p?.toString?.());
-    }
-    if (ret.creatorId) ret.creatorId = ret.creatorId.toString();
-    delete ret._id;
-    delete ret.__v;
-    return ret;
-  },
-});

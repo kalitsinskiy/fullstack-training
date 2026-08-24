@@ -6,7 +6,8 @@ import {
 } from '@nestjs/platform-fastify';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
-import AllExceptionsFilter from '../src/common/filters/all-exceptions.filter';
+import { AllExceptionsFilter } from '../src/common/filters/all-exceptions.filter';
+import { EventPublisherService } from '../src/events/eventPublisher.service';
 import {
   startInMemoryMongo,
   stopInMemoryMongo,
@@ -24,7 +25,10 @@ describe('Auth (e2e)', () => {
 
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(EventPublisherService)
+      .useValue({ publish: jest.fn() })
+      .compile();
 
     app = moduleRef.createNestApplication<NestFastifyApplication>(
       new FastifyAdapter(),
@@ -127,7 +131,9 @@ describe('Auth (e2e)', () => {
       .send({ email: payload.email, password: 'wrong-password' })
       .expect(401);
 
-    expect(response.body.message).toBe('Invalid credentials');
+    expect((response.body as { message: string }).message).toBe(
+      'Invalid credentials',
+    );
   });
 
   it('returns 401 for unknown email with the same generic message', async () => {
@@ -136,6 +142,8 @@ describe('Auth (e2e)', () => {
       .send({ email: 'unknown@test.com', password: 'password123' })
       .expect(401);
 
-    expect(response.body.message).toBe('Invalid credentials');
+    expect((response.body as { message: string }).message).toBe(
+      'Invalid credentials',
+    );
   });
 });

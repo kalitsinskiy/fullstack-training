@@ -1,38 +1,31 @@
-import { MongoMemoryServer } from 'mongodb-memory-server';
 import mongoose, { Connection } from 'mongoose';
 
-let mongoServer: MongoMemoryServer;
+jest.setTimeout(120_000);
 
-export async function startInMemoryMongo(): Promise<string> {
-  mongoServer = await MongoMemoryServer.create();
-  return mongoServer.getUri();
+/**
+ * The in-memory MongoDB is started once for the whole run in global-setup.ts —
+ * it has to exist *before* AppModule is imported, because ConfigModule validates
+ * and snapshots MONGO_URL at import time. These helpers just hand the specs the
+ * URI that global-setup already published, so the existing `beforeAll` wiring
+ * keeps working unchanged.
+ */
+export function startInMemoryMongo(): Promise<string> {
+  return Promise.resolve(process.env.MONGO_URL as string);
 }
 
 export async function stopInMemoryMongo(): Promise<void> {
+  // The shared server is stopped in global-teardown.ts; here we just drop the
+  // mongoose connection this suite opened.
   await mongoose.disconnect();
-  await mongoServer.stop();
 }
 
 export async function clearAllCollections(
   connection: Connection,
 ): Promise<void> {
-  if (!connection) {
-    console.warn('No MongoDB connection available to clear collections');
-    return;
-  }
-
-  const collections = await connection.db?.collections();
-  if (!collections) {
-    console.warn('No collections found to clear');
-    return;
-  }
-
-  for (const key of collections) {
-    try {
-      await key.deleteMany({});
-    } catch (error) {
-      // Ignore errors if collection doesn't exist
-      console.error(`Error clearing collection ${key?.collectionName}:`, error);
-    }
+  const db = connection.db;
+  if (!db) return;
+  const collections = await db.listCollections().toArray();
+  for (const col of collections) {
+    await db.collection(col.name).deleteMany({});
   }
 }

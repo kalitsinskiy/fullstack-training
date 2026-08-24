@@ -1,0 +1,24 @@
+# E2E override — apply on top of docker-compose.yml for Playwright runs.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.e2e.yml up -d --build
+#   cd santa-app && npm run test:e2e
+#   docker compose -f docker-compose.yml -f docker-compose.e2e.yml down
+#
+# Changes vs production compose:
+#   - NODE_ENV=test  →  disables rate limiting on /auth/register and /auth/login
+#   - Separate MongoDB databases (*-e2e) so E2E data never touches dev/prod data
+#   - santa-app container omitted (Playwright's webServer starts Vite directly)
+
+services:
+  santa-api:
+    environment:
+      NODE_ENV: test
+      MONGO_URL: mongodb://mongodb:27017/santa-api-e2e
+      LOG_LEVEL: debug
+
+  santa-notifications:
+    environment:
+      NODE_ENV: test
+      MONGO_URL: mongodb://mongodb:27017/santa-notifications-e2e
+      LOG_LEVEL: debug

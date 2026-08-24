@@ -1,36 +1,39 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import { UsersService } from '../users/users.service';
 
-interface JwtPayload {
-  sub: string; // user ID
+export type JwtPayload = {
+  sub: string;
   email: string;
-  role: string;
-}
+  role: 'user' | 'admin';
+};
 
-interface UserPayload {
+export type AuthenticatedUser = {
   id: string;
   email: string;
-  role: string;
-}
+  role: 'user' | 'admin';
+};
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor() {
-    const secret = process.env.JWT_SECRET;
-    if (!secret) {
-      throw new Error('JWT_SECRET environment variable is required');
-    }
+  constructor(
+    private readonly usersService: UsersService,
+    config: ConfigService,
+  ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: secret,
+      secretOrKey: config.get<string>('JWT_SECRET')!,
     });
   }
 
-  async validate(payload: JwtPayload): Promise<UserPayload> {
-    if (!payload.sub) {
-      throw new UnauthorizedException('Invalid token payload');
+  async validate(payload: JwtPayload): Promise<AuthenticatedUser> {
+    try {
+      await this.usersService.findById(payload.sub);
+    } catch {
+      throw new UnauthorizedException();
     }
 
     return {

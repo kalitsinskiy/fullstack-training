@@ -1,83 +1,86 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { Types } from 'mongoose';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import type { Permission } from '../permissions';
 
 export class RoomResponseDto {
   @ApiProperty({
-    description: 'The ID of the room',
-    example: '550e8400-e29b-41d4-a716-446655440000',
+    description: 'Room identifier',
+    example: '665f0c2ab7d13a5e8b1c4d9f',
   })
-  id: string;
+  id!: string;
 
   @ApiProperty({
-    description: 'The name of the room',
-    example: 'Family Secret Santa 2024',
+    description: 'Readable room name',
+    example: 'New Year team building',
   })
-  name: string;
+  name!: string;
 
   @ApiProperty({
-    description: 'The ID of the creator of the room',
-    example: '550e8400-e29b-41d4-a716-446655440000',
+    description: 'Identifier of the user who created the room',
+    example: '665f0c2ab7d13a5e8b1c4d1a',
   })
-  creatorId: string;
+  creatorId!: string;
 
   @ApiProperty({
-    description: 'The invite code for the room',
-    example: 'ABCDE',
+    description: 'Invite code used to join the room',
+    example: 'Q7X4LM',
   })
-  inviteCode: string;
+  inviteCode!: string;
 
   @ApiProperty({
-    description: 'The list of participants in the room',
-    example: ['550e8400-e29b-41d4-a716-446655440000'],
+    description: 'Room participants, populated to { id, displayName, role }',
+    example: [
+      { id: '665f0c2ab7d13a5e8b1c4d1a', displayName: 'Mariia', role: 'owner' },
+    ],
+    isArray: true,
   })
-  participants: string[];
+  participants!: {
+    id: string;
+    displayName: string;
+    role: 'owner' | 'member';
+  }[];
 
   @ApiProperty({
-    description: 'The status of the room',
+    description: 'Number of participants in the room',
+    example: 2,
+  })
+  participantCount!: number;
+
+  @ApiProperty({
+    description: 'Current room status',
+    enum: ['pending', 'drawn'],
     example: 'pending',
   })
-  status: 'pending' | 'drawn';
+  status!: 'pending' | 'drawn';
 
-  @ApiProperty({
-    description: 'The date of the draw',
-    example: '2024-12-25T00:00:00.000Z',
-    required: false,
+  @ApiPropertyOptional({
+    description: 'ISO date when the draw was completed (omitted until drawn)',
+    example: '2025-12-20T00:00:00.000Z',
   })
-  drawDate?: Date;
+  drawDate?: string;
 
-  @ApiProperty({
-    description: 'The date the room was created',
-    example: '2024-01-01T00:00:00.000Z',
+  @ApiPropertyOptional({
+    description: 'Suggested per-gift budget amount (omitted when not set)',
+    example: 500,
   })
-  createdAt: Date;
+  budget?: number;
 
-  @ApiProperty({
-    description: 'The date the room was last updated',
-    example: '2024-01-01T00:00:00.000Z',
+  @ApiPropertyOptional({
+    description: 'Currency symbol for the budget',
+    example: '₴',
   })
-  updatedAt: Date;
+  currency?: string;
 
-  constructor(data: {
-    _id?: Types.ObjectId;
-    id?: string;
-    name: string;
-    creatorId: Types.ObjectId;
-    inviteCode: string;
-    participants: Types.ObjectId[];
-    status: 'pending' | 'drawn';
-    drawDate?: Date;
-    createdAt: Date;
-    updatedAt: Date;
-  }) {
-    const idValue = (data.id || data._id)?.toString() || '';
-    this.id = idValue;
-    this.name = data.name;
-    this.creatorId = data.creatorId.toString();
-    this.inviteCode = data.inviteCode;
-    this.participants = data.participants.map((p) => p.toString());
-    this.status = data.status;
-    this.drawDate = data.drawDate;
-    this.createdAt = data.createdAt;
-    this.updatedAt = data.updatedAt;
-  }
+  @ApiPropertyOptional({
+    description: 'Gift-exchange day, ISO date (omitted until the draw sets it)',
+    example: '2026-12-24T00:00:00.000Z',
+  })
+  exchangeDate?: string;
+
+  @ApiPropertyOptional({
+    description:
+      "The caller's effective permissions for this room (from Lesson 04 onward)",
+    example: ['room:view', 'wishlist:set'],
+    isArray: true,
+  })
+  viewerPermissions?: Permission[];
 }

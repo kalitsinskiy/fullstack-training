@@ -1,21 +1,22 @@
 import { Module } from '@nestjs/common';
-import { WishlistService } from './wishlist.service';
-import { WishlistController } from './wishlist.controller';
-import { UsersModule } from 'src/users/users.module';
-import { RoomsModule } from 'src/rooms/rooms.module';
 import { MongooseModule } from '@nestjs/mongoose';
+import { WishlistController } from './wishlist.controller';
 import { Wishlist, WishlistSchema } from './schemas/wishlist.schema';
-import { WishlistRepository } from './repositories/wishlist.repository';
+import { WishlistService } from './wishlist.service';
+import { Room, RoomSchema } from '../rooms/schemas/room.schema';
+import { RoomPermissionsGuard } from '../rooms/guards/room-permissions.guard';
+import { EventPublisherModule } from 'src/events/eventPublisher.module';
 
 @Module({
-  providers: [WishlistRepository, WishlistService],
-  controllers: [WishlistController],
   imports: [
+    EventPublisherModule,
     MongooseModule.forFeature([
       { name: Wishlist.name, schema: WishlistSchema },
+      { name: Room.name, schema: RoomSchema },
     ]),
-    UsersModule,
-    RoomsModule,
   ],
+  controllers: [WishlistController],
+  providers: [WishlistService, RoomPermissionsGuard],
+  exports: [WishlistService],
 })
 export class WishlistModule {}

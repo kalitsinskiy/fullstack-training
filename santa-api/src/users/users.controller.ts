@@ -3,80 +3,66 @@ import {
   Controller,
   Delete,
   Get,
-  NotFoundException,
+  HttpCode,
+  HttpStatus,
   Patch,
-  Post,
   UseGuards,
 } from '@nestjs/common';
-import { UsersService } from './users.service';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
-import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 import {
   ApiBearerAuth,
   ApiOperation,
-  ApiParam,
+  ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import type { User } from './user.types';
+import { UpdateCurrentUserDto } from './dto/update-current-user.dto';
+import { UserResponseDto } from './dto/user-response.dto';
+import { UsersService } from './users.service';
 
-@ApiTags('users')
 @Controller('users')
+@ApiTags('users')
+@ApiBearerAuth('JWT')
+@UseGuards(JwtAuthGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @ApiOperation({ summary: 'Create a new user' })
-  @ApiParam({
-    name: 'user',
-    description: 'The details of the user to create',
-    type: CreateUserDto,
-  })
-  @Post()
-  async create(@Body() user: CreateUserDto) {
-    return await this.usersService.create(user);
-  }
-
-  @ApiOperation({ summary: 'Get the current user' })
-  @ApiBearerAuth('JWT')
   @Get('me')
-  @UseGuards(JwtAuthGuard)
-  async findById(@CurrentUser('id') id: string) {
-    const user = await this.usersService.findById(id);
-    if (user === null) {
-      throw new NotFoundException('User not found');
-    }
-    return user;
-  }
-
-  @ApiOperation({ summary: 'Update the current user' })
-  @ApiBearerAuth('JWT')
-  @ApiParam({
-    name: 'updates',
-    description: 'The fields to update for the current user',
-    type: UpdateUserDto,
+  @ApiOperation({ summary: 'Get the authenticated user profile' })
+  @ApiResponse({
+    status: 200,
+    description: 'Current user profile returned successfully',
+    type: UserResponseDto,
   })
-  @Patch('me')
-  @UseGuards(JwtAuthGuard)
-  async updateMe(
-    @CurrentUser('id') id: string,
-    @Body() updates: UpdateUserDto,
-  ) {
-    const user = await this.usersService.updateById(id, updates);
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-    return user;
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  findCurrent(@CurrentUser('id') userId: string): Promise<User> {
+    return this.usersService.findById(userId);
   }
 
-  @ApiOperation({ summary: 'Delete the current user' })
-  @ApiBearerAuth('JWT')
   @Delete('me')
-  @UseGuards(JwtAuthGuard)
-  async deleteMe(@CurrentUser('id') id: string) {
-    const deleted = await this.usersService.deleteById(id);
-    if (!deleted) {
-      throw new NotFoundException('User not found');
-    }
-    return { success: true };
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Delete the authenticated user account' })
+  @ApiResponse({ status: 204, description: 'Account deleted successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  deleteCurrent(@CurrentUser('id') userId: string): Promise<void> {
+    return this.usersService.deleteCurrentUser(userId);
+  }
+
+  @Patch('me')
+  @ApiOperation({ summary: 'Update the authenticated user profile' })
+  @ApiResponse({
+    status: 200,
+    description: 'Current user profile updated successfully',
+    type: UserResponseDto,
+  })
+  @ApiResponse({ status: 400, description: 'Validation error' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  updateCurrent(
+    @CurrentUser('id') userId: string,
+    @Body() body: UpdateCurrentUserDto,
+  ): Promise<User> {
+    return this.usersService.updateCurrentUser(userId, body);
   }
 }

@@ -1,33 +1,57 @@
-import Fastify, { FastifyInstance, FastifyError } from 'fastify';
-import { timingPlugin } from './plugins/timing';
-import { configPlugin } from './plugins/config';
-import { healthRoutes } from './routes/health';
-import { notificationsRoutes } from './routes/notifications';
-import { AppError, ValidationError } from './errors';
+import Fastify, { FastifyError } from 'fastify';
+import cors from '@fastify/cors';
+import ajvFormats from 'ajv-formats';
 
-async function buildApp(): Promise<FastifyInstance> {
+import configPlugin from './plugins/config';
+import redisPlugin from './plugins/redis';
+import authPlugin from './plugins/auth';
+import eventsPlugin from './plugins/events';
+import { AppError, ValidationError } from './errors';
+import timingPlugin from './plugins/timing';
+import healthRoutes from './routes/health';
+import notificationRoutes from './routes/notifications';
+import messageRoutes from './routes/messages';
+
+export function buildApp() {
   const app = Fastify({
     logger: {
-      level: process.env.LOG_LEVEL ?? 'info',
+      level: process.env.LOG_LEVEL ?? (process.env.NODE_ENV === 'test' ? 'silent' : 'info'),
       transport:
-        process.env.NODE_ENV !== 'production'
+        process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test'
           ? {
               target: 'pino-pretty',
-              options: { colorize: true, translateTime: 'HH:MM:ss', ignore: 'pid,hostname' },
+              options: {
+                colorize: true,
+                translateTime: 'HH:MM:ss',
+                ignore: 'pid,hostname',
+              },
             }
           : undefined,
     },
+    ajv: {
+      plugins: [ajvFormats as never],
+    },
   });
 
-  app.log.info('Registering plugins');
+  // CORS so the browser SPA (Vite :5173) can read notifications directly.
+  app.register(cors, {
+    origin: process.env.CORS_ORIGIN
+      ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
+      : ['http://localhost:5173'],
+    methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+  });
   app.register(configPlugin);
+  app.register(redisPlugin);
+  app.register(authPlugin);
+  app.register(eventsPlugin);
   app.register(timingPlugin);
-
-  app.log.info('Registering routes');
   app.register(healthRoutes);
-  app.register(notificationsRoutes, { prefix: '/api/notifications' });
+  app.register(notificationRoutes, { prefix: '/api/notifications' });
+  app.register(messageRoutes, { prefix: '/api/messages' });
 
   app.setErrorHandler((error: FastifyError, request, reply) => {
+    const timestamp = new Date().toISOString();
+
     if (error instanceof AppError) {
       request.log.warn({ err: error, code: error.code }, error.message);
       return reply.status(error.statusCode).send({
@@ -37,6 +61,7 @@ async function buildApp(): Promise<FastifyInstance> {
           message: error.message,
           ...(error instanceof ValidationError && { details: error.details }),
         },
+        timestamp,
       });
     }
 
@@ -49,17 +74,30 @@ async function buildApp(): Promise<FastifyInstance> {
           message: 'Request validation failed',
           details: error.validation,
         },
+        timestamp,
       });
     }
 
     request.log.error({ err: error }, 'Unhandled error');
     return reply.status(500).send({
       success: false,
-      error: { code: 'INTERNAL_ERROR', message: 'An unexpected error occurred' },
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'An unexpected error occurred',
+      },
+      timestamp,
+    });
+  });
+
+  app.setNotFoundHandler((request, reply) => {
+    reply.code(404).send({
+      success: false,
+      error: {
+        code: 'NOT_FOUND',
+        message: `Route ${request.method} ${request.url} not found`,
+      },
     });
   });
 
   return app;
 }
-
-export { buildApp };

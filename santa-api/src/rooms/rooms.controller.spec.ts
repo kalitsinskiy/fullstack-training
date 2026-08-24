@@ -1,18 +1,25 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { getModelToken } from '@nestjs/mongoose';
+import { Reflector } from '@nestjs/core';
 import { RoomsController } from './rooms.controller';
 import { RoomsService } from './rooms.service';
-import { NotFoundException } from '@nestjs/common/exceptions/not-found.exception';
+import { RoomPermissionsGuard } from './guards/room-permissions.guard';
+import { Room } from './schemas/room.schema';
 
 describe('RoomsController', () => {
   let controller: RoomsController;
   const mockRoomsService = {
     create: jest.fn(),
-    findAll: jest.fn(),
-    findById: jest.fn(),
-    findByCode: jest.fn(),
-    addMember: jest.fn(),
-    updateById: jest.fn(),
-    deleteById: jest.fn(),
+    findByUser: jest.fn(),
+    findByIdForUser: jest.fn(),
+    join: jest.fn(),
+    joinByCode: jest.fn(),
+    draw: jest.fn(),
+    getAssignment: jest.fn(),
+    editRoom: jest.fn(),
+    deleteRoom: jest.fn(),
+    kickMember: jest.fn(),
+    regenerateInviteCode: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -20,7 +27,12 @@ describe('RoomsController', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [RoomsController],
-      providers: [{ provide: RoomsService, useValue: mockRoomsService }],
+      providers: [
+        { provide: RoomsService, useValue: mockRoomsService },
+        { provide: getModelToken(Room.name), useValue: {} },
+        RoomPermissionsGuard,
+        Reflector,
+      ],
     }).compile();
 
     controller = module.get<RoomsController>(RoomsController);
@@ -30,108 +42,184 @@ describe('RoomsController', () => {
     expect(controller).toBeDefined();
   });
 
-  it('should call service.create with the dto', async () => {
-    const dto = {
-      name: 'Test Room',
-      ownerId: 'a4883b3e-4f49-4b99-9d34-6bfc8fda0ce5',
-    };
-    const fakeRoom = { id: '64e000000000000000000001', ...dto };
-    mockRoomsService.create.mockResolvedValue(fakeRoom);
+  describe('create', () => {
+    it('delegates to service.create with dto and userId', async () => {
+      const dto = { name: 'Test Room' };
+      const fakeRoom = { id: 'room-id', name: 'Test Room', status: 'pending' };
+      mockRoomsService.create.mockResolvedValue(fakeRoom);
 
-    await expect(controller.create(dto)).resolves.toEqual(fakeRoom);
-    expect(mockRoomsService.create).toHaveBeenCalledWith(dto);
+      const result = await controller.create(dto, 'user-id');
+
+      expect(mockRoomsService.create).toHaveBeenCalledWith(dto, 'user-id');
+      expect(result).toEqual(fakeRoom);
+    });
   });
 
-  it('should call service.findAll', async () => {
-    const fakeRooms = [
-      {
-        id: '1',
-        name: 'Room 1',
-        ownerId: '1',
-        inviteCode: '123ABC',
-        participants: ['1', '4'],
-      },
-      {
-        id: '2',
-        name: 'Room 2',
-        ownerId: '2',
-        inviteCode: '456DEF',
-        participants: ['2', '3'],
-      },
-    ];
-    mockRoomsService.findAll.mockResolvedValue(fakeRooms);
+  describe('findAll', () => {
+    it('delegates to service.findByUser with userId and pagination', async () => {
+      const response = {
+        data: [],
+        meta: { total: 0, page: 1, limit: 10, totalPages: 1 },
+      };
+      mockRoomsService.findByUser.mockResolvedValue(response);
 
-    await expect(controller.findAll()).resolves.toEqual(fakeRooms);
-    expect(mockRoomsService.findAll).toHaveBeenCalled();
+      const result = await controller.findAll('user-id', 1, 10);
+
+      expect(mockRoomsService.findByUser).toHaveBeenCalledWith('user-id', {
+        page: 1,
+        limit: 10,
+      });
+      expect(result).toEqual(response);
+    });
   });
 
-  it('should call service.findById', async () => {
-    const id = '1';
-    const fakeRoom = {
-      id: id,
-      name: 'Room 1',
-      ownerId: '1',
-      inviteCode: '123ABC',
-      participants: ['1', '4'],
-    };
-    mockRoomsService.findById.mockResolvedValue(fakeRoom);
+  describe('findById', () => {
+    it('delegates to service.findByIdForUser with id and userId', async () => {
+      const fakeRoom = { id: 'room-id', name: 'Room' };
+      mockRoomsService.findByIdForUser.mockResolvedValue(fakeRoom);
 
-    await expect(controller.findById(id)).resolves.toEqual(fakeRoom);
-    expect(mockRoomsService.findById).toHaveBeenCalledWith(id);
+      const result = await controller.findById('room-id', 'user-id');
+
+      expect(mockRoomsService.findByIdForUser).toHaveBeenCalledWith(
+        'room-id',
+        'user-id',
+      );
+      expect(result).toEqual(fakeRoom);
+    });
   });
 
-  it('should throw NotFoundException when room id not found', async () => {
-    const id = 'non-existing-id';
-    mockRoomsService.findById.mockResolvedValue(undefined);
+  describe('joinByCode', () => {
+    it('delegates to service.joinByCode with inviteCode and userId', async () => {
+      const fakeRoom = { id: 'room-id', name: 'Room' };
+      mockRoomsService.joinByCode.mockResolvedValue(fakeRoom);
 
-    await expect(controller.findById(id)).rejects.toThrow(NotFoundException);
-    expect(mockRoomsService.findById).toHaveBeenCalledWith(id);
+      const result = await controller.joinByCode(
+        { inviteCode: 'ABC123' },
+        'user-id',
+      );
+
+      expect(mockRoomsService.joinByCode).toHaveBeenCalledWith(
+        'ABC123',
+        'user-id',
+      );
+      expect(result).toEqual(fakeRoom);
+    });
   });
 
-  it('should call service.findByCode and service.addMember', async () => {
-    const code = '123';
-    const userId = '8ad26f7f-b1a5-4e90-8e74-79f4f34b0d9c';
-    const fakeRoom = {
-      id: '1',
-      name: 'Room 1',
-      ownerId: '1',
-      inviteCode: code,
-      participants: ['1', '4', userId],
-    };
-    mockRoomsService.findByCode.mockResolvedValue(fakeRoom);
-    mockRoomsService.addMember.mockResolvedValue(fakeRoom);
+  describe('join', () => {
+    it('delegates to service.join with id, inviteCode, userId', async () => {
+      const fakeRoom = { id: 'room-id', name: 'Room' };
+      mockRoomsService.join.mockResolvedValue(fakeRoom);
 
-    await expect(controller.join(code, { userId })).resolves.toEqual(fakeRoom);
-    expect(mockRoomsService.findByCode).toHaveBeenCalledWith(code);
-    expect(mockRoomsService.addMember).toHaveBeenCalledWith(code, { userId });
+      const result = await controller.join(
+        'room-id',
+        { inviteCode: 'XYZ' },
+        'user-id',
+      );
+
+      expect(mockRoomsService.join).toHaveBeenCalledWith(
+        'room-id',
+        'XYZ',
+        'user-id',
+      );
+      expect(result).toEqual(fakeRoom);
+    });
   });
 
-  it('should throw NotFoundException when room code not found', async () => {
-    const code = 'non-existing-code';
-    const userId = '8ad26f7f-b1a5-4e90-8e74-79f4f34b0d9c';
-    mockRoomsService.findByCode.mockResolvedValue(undefined);
+  describe('draw', () => {
+    it('delegates to service.draw with id, userId, exchangeDate', async () => {
+      const fakeRoom = { id: 'room-id', status: 'drawn' };
+      mockRoomsService.draw.mockResolvedValue(fakeRoom);
 
-    await expect(controller.join(code, { userId })).rejects.toThrow(
-      NotFoundException,
-    );
-    expect(mockRoomsService.findByCode).toHaveBeenCalledWith(code);
+      const result = await controller.draw(
+        'room-id',
+        { exchangeDate: '2026-12-24' },
+        'user-id',
+      );
+
+      expect(mockRoomsService.draw).toHaveBeenCalledWith(
+        'room-id',
+        'user-id',
+        '2026-12-24',
+        undefined,
+        undefined,
+      );
+      expect(result).toEqual(fakeRoom);
+    });
   });
 
-  it('should call service.updateById when patching a room', async () => {
-    const id = '64e000000000000000000001';
-    const updates = { name: 'Updated room name' };
-    const updatedRoom = { id: id, name: 'Updated room name' };
-    mockRoomsService.updateById.mockResolvedValue(updatedRoom);
+  describe('getAssignment', () => {
+    it('delegates to service.getAssignment with id and userId', async () => {
+      const assignment = {
+        receiver: { id: 'giftee-id', displayName: 'Bob', wishlist: [] },
+      };
+      mockRoomsService.getAssignment.mockResolvedValue(assignment);
 
-    await expect(controller.update(id, updates)).resolves.toEqual(updatedRoom);
-    expect(mockRoomsService.updateById).toHaveBeenCalledWith(id, updates);
+      const result = await controller.getAssignment('room-id', 'user-id');
+
+      expect(mockRoomsService.getAssignment).toHaveBeenCalledWith(
+        'room-id',
+        'user-id',
+      );
+      expect(result).toEqual(assignment);
+    });
   });
 
-  it('should call service.deleteById when deleting a room', async () => {
-    const id = '64e000000000000000000001';
-    mockRoomsService.deleteById.mockResolvedValue(true);
+  describe('edit', () => {
+    it('delegates to service.editRoom', async () => {
+      const fakeRoom = { id: 'room-id', name: 'Renamed' };
+      mockRoomsService.editRoom.mockResolvedValue(fakeRoom);
 
-    await expect(controller.remove(id)).resolves.toEqual({ success: true });
-    expect(mockRoomsService.deleteById).toHaveBeenCalledWith(id);
+      const result = await controller.edit(
+        'room-id',
+        { name: 'Renamed' },
+        'user-id',
+      );
+
+      expect(mockRoomsService.editRoom).toHaveBeenCalledWith(
+        'room-id',
+        { name: 'Renamed' },
+        'user-id',
+      );
+      expect(result).toEqual(fakeRoom);
+    });
+  });
+
+  describe('remove', () => {
+    it('delegates to service.deleteRoom', async () => {
+      mockRoomsService.deleteRoom.mockResolvedValue(undefined);
+
+      await controller.remove('room-id');
+
+      expect(mockRoomsService.deleteRoom).toHaveBeenCalledWith('room-id');
+    });
+  });
+
+  describe('kick', () => {
+    it('delegates to service.kickMember', async () => {
+      mockRoomsService.kickMember.mockResolvedValue(undefined);
+
+      await controller.kick('room-id', 'target-id');
+
+      expect(mockRoomsService.kickMember).toHaveBeenCalledWith(
+        'room-id',
+        'target-id',
+      );
+    });
+  });
+
+  describe('regenerateInvite', () => {
+    it('delegates to service.regenerateInviteCode', async () => {
+      const fakeRoom = { id: 'room-id', inviteCode: 'NEWCODE' };
+      mockRoomsService.regenerateInviteCode.mockResolvedValue(fakeRoom);
+
+      const result = await controller.regenerateInvite('room-id', 'user-id');
+
+      expect(mockRoomsService.regenerateInviteCode).toHaveBeenCalledWith(
+        'room-id',
+        'user-id',
+      );
+      expect(result).toEqual(fakeRoom);
+    });
   });
 });

@@ -98,31 +98,13 @@ const seedRooms: SeedRoom[] = [
   },
 ];
 
-function pickWishlistItems(index: number) {
+function pickWishlistItems(index: number): string[] {
   const presets = [
-    [
-      { name: 'Warm scarf', priority: 1 },
-      { name: 'Coffee beans', priority: 2 },
-      { name: 'Board game', priority: 3 },
-    ],
-    [
-      { name: 'Wireless earbuds', priority: 1 },
-      { name: 'Desk lamp', priority: 2 },
-      { name: 'Notebook set', priority: 3 },
-    ],
-    [
-      { name: 'Tea sampler', priority: 1 },
-      { name: 'Wool socks', priority: 2 },
-      { name: 'Gift card', priority: 3 },
-    ],
+    ['Warm scarf', 'Coffee beans', 'Board game'],
+    ['Wireless earbuds', 'Desk lamp', 'Notebook set'],
+    ['Tea sampler', 'Wool socks', 'Gift card'],
   ];
-
-  return presets[index % presets.length].map((item) => ({
-    ...item,
-    url: `https://example.com/gifts/${item.name
-      .toLowerCase()
-      .replace(/\s+/g, '-')}`,
-  }));
+  return presets[index % presets.length];
 }
 
 async function seed() {
@@ -177,7 +159,10 @@ async function seed() {
       if (!participant) {
         throw new Error(`Missing participant user for ${email}`);
       }
-      return participant._id;
+      return {
+        userId: participant._id,
+        role: email === room.creatorEmail ? 'owner' : 'member',
+      };
     });
 
     return {
@@ -202,10 +187,14 @@ async function seed() {
     throw error;
   });
 
-  const wishlistsPayload = rooms.flatMap((room, roomIndex) =>
-    room.participants.map((participantId, participantIndex) => ({
+  type RoomDoc = {
+    _id: mongoose.Types.ObjectId;
+    participants: Array<{ userId: mongoose.Types.ObjectId; role: string }>;
+  };
+  const wishlistsPayload = (rooms as RoomDoc[]).flatMap((room, roomIndex) =>
+    room.participants.map((p, participantIndex) => ({
       roomId: room._id,
-      userId: participantId,
+      userId: p.userId,
       items: pickWishlistItems(roomIndex + participantIndex),
     })),
   );

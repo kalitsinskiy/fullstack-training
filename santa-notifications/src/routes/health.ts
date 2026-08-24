@@ -1,13 +1,5 @@
-import { FastifyInstance, FastifyPluginOptions } from 'fastify';
+import { FastifyInstance } from 'fastify';
 
-async function healthRoutes(fastify: FastifyInstance, _opts: FastifyPluginOptions) {
-  fastify.log.info({ route: '/health', method: 'GET' }, 'Registering health route');
-
-  fastify.get('/health', async () => {
-    return { status: 'ok' };
-  });
-
-  fastify.log.debug('Health routes loaded');
+export default async function healthRoutes(fastify: FastifyInstance) {
+  fastify.get('/health', async () => ({ status: 'ok' }));
 }
-
-export { healthRoutes };

@@ -1,331 +1,310 @@
-# Santa API — Contract
+# Secret Santa API Contract
 
-NestJS 11 + Fastify, backed by MongoDB.
+Base URL: `http://localhost:3001/api`
 
-- **Base URL (local):** `http://localhost:3001`
-- **Swagger UI:** `http://localhost:3001/api-docs`
-- **Auth:** JWT Bearer — `Authorization: Bearer <token>` on all 🔒 routes
-- **Rate limiting:** 100 req / 60 s globally; stricter limits on auth endpoints
+Protected endpoints require:
 
-## Environment variables
+```http
+Authorization: Bearer <accessToken>
+```
 
-| Variable     | Required | Default                               |
-|--------------|----------|---------------------------------------|
-| `JWT_SECRET` | Yes      | —                                     |
-| `MONGO_URL`  | No       | `mongodb://localhost:27017/santa-api` |
-| `NODE_ENV`   | No       | unset → pino-pretty dev logging       |
-
----
-
-## Endpoint overview
-
-| Method   | Path                                    | Auth | Description                          |
-|----------|-----------------------------------------|------|--------------------------------------|
-| GET      | `/`                                     | —    | Hello world greeting                 |
-| GET      | `/health`                               | —    | Health check                         |
-| POST     | `/auth/register`                        | —    | Register new user, returns JWT       |
-| POST     | `/auth/login`                           | —    | Login, returns JWT                   |
-| POST     | `/users`                                | —    | Create user directly (low-level)     |
-| GET      | `/users/me`                             | 🔒   | Get current user profile             |
-| PATCH    | `/users/me`                             | 🔒   | Update current user                  |
-| DELETE   | `/users/me`                             | 🔒   | Delete current user                  |
-| GET      | `/rooms`                                | 🔒   | List all rooms (paginated)           |
-| GET      | `/rooms/:id`                            | 🔒   | Get room by MongoDB ID               |
-| POST     | `/rooms`                                | 🔒   | Create room                          |
-| PATCH    | `/rooms/:id`                            | 🔒   | Update room name                     |
-| DELETE   | `/rooms/:id`                            | 🔒   | Delete room                          |
-| POST     | `/rooms/:code/join`                     | 🔒   | Join room by invite code             |
-| POST     | `/rooms/:roomCode/wishlist`             | 🔒   | Create or replace wishlist for user  |
-| GET      | `/rooms/:roomCode/wishlist/:userId`     | 🔒   | Get user's wishlist                  |
-| PATCH    | `/rooms/:roomCode/wishlist/:userId`     | 🔒   | Update user's wishlist items         |
-| DELETE   | `/rooms/:roomCode/wishlist/:userId`     | 🔒   | Delete user's wishlist               |
-
----
-
-## Root
-
-### `GET /`
-No auth. Returns a greeting string.
-
-**Response (200):** `"Hello World!"`
-
-### `GET /health`
-No auth. Liveness probe.
-
-**Response (200):** `{ "status": "ok" }`
-
----
-
-## Auth — `/auth`
+## Auth
 
 ### `POST /auth/register`
-Rate limit: 20 req / 60 s.
 
-**Body**
+Request:
+
 ```json
 {
-  "email": "user@example.com",
-  "password": "atleast10chars",
-  "displayName": "Jane"
+  "email": "alice@example.com",
+  "password": "secret123",
+  "displayName": "Alice"
 }
 ```
-- `password` min length: 10
-- `displayName` min length: 2
 
-**201** `{ "accessToken": "<jwt>" }` — expires in 1 h  
-**400** validation error  
-**409** email already taken
+Response `201`:
+
+```json
+{
+  "id": "665f0c2ab7d13a5e8b1c4d9f",
+  "email": "alice@example.com",
+  "displayName": "Alice",
+  "accessToken": "eyJ..."
+}
+```
+
+Errors: `400`, `409`, `429`
 
 ### `POST /auth/login`
-Rate limit: 50 req / 60 s.
 
-**Body**
+Request:
+
 ```json
 {
-  "email": "user@example.com",
-  "password": "atleast8ch"
-}
-```
-- `password` min length: 8
-
-**200** `{ "accessToken": "<jwt>" }`  
-**401** invalid credentials
-
-JWT payload: `{ sub: userId, email, role }`
-
----
-
-## Users — `/users`
-
-### `POST /users`
-No auth. Low-level endpoint that accepts a pre-hashed password directly. End users should register via `POST /auth/register` instead.
-
-**Body**
-```json
-{
-  "email": "user@example.com",
-  "displayName": "Jane",
-  "passwordHash": "$2b$10$..."
+  "email": "alice@example.com",
+  "password": "secret123"
 }
 ```
 
-**201** `UserResponse`
+Response `200`:
 
-### `GET /users/me` 🔒
-Returns the authenticated user's profile.
-
-**200** `UserResponse`
 ```json
 {
-  "id": "<mongo-id>",
-  "email": "user@example.com",
-  "displayName": "Jane",
-  "role": "user",
-  "createdAt": "<ISO date>",
-  "updatedAt": "<ISO date>"
-}
-```
-**404** user not found
-
-### `PATCH /users/me` 🔒
-Updates the authenticated user's profile.
-
-**Body** (all fields optional)
-```json
-{
-  "email": "new@example.com",
-  "displayName": "New Name"
+  "accessToken": "eyJ..."
 }
 ```
 
-**200** updated `UserResponse`  
-**404** user not found
+Errors: `400`, `401`, `429`
 
-### `DELETE /users/me` 🔒
-Deletes the authenticated user's account.
+## Users
 
-**200** `{ "success": true }`  
-**404** user not found
+### `GET /users/me`
 
----
+Response `200`:
 
-## Rooms — `/rooms`
-
-All room endpoints require auth 🔒.
-
-Rooms have two identifiers:
-- **`id`** — MongoDB ObjectId, used in CRUD routes
-- **`inviteCode`** — 5-char alphanumeric (e.g. `AB1C2`), used in join and wishlist routes
-
-### `GET /rooms` 🔒
-Paginated list of all rooms, sorted by `createdAt` desc.
-
-**Query params**
-
-| Param   | Default | Max |
-|---------|---------|-----|
-| `page`  | `1`     | —   |
-| `limit` | `10`    | 100 |
-
-**200**
 ```json
 {
-  "data": [ /* Room[] */ ],
-  "meta": { "total": 42, "page": 1, "limit": 10, "totalPages": 5 }
+  "id": "665f0c2ab7d13a5e8b1c4d9f",
+  "displayName": "Alice",
+  "email": "alice@example.com",
+  "role": "user"
 }
 ```
 
-### `GET /rooms/:id` 🔒
-Get a single room by MongoDB `_id`.
+Errors: `401`
 
-**200** `RoomResponse`
+### `PATCH /users/me`
+
+Request:
+
 ```json
 {
-  "id": "<mongo-id>",
-  "name": "Family Santa 2024",
-  "creatorId": "<mongo-id>",
-  "inviteCode": "AB1C2",
-  "participants": ["<mongo-id>"],
+  "displayName": "Alice Frost"
+}
+```
+
+Response `200`: same shape as `GET /users/me`
+
+Errors: `400`, `401`
+
+## Roles & Permissions
+
+Access to room features is decided **by permission, never by role**. Each
+participant has a room-scoped role (`owner` or `member`); a role is just a named
+preset of permissions:
+
+| Permission | `owner` | `member` |
+|------------|:------:|:--------:|
+| `room:view` | ✅ | ✅ |
+| `wishlist:set` | ✅ | ✅ |
+| `room:draw` | ✅ | — |
+| `room:invite` | ✅ | — |
+| `room:kick` | ✅ | — |
+| `room:edit` | ✅ | — |
+| `room:delete` | ✅ | — |
+
+The room creator is the `owner`; everyone who joins is a `member`. Every room
+object includes `viewerPermissions` — the calling user's effective permissions
+for that room, which the frontend uses to gate UI. A request lacking the required
+permission gets `403`; a non-member gets `404`.
+
+> Adding a new role is a one-line change to the role→permission preset on the
+> backend — no guard, route, or frontend change.
+
+## Rooms
+
+**Room shape** (returned by every room endpoint below). Participants are populated
+to `{ id, displayName, role }`; `participantCount` is the number of members;
+`viewerPermissions` is the caller's permissions for this room.
+
+```json
+{
+  "id": "665f0c2ab7d13a5e8b1c4d9f",
+  "name": "New Year team building",
+  "creatorId": "665f0c2ab7d13a5e8b1c4d1a",
+  "inviteCode": "Q7X4LM",
+  "participants": [
+    { "id": "665f0c2ab7d13a5e8b1c4d1a", "displayName": "Mariia", "role": "owner" }
+  ],
+  "participantCount": 1,
   "status": "pending",
   "drawDate": null,
-  "createdAt": "<ISO date>",
-  "updatedAt": "<ISO date>"
+  "budget": 500,
+  "currency": "₴",
+  "exchangeDate": null,
+  "viewerPermissions": ["room:view", "room:draw", "room:invite", "room:kick", "room:edit", "room:delete", "wishlist:set"]
 }
 ```
-**404** not found
 
-`status` is `"pending"` or `"drawn"`.
+`status` is `"pending"` until the draw, then `"drawn"` (with `drawDate` set).
+`budget`/`currency` are an optional per-gift budget set on create (omitted when not
+given). `exchangeDate` is the gift-exchange day — unset until the draw, and editable
+afterwards via `PATCH /rooms/:id`.
 
-### `POST /rooms` 🔒
-Create a new room. The creator is automatically added to `participants` and a random `inviteCode` is generated.
+> Optional fields (`drawDate`, `budget`, `currency`, `exchangeDate`,
+> `viewerPermissions`) that have no value yet are **omitted** from the JSON (or may
+> appear as `null`). Clients must treat "absent" and `null` the same — don't rely on
+> the key being present.
 
-**Body**
+### `POST /rooms`
+
+Request: `{ "name": "New Year team building", "budget": 500, "currency": "₴" }`
+— `budget` (optional, integer 1–1,000,000) and `currency` (optional, one of
+`$ € £ ₴ zł`; defaults to `$` when a budget is given) are the suggested per-gift
+budget.
+
+Response `201`: the room shape (creator is the first participant, with role `owner`).
+
+Errors: `400`, `401`
+
+> Stretch (Kickoff §4): if you enforce unique room names per creator, the same
+> creator reusing a name returns `409`. Names are NOT globally unique — different
+> users may reuse a name.
+
+### `GET /rooms?page=1&limit=10`
+
+Response `200`: `{ "data": [ <room> ], "meta": { "total", "page", "limit", "totalPages" } }`
+— rooms where the caller is a participant.
+
+Notes:
+
+- `page` defaults to `1`, clamped to a minimum of `1`
+- `limit` defaults to `10`, minimum `1`, maximum `100`
+- `totalPages` is always at least `1`, even when `data` is empty
+
+Errors: `401`
+
+### `GET /rooms/:id`
+
+Requires `room:view`. Response `200`: the room shape. Only a participant may read
+it; a non-participant (or an unknown id) gets `404` — the API never reveals that a
+room exists to someone who isn't in it.
+
+Errors: `401`, `404`
+
+### `POST /rooms/join`
+
+Join using ONLY the invite code (invitees have the code, not the room id). The
+code is resolved to a room via Redis (`invite:{code}`, set on create — Lesson 05).
+
+Request: `{ "inviteCode": "Q7X4LM" }`
+
+Response `201`: the room shape (caller added to `participants`).
+
+Errors: `400` (invalid/expired code), `401`
+
+### `POST /rooms/:id/join`
+
+Request: `{ "inviteCode": "Q7X4LM" }`
+
+Response `201`: the room shape (caller added to `participants`).
+
+Errors: `400` (wrong invite code), `401`, `403` (draw already done), `404`
+
+### `POST /rooms/:id/draw`
+
+Requires `room:draw` (owner-only). Requires at least 3 participants and a
+`pending` room. Produces a derangement (no one is their own giftee) and saves all
+assignments in a single atomic document write.
+
+Request: `{ "exchangeDate": "2026-12-24" }` — the gift-exchange day (ISO 8601),
+**required**. Picking it here means everyone knows the day as soon as names are
+drawn; it can be changed later via `PATCH /rooms/:id`.
+
+Response `200`: the room shape with `status: "drawn"`, `drawDate`, and
+`exchangeDate` set.
+
+Errors: `400` (fewer than 3 participants / already drawn / missing or invalid `exchangeDate`), `401`, `403` (missing `room:draw`), `404`
+
+### `GET /rooms/:id/assignment`
+
+Your giftee for a drawn room. Only a participant may read it; a non-participant
+(or unknown id) gets `404` — same as `GET /rooms/:id`, the API never leaks a
+room's existence.
+
+Response `200`:
+
 ```json
 {
-  "name": "Family Santa 2024",
-  "ownerId": "<mongo-id-or-uuid>"
+  "receiver": {
+    "id": "665f0c2ab7d13a5e8b1c4d2b",
+    "displayName": "Gita",
+    "wishlist": ["Wool socks", "A good book"]
+  }
 }
 ```
-- `name` min length: 3
-- `ownerId` length: 20–30 chars
 
-**201** `RoomResponse`
+Errors: `400` (draw not done yet), `401`, `404` (not found / not a participant)
 
-### `PATCH /rooms/:id` 🔒
-Update the room name.
+### `PATCH /rooms/:id`
 
-**Body**
-```json
-{ "name": "Updated Name" }
-```
-- `name` min length: 3
+Requires `room:edit` (owner-only). Edit room fields — all optional, only the
+provided ones change.
 
-**200** updated `RoomResponse`  
-**404** not found
+Request: `{ "name": "Renamed room", "budget": 700, "currency": "₴", "exchangeDate": "2026-12-26" }`
+— `name` (3–60), `budget` (1–1,000,000), `currency` (`$ € £ ₴ zł`), `exchangeDate`
+(ISO 8601). Used to change the budget or move the gift-exchange day after the draw.
 
-### `DELETE /rooms/:id` 🔒
-Delete a room.
+Changing `exchangeDate` publishes a `room.date_changed` event so **every
+participant** gets a notification ("The gift exchange for … is now …") — moving the
+day concerns everyone.
 
-**200** `{ "success": true }`  
-**404** not found
+Response `200`: the room shape.
 
-### `POST /rooms/:code/join` 🔒
-Add a user to `participants` by invite code (idempotent via `$addToSet`).
+Errors: `400`, `401`, `403` (missing `room:edit`), `404`
 
-`:code` is the room's `inviteCode`.
+### `DELETE /rooms/:id`
 
-**Body**
-```json
-{ "userId": "550e8400-e29b-41d4-a716-446655440000" }
-```
-- `userId` — UUID v4
+Requires `room:delete` (owner-only). Deletes the room.
 
-**201** updated `RoomResponse`  
-**404** room not found
+Response `204`: no content.
 
----
+Errors: `401`, `403` (missing `room:delete`), `404`
 
-## Wishlists — `/rooms/:roomCode/wishlist`
+### `DELETE /rooms/:id/members/:userId`
 
-All wishlist endpoints require auth 🔒.  
-`:roomCode` is the room's `inviteCode`, **not** its `id`.
+Requires `room:kick` (owner-only). Removes a member from the room. The owner
+cannot be removed.
 
-### `POST /rooms/:roomCode/wishlist` 🔒
-Create or fully replace a user's wishlist in a room (upsert).
+Response `204`: no content.
 
-**Body**
+Errors: `400` (cannot remove the owner), `401`, `403` (missing `room:kick`), `404` (room or member not found)
+
+### `POST /rooms/:id/invite-code/regenerate`
+
+Requires `room:invite` (owner-only). Generates a fresh unique invite code,
+invalidating the old one.
+
+Response `200`: the room shape with the new `inviteCode`.
+
+Errors: `401`, `403` (missing `room:invite`), `404`
+
+## Wishlist
+
+A wishlist is a list of plain strings, scoped to `{ roomId, userId }`.
+
+### `PUT /rooms/:roomId/wishlist`
+
+Requires `wishlist:set` (any participant). Upserts the caller's wishlist for the room.
+
+Request: `{ "items": ["Wool socks", "A good book"] }`
+
+Response `200`:
+
 ```json
 {
-  "userId": "<mongo-id>",
-  "items": [
-    { "name": "Bicycle", "url": "https://example.com/bike", "priority": 1 }
-  ]
-}
-```
-- `items[].name` min length: 1, required
-- `items[].url` valid URL, optional
-- `items[].priority` integer ≥ 0, optional
-
-**201** `WishlistResponse`
-```json
-{
-  "id": "<mongo-id>",
-  "userId": "<mongo-id>",
-  "roomId": "<mongo-id>",
-  "items": [ { "name": "Bicycle", "url": "...", "priority": 1 } ],
-  "createdAt": "<ISO date>",
-  "updatedAt": "<ISO date>"
-}
-```
-**404** room or user not found
-
-### `GET /rooms/:roomCode/wishlist/:userId` 🔒
-Get a user's wishlist.
-
-**200** `WishlistResponse`  
-**404** room, user, or wishlist not found
-
-### `PATCH /rooms/:roomCode/wishlist/:userId` 🔒
-Replace all wishlist items for a user (same upsert semantics as POST).
-
-**Body**
-```json
-{
-  "items": [
-    { "name": "Bicycle", "url": "https://example.com/bike", "priority": 1 }
-  ]
+  "roomId": "665f0c2ab7d13a5e8b1c4d9f",
+  "userId": "665f0c2ab7d13a5e8b1c4d1a",
+  "items": ["Wool socks", "A good book"]
 }
 ```
 
-**200** updated `WishlistResponse`  
-**404** room or user not found
+Errors: `400`, `401`, `403` (missing `wishlist:set`), `404`
 
-### `DELETE /rooms/:roomCode/wishlist/:userId` 🔒
-Delete a user's wishlist.
+### `GET /rooms/:roomId/wishlist/:userId`
 
-**200** `{ "success": true }`  
-**404** room, user, or wishlist not found
+Requires `room:view` (any participant of the room). Response `200`: the wishlist
+shape above. If the user has **no** wishlist yet, returns an **empty** one
+(`"items": []`) — not a `404`.
 
----
-
-## Error shape
-
-All errors follow:
-```json
-{
-  "sucess": false,
-  "statusCode": 404,
-  "message": "...",
-  "timestamp": "<ISO date>"
-}
-```
-
-> Note: `"sucess"` is a known typo in `src/common/filters/all-exceptions.filter.ts`.
-
----
-
-## Known gaps
-
-- **No draw endpoint** — `Room.status` and `Room.drawDate` exist but there is no route to trigger the Secret Santa draw.
-- **`POST /users` is unprotected** — accepts a raw `passwordHash`; intended for internal use only.
-- **No RBAC** — a `role` field (`"user"` | `"admin"`) exists on users but no role guards are enforced.
+Errors: `401`, `403` (missing `room:view`), `404` (room not found / caller is not a participant)

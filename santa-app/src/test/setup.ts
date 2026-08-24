@@ -1,15 +1,14 @@
-import "@testing-library/jest-dom/vitest";
-import { afterAll, afterEach, beforeAll } from "vitest";
-import { server } from "./msw-server";
+import '@testing-library/jest-dom/vitest';
+import { afterAll, afterEach, beforeAll, vi } from 'vitest';
+import { server } from './mocks/server';
 
-beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
-afterEach(() => {
-  server.resetHandlers();
-  localStorage.clear();
-});
+// jsdom doesn't implement scrollIntoView — stub it out globally so components
+// that call it (e.g. ChatPanel auto-scroll) don't throw in tests.
+Element.prototype.scrollIntoView = vi.fn();
+
+// Start MSW once, reset handlers between tests, and stop it at the end.
+// `onUnhandledRequest: 'error'` makes any un-mocked request fail loudly — add a
+// handler in mocks/handlers.ts (or server.use(...) in a test) for each call.
+beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
-
-// Suppress unhandled promise rejections from mutateAsync firing after component unmount.
-// These originate from TanStack Mutation's mutateAsync when the React tree is torn down
-// mid-flight (test cleanup); they are not real failures — the relevant assertions already passed.
-process.on("unhandledRejection", () => {});

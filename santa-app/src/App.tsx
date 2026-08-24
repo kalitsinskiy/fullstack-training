@@ -1,47 +1,50 @@
-import { lazy } from "react";
-import "./App.css";
-import { Layout } from "./components/Layout";
-import LoginForm from "./components/LoginForm";
-import { NotFoundPage } from "./components/NotFoundPage";
-import { ProtectedRoute } from "./components/ProtectedRoute";
-import RegisterForm from "./components/RegisterForm";
-import { BrowserRouter, Route, Routes } from "react-router";
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { queryClient } from '@/lib/queryClient';
+import { AuthProvider } from '@/features/auth/AuthContext';
+import { AuthGuard } from '@/features/auth/AuthGuard';
+import { AppLayout } from '@/components/layout/AppLayout';
+import { Toaster } from '@/components/ui/sonner';
+import { LandingPage } from '@/pages/LandingPage';
+import { LoginPage } from '@/pages/LoginPage';
+import { RegisterPage } from '@/pages/RegisterPage';
+import { RoomListPage } from '@/pages/RoomListPage';
+import { RoomDetailPage } from '@/pages/RoomDetailPage';
+import { MessageListPage } from '@/pages/MessageListPage';
+import { MessagesPage } from '@/pages/MessagesPage';
+import { NotificationsPage } from '@/pages/NotificationsPage';
+import { ProfilePage } from '@/pages/ProfilePage';
 
-const RoomDetailsPage = lazy(() => import("./components/RoomDetailsPage"));
-const RoomList = lazy(() => import("./components/RoomList"));
-const WishlistPage = lazy(() => import("./components/WishlistPage"));
-
-function App() {
+export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route
-          path="/login"
-          element={
-            <main className="grid min-h-svh place-items-center px-4">
-              <LoginForm />
-            </main>
-          }
-        />
-        <Route
-          path="/register"
-          element={
-            <main className="grid min-h-svh place-items-center px-4">
-              <RegisterForm />
-            </main>
-          }
-        />
-        <Route element={<ProtectedRoute />}>
-          <Route element={<Layout />}>
-            <Route path="/rooms" element={<RoomList />} />
-            <Route path="/rooms/:id" element={<RoomDetailsPage />} />
-            <Route path="/rooms/:id/wishlist" element={<WishlistPage />} />
-          </Route>
-        </Route>
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
-    </BrowserRouter>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            {/* Public */}
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+
+            {/* Protected — SocketProvider mounts inside AuthGuard, after login */}
+            <Route element={<AuthGuard />}>
+              <Route element={<AppLayout />}>
+                <Route path="/rooms" element={<RoomListPage />} />
+                <Route path="/rooms/:id" element={<RoomDetailPage />} />
+                <Route path="/rooms/:roomId/messages" element={<MessagesPage />} />
+                <Route path="/messages" element={<MessageListPage />} />
+                <Route path="/notifications" element={<NotificationsPage />} />
+                <Route path="/profile" element={<ProfilePage />} />
+              </Route>
+            </Route>
+
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+          <Toaster />
+        </BrowserRouter>
+        <ReactQueryDevtools initialIsOpen={false} />
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }
-
-export default App;

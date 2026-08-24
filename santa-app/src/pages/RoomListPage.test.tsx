@@ -1,0 +1,198 @@
+import { describe, it, expect } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { renderWithProviders, screen, waitFor } from '@/test/render';
+import { server } from '@/test/mocks/server';
+import { http, HttpResponse } from 'msw';
+import { RoomListPage } from './RoomListPage';
+
+describe('RoomListPage', () => {
+  it('shows empty state when no rooms', async () => {
+    server.use(
+      http.get('/api/rooms', () =>
+        HttpResponse.json({
+          data: [],
+          meta: { total: 0, page: 1, limit: 10, totalPages: 1 },
+        }),
+      ),
+    );
+
+    renderWithProviders(<RoomListPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/no rooms yet/i)).toBeInTheDocument();
+    });
+  });
+
+  it('renders room cards when rooms exist', async () => {
+    server.use(
+      http.get('/api/rooms', () =>
+        HttpResponse.json({
+          data: [
+            {
+              id: 'room-1',
+              name: 'Holiday Gift Exchange',
+              inviteCode: 'ABC',
+              creatorId: 'user-1',
+              status: 'pending',
+              participants: [],
+              participantCount: 5,
+            },
+            {
+              id: 'room-2',
+              name: 'Office Party',
+              inviteCode: 'DEF',
+              creatorId: 'user-2',
+              status: 'drawn',
+              participants: [],
+              participantCount: 3,
+            },
+          ],
+          meta: { total: 2, page: 1, limit: 10, totalPages: 1 },
+        }),
+      ),
+    );
+
+    renderWithProviders(<RoomListPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Holiday Gift Exchange')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Office Party')).toBeInTheDocument();
+    expect(screen.getByText('5 participants')).toBeInTheDocument();
+    expect(screen.getByText('3 participants')).toBeInTheDocument();
+  });
+
+  it('hides pagination controls when there is only one page', async () => {
+    server.use(
+      http.get('/api/rooms', () =>
+        HttpResponse.json({
+          data: [{ id: 'room-1', name: 'Solo Room', inviteCode: 'A', creatorId: 'u1', status: 'pending', participants: [], participantCount: 1 }],
+          meta: { total: 1, page: 1, limit: 10, totalPages: 1 },
+        }),
+      ),
+    );
+
+    renderWithProviders(<RoomListPage />);
+
+    await screen.findByText('Solo Room');
+    expect(screen.queryByRole('button', { name: /previous/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /next/i })).not.toBeInTheDocument();
+  });
+
+  it('shows pagination controls with correct disabled state on page 1 of 2', async () => {
+    server.use(
+      http.get('/api/rooms', () =>
+        HttpResponse.json({
+          data: [{ id: 'room-1', name: 'Room One', inviteCode: 'A', creatorId: 'u1', status: 'pending', participants: [], participantCount: 2 }],
+          meta: { total: 15, page: 1, limit: 10, totalPages: 2 },
+        }),
+      ),
+    );
+
+    renderWithProviders(<RoomListPage />);
+
+    await screen.findByText('Room One');
+    expect(screen.getByText(/page 1 of 2/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /previous/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /next/i })).not.toBeDisabled();
+  });
+
+  it('loads page 2 when Next is clicked and disables Next on the last page', async () => {
+    server.use(
+      http.get('/api/rooms', ({ request }) => {
+        const p = new URL(request.url).searchParams.get('page');
+        if (p === '2') {
+          return HttpResponse.json({
+            data: [{ id: 'room-11', name: 'Room Eleven', inviteCode: 'B', creatorId: 'u1', status: 'pending', participants: [], participantCount: 3 }],
+            meta: { total: 15, page: 2, limit: 10, totalPages: 2 },
+          });
+        }
+        return HttpResponse.json({
+          data: [{ id: 'room-1', name: 'Room One', inviteCode: 'A', creatorId: 'u1', status: 'pending', participants: [], participantCount: 2 }],
+          meta: { total: 15, page: 1, limit: 10, totalPages: 2 },
+        });
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderWithProviders(<RoomListPage />);
+
+    await screen.findByText('Room One');
+    await user.click(screen.getByRole('button', { name: /next/i }));
+
+    await screen.findByText('Room Eleven');
+    expect(screen.getByText(/page 2 of 2/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /previous/i })).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: /next/i })).toBeDisabled();
+  });
+
+  it('goes back to page 1 when Previous is clicked', async () => {
+    server.use(
+      http.get('/api/rooms', ({ request }) => {
+        const p = new URL(request.url).searchParams.get('page');
+        if (p === '2') {
+          return HttpResponse.json({
+            data: [{ id: 'room-11', name: 'Room Eleven', inviteCode: 'B', creatorId: 'u1', status: 'pending', participants: [], participantCount: 3 }],
+            meta: { total: 15, page: 2, limit: 10, totalPages: 2 },
+          });
+        }
+        return HttpResponse.json({
+          data: [{ id: 'room-1', name: 'Room One', inviteCode: 'A', creatorId: 'u1', status: 'pending', participants: [], participantCount: 2 }],
+          meta: { total: 15, page: 1, limit: 10, totalPages: 2 },
+        });
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderWithProviders(<RoomListPage />);
+
+    await screen.findByText('Room One');
+    await user.click(screen.getByRole('button', { name: /next/i }));
+    await screen.findByText('Room Eleven');
+
+    await user.click(screen.getByRole('button', { name: /previous/i }));
+    await screen.findByText('Room One');
+    expect(screen.getByText(/page 1 of 2/i)).toBeInTheDocument();
+  });
+
+  it('create room form submits and room appears', async () => {
+    let createCalled = false;
+    server.use(
+      http.get('/api/rooms', () =>
+        HttpResponse.json({
+          data: createCalled
+            ? [{ id: 'room-new', name: 'My New Room', inviteCode: 'XYZ', creatorId: 'user-1', status: 'pending', participants: [], participantCount: 1 }]
+            : [],
+          meta: { total: createCalled ? 1 : 0, page: 1, limit: 10, totalPages: 1 },
+        }),
+      ),
+      http.post('/api/rooms', () => {
+        createCalled = true;
+        return HttpResponse.json(
+          { id: 'room-new', name: 'My New Room', inviteCode: 'XYZ', creatorId: 'user-1', status: 'pending', participants: [], participantCount: 1 },
+          { status: 201 },
+        );
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderWithProviders(<RoomListPage />);
+
+    // Wait for initial load (empty state)
+    await waitFor(() => {
+      expect(screen.getByText(/no rooms yet/i)).toBeInTheDocument();
+    });
+
+    // Click "New room" to show form
+    await user.click(screen.getByRole('button', { name: /new room/i }));
+
+    // Fill in and submit
+    await user.type(screen.getByLabelText(/room name/i), 'My New Room');
+    await user.click(screen.getByRole('button', { name: /^create$/i }));
+
+    // Room should now appear
+    await waitFor(() => {
+      expect(screen.getByText('My New Room')).toBeInTheDocument();
+    });
+  });
+});
