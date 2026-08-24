@@ -122,7 +122,8 @@ export function RoomDetailPage() {
 
   const drawMutation = useMutation({
     mutationFn: async (date: string) => {
-      if (!can('room:draw')) return;
+      if (!can('room:draw'))
+        throw new Error('You do not have permission to draw names');
       const budget = drawBudget ? Number(drawBudget) : undefined;
       const currency = drawCurrency.trim() || undefined;
       await api.post(`/api/rooms/${id}/draw`, {
@@ -147,7 +148,8 @@ export function RoomDetailPage() {
 
   const changeDateMutation = useMutation({
     mutationFn: async (date: string) => {
-      if (!can('room:edit')) return;
+      if (!can('room:edit'))
+        throw new Error('You do not have permission to edit this room');
       await api.patch(`/api/rooms/${id}`, { exchangeDate: date });
     },
     onSuccess: () => {
@@ -163,7 +165,8 @@ export function RoomDetailPage() {
 
   const kickMutation = useMutation({
     mutationFn: async (memberId: string) => {
-      if (!can('room:kick')) return;
+      if (!can('room:kick'))
+        throw new Error('You do not have permission to remove members');
       await api.delete(`/api/rooms/${id}/members/${memberId}`);
     },
     onSuccess: () => {
@@ -177,7 +180,10 @@ export function RoomDetailPage() {
 
   const regenerateCodeMutation = useMutation({
     mutationFn: async () => {
-      if (!can('room:invite')) return;
+      if (!can('room:invite'))
+        throw new Error(
+          'You do not have permission to regenerate the invite code',
+        );
       await api.post(`/api/rooms/${id}/invite-code/regenerate`);
     },
     onSuccess: () => {
@@ -191,7 +197,8 @@ export function RoomDetailPage() {
 
   const deleteRoomMutation = useMutation({
     mutationFn: async () => {
-      if (!can('room:delete')) return;
+      if (!can('room:delete'))
+        throw new Error('You do not have permission to delete this room');
       await api.delete(`/api/rooms/${id}`);
     },
     onSuccess: () => {
