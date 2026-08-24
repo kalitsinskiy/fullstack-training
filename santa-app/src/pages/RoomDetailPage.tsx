@@ -41,6 +41,8 @@ const CURRENCIES = [
   { code: 'PLN', symbol: 'zł', label: 'PLN' },
 ];
 
+const DEFAULT_CURRENCY = 'UAH';
+
 export function RoomDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
@@ -49,7 +51,7 @@ export function RoomDetailPage() {
   const [drawDialogOpen, setDrawDialogOpen] = useState(false);
   const [exchangeDate, setExchangeDate] = useState<Date | undefined>(undefined);
   const [drawBudget, setDrawBudget] = useState('');
-  const [drawCurrency, setDrawCurrency] = useState('UAH');
+  const [drawCurrency, setDrawCurrency] = useState(DEFAULT_CURRENCY);
   const [changeDateOpen, setChangeDateOpen] = useState(false);
   const [changeDate, setChangeDate] = useState<Date | undefined>(undefined);
 
@@ -138,7 +140,7 @@ export function RoomDetailPage() {
       setDrawDialogOpen(false);
       setExchangeDate(undefined);
       setDrawBudget('');
-      setDrawCurrency('USD');
+      setDrawCurrency(DEFAULT_CURRENCY);
       toast.success('Names have been drawn!');
     },
     onError: (error) => {
@@ -452,7 +454,10 @@ export function RoomDetailPage() {
                   <CalendarDays className="size-4 text-primary" />
                   {/* Format from the date-only part so the stored UTC-midnight
                       value renders as the same calendar day in every timezone. */}
-                  {format(parseISO(room.exchangeDate.slice(0, 10)), 'EEEE, d MMM yyyy')}
+                  {format(
+                    parseISO(room.exchangeDate.slice(0, 10)),
+                    'EEEE, d MMM yyyy',
+                  )}
                 </div>
               </div>
             )}
