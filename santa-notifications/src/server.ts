@@ -8,7 +8,7 @@ const app = buildApp();
 
 async function start() {
   try {
-    const io = await createSocketServer(app.server, (token) => app.jwt.verify(token));
+    const io = await createSocketServer(app.server, (token) => app.jwt.verify(token), app.log);
     setIo(io);
     app.log.info('Socket.IO server ready');
 
