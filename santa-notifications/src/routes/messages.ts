@@ -66,12 +66,6 @@ export default async function messageRoutes(fastify: FastifyInstance) {
         // io not ready yet — skip
       }
 
-      await fastify.publish('message.sent', {
-        type: 'message.sent',
-        roomId,
-        recipientId,
-      });
-
       return reply.status(201).send({
         id: message._id,
         roomId: message.roomId,

@@ -6,7 +6,6 @@ import configPlugin from './plugins/config';
 import redisPlugin from './plugins/redis';
 import authPlugin from './plugins/auth';
 import eventsPlugin from './plugins/events';
-import publisherPlugin from './plugins/publisher';
 import { AppError, ValidationError } from './errors';
 import timingPlugin from './plugins/timing';
 import healthRoutes from './routes/health';
@@ -45,7 +44,6 @@ export function buildApp() {
   app.register(redisPlugin);
   app.register(authPlugin);
   app.register(eventsPlugin);
-  app.register(publisherPlugin);
   app.register(timingPlugin);
   app.register(healthRoutes);
   app.register(notificationRoutes, { prefix: '/api/notifications' });
