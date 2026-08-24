@@ -4,6 +4,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Matches,
   Min,
 } from 'class-validator';
 
@@ -14,7 +15,13 @@ export class DrawRoomDto {
     description: 'The day participants exchange gifts (ISO 8601)',
     example: '2026-12-24',
   })
-  @IsISO8601()
+  // The contract is a calendar day. @IsISO8601 alone accepts forms new Date()
+  // can't parse (week dates like 2026-W52-2, ordinal dates), which then become
+  // Invalid Date downstream — so pin the date-only shape and require a real date.
+  @IsISO8601({ strict: true })
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, {
+    message: 'exchangeDate must be a calendar date (YYYY-MM-DD)',
+  })
   exchangeDate!: string;
 
   @ApiPropertyOptional({ description: 'Suggested per-gift budget amount' })

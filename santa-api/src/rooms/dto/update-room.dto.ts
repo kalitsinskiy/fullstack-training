@@ -6,6 +6,7 @@ import {
   IsOptional,
   IsString,
   Length,
+  Matches,
   Max,
   Min,
 } from 'class-validator';
@@ -43,7 +44,12 @@ export class UpdateRoomDto {
     description: 'Gift-exchange date (ISO 8601)',
     example: '2026-12-24',
   })
+  // Pin to a real calendar day: @IsISO8601 alone accepts week/ordinal forms that
+  // new Date() turns into Invalid Date when the update is persisted.
   @IsOptional()
-  @IsISO8601()
+  @IsISO8601({ strict: true })
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, {
+    message: 'exchangeDate must be a calendar date (YYYY-MM-DD)',
+  })
   exchangeDate?: string;
 }
