@@ -3,7 +3,7 @@ import { useState, useEffect, type FormEvent } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { DayPicker } from 'react-day-picker';
 import {
   Gift,
@@ -450,7 +450,9 @@ export function RoomDetailPage() {
                 </p>
                 <div className="flex items-center gap-2 text-sm font-medium">
                   <CalendarDays className="size-4 text-primary" />
-                  {format(new Date(room.exchangeDate), 'EEEE, d MMM yyyy')}
+                  {/* Format from the date-only part so the stored UTC-midnight
+                      value renders as the same calendar day in every timezone. */}
+                  {format(parseISO(room.exchangeDate.slice(0, 10)), 'EEEE, d MMM yyyy')}
                 </div>
               </div>
             )}
