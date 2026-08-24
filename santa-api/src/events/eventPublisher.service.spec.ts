@@ -1,5 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { PinoLogger } from 'nestjs-pino';
 import { EventPublisherService } from './eventPublisher.service';
+
+const mockLogger = {
+  setContext: jest.fn(),
+  info: jest.fn(),
+  warn: jest.fn(),
+  error: jest.fn(),
+} as unknown as PinoLogger;
 
 jest.mock('amqplib', () => ({
   __esModule: true,
@@ -21,6 +29,7 @@ const mockChannel = {
 const mockConnection = {
   createChannel: jest.fn(),
   close: jest.fn(),
+  on: jest.fn(),
 };
 
 describe('EventPublisherService', () => {
@@ -36,7 +45,10 @@ describe('EventPublisherService', () => {
     amqp.connect.mockResolvedValue(mockConnection);
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [EventPublisherService],
+      providers: [
+        EventPublisherService,
+        { provide: PinoLogger, useValue: mockLogger },
+      ],
     }).compile();
 
     service = module.get<EventPublisherService>(EventPublisherService);
@@ -133,7 +145,7 @@ describe('EventPublisherService', () => {
 
     it('does nothing when not configured (no RABBITMQ_URL)', () => {
       delete process.env.RABBITMQ_URL;
-      const unconfiguredService = new EventPublisherService();
+      const unconfiguredService = new EventPublisherService(mockLogger);
 
       unconfiguredService.publish('room.created', { roomId: '1' });
 
@@ -154,7 +166,7 @@ describe('EventPublisherService', () => {
 
     it('does nothing when not configured', async () => {
       delete process.env.RABBITMQ_URL;
-      const unconfiguredService = new EventPublisherService();
+      const unconfiguredService = new EventPublisherService(mockLogger);
 
       await unconfiguredService.onModuleDestroy();
 
