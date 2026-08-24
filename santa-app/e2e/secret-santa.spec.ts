@@ -42,8 +42,11 @@ test.describe('create → join → draw → assignment', () => {
       .getByRole('button', { name: 'Create', exact: true })
       .click();
 
-    await expect(ownerPage.getByText('E2E Room')).toBeVisible();
-    await ownerPage.getByText('E2E Room').click();
+    // Target the room card link specifically — a toast ("Room "E2E Room" was
+    // created") also contains this text, so getByText would match two elements.
+    const ownerRoomLink = ownerPage.getByRole('link', { name: /E2E Room/ });
+    await expect(ownerRoomLink).toBeVisible();
+    await ownerRoomLink.click();
     await expect(ownerPage).toHaveURL(/\/rooms\/[a-f0-9]+/);
 
     const inviteCode = (
@@ -59,7 +62,10 @@ test.describe('create → join → draw → assignment', () => {
         .click();
       await page.locator('#inviteCode').fill(inviteCode);
       await page.getByRole('button', { name: 'Join', exact: true }).click();
-      await expect(page.getByText('E2E Room')).toBeVisible({ timeout: 10_000 });
+      // Match the room card link, not a toast that also names the room.
+      await expect(page.getByRole('link', { name: /E2E Room/ })).toBeVisible({
+        timeout: 10_000,
+      });
     }
 
     // ── Step 4: Owner reloads and runs the draw ────────────────────────────────
