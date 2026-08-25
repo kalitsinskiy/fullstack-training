@@ -44,6 +44,19 @@ function isRetryable(error: unknown): boolean {
   return true;
 }
 
+/**
+ * A deterministic 4xx (e.g. a stale room id) reflects the caller's input, not
+ * santa-api's health — counting it would let a run of legitimate 404s trip
+ * the breaker and block healthy calls. 429 still counts: it reflects real
+ * backend distress (the caller is being rate-limited).
+ */
+function countsTowardBreaker(error: unknown): boolean {
+  if (error instanceof HttpError) {
+    return error.status >= 500 || error.status === 429;
+  }
+  return true;
+}
+
 export class SantaApiClient implements SantaApi {
   private readonly baseUrl: string;
   private readonly serviceKey: string;
@@ -72,15 +85,17 @@ export class SantaApiClient implements SantaApi {
   }
 
   private get<T>(path: string): Promise<T> {
-    return this.breaker.call(() =>
-      withRetry(
-        () =>
-          this.http.get<T>(`${this.baseUrl}${path}`, {
-            headers: { 'X-Service-Key': this.serviceKey },
-            timeout: this.timeout,
-          }),
-        { isRetryable }
-      )
+    return this.breaker.call(
+      () =>
+        withRetry(
+          () =>
+            this.http.get<T>(`${this.baseUrl}${path}`, {
+              headers: { 'X-Service-Key': this.serviceKey },
+              timeout: this.timeout,
+            }),
+          { isRetryable }
+        ),
+      countsTowardBreaker
     );
   }
 }

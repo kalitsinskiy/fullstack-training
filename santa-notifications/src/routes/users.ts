@@ -4,6 +4,7 @@ export default async function userRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/users/online',
     {
+      preHandler: [fastify.authenticate],
       schema: {
         response: {
           200: { type: 'array', items: { type: 'string' } },
@@ -16,6 +17,7 @@ export default async function userRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/users/online/count',
     {
+      preHandler: [fastify.authenticate],
       schema: {
         response: {
           200: {

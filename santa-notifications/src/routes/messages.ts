@@ -18,6 +18,10 @@ const threadValues: MessageThread[] = ['giftee', 'santa'];
 
 const CANNOT_SEND = 'You cannot send a message in this room yet';
 
+// A generous per-user cap: high enough not to bother a real conversation,
+// low enough to stop an authenticated user from spamming the endpoint.
+const SEND_MESSAGE_RATE_LIMIT = { max: 30, timeWindow: '1 minute' };
+
 interface SendMessageBody {
   roomId: string;
   to: MessageThread;
@@ -71,7 +75,17 @@ export default async function messageRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/',
     {
-      preHandler: [fastify.authenticate],
+      preHandler: [
+        fastify.authenticate,
+        ...(fastify.config.env === 'test'
+          ? []
+          : [
+              fastify.rateLimit({
+                ...SEND_MESSAGE_RATE_LIMIT,
+                keyGenerator: (request) => currentUser(request).id,
+              }),
+            ]),
+      ],
       schema: {
         body: {
           type: 'object',

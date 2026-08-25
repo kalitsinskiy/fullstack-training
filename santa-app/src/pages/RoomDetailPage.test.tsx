@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import userEvent from '@testing-library/user-event';
 import { Route, Routes } from 'react-router-dom';
-import { format } from 'date-fns';
 import { renderWithProviders, screen, waitFor, within } from '@/test/render';
 import { server } from '@/test/mocks/server';
 import { RoomDetailPage } from './RoomDetailPage';
@@ -174,9 +173,11 @@ describe('RoomDetailPage', () => {
     expect(
       screen.queryByRole('button', { name: /draw names/i }),
     ).not.toBeInTheDocument();
-    // Formatted the same way the component does, so the assertion is TZ-proof.
+    // Hardcoded (not recomputed with the component's formula) so this test
+    // can actually fail if the component renders the wrong day in a
+    // UTC-negative zone — run with TZ=America/New_York to prove it.
     expect(
-      screen.getByText(format(new Date('2026-12-24'), 'EEEE, d MMM yyyy')),
+      screen.getByText('Thursday, 24 Dec 2026'),
     ).toBeInTheDocument();
 
     // And the anonymous chat is reachable from here.

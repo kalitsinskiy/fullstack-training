@@ -66,7 +66,11 @@ describe('santa-notifications (HTTP)', () => {
   });
 
   it('GET /users/online → 200 [] with nobody connected', async () => {
-    const res = await app.inject({ method: 'GET', url: '/users/online' });
+    const res = await app.inject({
+      method: 'GET',
+      url: '/users/online',
+      headers: { authorization: bearer(ALICE) },
+    });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual([]);
   });
@@ -77,7 +81,11 @@ describe('santa-notifications (HTTP)', () => {
 
     await app.presence.markOnline('user-a');
 
-    const res = await app.inject({ method: 'GET', url: '/users/online' });
+    const res = await app.inject({
+      method: 'GET',
+      url: '/users/online',
+      headers: { authorization: bearer(ALICE) },
+    });
     expect(res.statusCode).toBe(200);
     expect((res.json() as string[]).sort()).toEqual(['user-a', 'user-b']);
 
@@ -85,7 +93,11 @@ describe('santa-notifications (HTTP)', () => {
     await expect(app.presence.countOnline()).resolves.toBe(2);
 
     await app.presence.markOffline('user-a');
-    const after = await app.inject({ method: 'GET', url: '/users/online' });
+    const after = await app.inject({
+      method: 'GET',
+      url: '/users/online',
+      headers: { authorization: bearer(ALICE) },
+    });
     expect(after.json()).toEqual(['user-b']);
   });
 

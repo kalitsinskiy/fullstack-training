@@ -39,6 +39,9 @@ export interface HandleEventResult {
   created: number;
 }
 
+/** A malformed event that will never succeed on retry — dead-letter it immediately. */
+export class UnprocessableEventError extends Error {}
+
 export function buildNotificationMessage(
   routingKey: string,
   data: EventPayload,
@@ -95,11 +98,11 @@ export async function handleEvent(
   deps: HandleEventDeps
 ): Promise<HandleEventResult> {
   if (!isKnownType(routingKey)) {
-    throw new Error(`Unsupported routing key: ${routingKey}`);
+    throw new UnprocessableEventError(`Unsupported routing key: ${routingKey}`);
   }
 
   if (!data.roomId) {
-    throw new Error(`Event ${routingKey} is missing roomId`);
+    throw new UnprocessableEventError(`Event ${routingKey} is missing roomId`);
   }
 
   if (messageId) {

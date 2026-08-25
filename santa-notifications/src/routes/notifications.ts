@@ -22,6 +22,20 @@ const idParamsSchema = {
 
 const objectIdSchema = { type: 'string', pattern: '^[a-fA-F0-9]{24}$' };
 
+const payloadSchema = {
+  type: 'object',
+  additionalProperties: false,
+  maxProperties: 10,
+  properties: {
+    roomId: objectIdSchema,
+    roomName: { type: 'string', maxLength: 200 },
+    userId: objectIdSchema,
+    userName: { type: 'string', maxLength: 200 },
+    participantCount: { type: 'number' },
+    createdBy: objectIdSchema,
+  },
+};
+
 export default async function notificationRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/',

@@ -51,12 +51,21 @@ export const notificationsApi = createClient(
   import.meta.env.VITE_NOTIFICATIONS_URL,
 );
 
-/** Narrow an unknown error into a user-facing message. */
+/**
+ * Narrow an unknown error into a user-facing message.
+ *
+ * The two backends disagree on error envelope shape:
+ * - santa-api: `{ success, statusCode, message, timestamp }`
+ * - santa-notifications: `{ success: false, error: { code, message } }`
+ */
 export function getApiErrorMessage(error: unknown, fallback = 'Something went wrong'): string {
   if (axios.isAxiosError(error)) {
-    const data = error.response?.data as { message?: string | string[] } | undefined;
-    if (Array.isArray(data?.message)) return data.message.join(', ');
-    if (data?.message) return data.message;
+    const data = error.response?.data as
+      | { message?: string | string[]; error?: { message?: string } }
+      | undefined;
+    const message = data?.message ?? data?.error?.message;
+    if (Array.isArray(message)) return message.join(', ');
+    if (message) return message;
   }
   return fallback;
 }

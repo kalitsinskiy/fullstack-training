@@ -22,7 +22,7 @@ export class CircuitBreaker {
     return this.state;
   }
 
-  async call<T>(fn: () => Promise<T>): Promise<T> {
+  async call<T>(fn: () => Promise<T>, isFailure: (error: unknown) => boolean = () => true): Promise<T> {
     if (this.state === 'OPEN') {
       const elapsed = this.now() - this.lastFailureTime;
       if (elapsed <= this.resetTimeout) {
@@ -36,7 +36,9 @@ export class CircuitBreaker {
       this.onSuccess();
       return result;
     } catch (error) {
-      this.onFailure();
+      if (isFailure(error)) {
+        this.onFailure();
+      }
       throw error;
     }
   }

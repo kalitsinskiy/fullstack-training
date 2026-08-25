@@ -30,10 +30,8 @@ import { WishlistModule } from './wishlist/wishlist.module';
           'amqp://santa:santa123@localhost:5672',
         ),
         JWT_SECRET: Joi.string().required(),
-        JWT_EXPIRATION: Joi.string().default('7d'),
-        SERVICE_API_KEY: Joi.string().default(
-          'dev-service-key-change-in-production',
-        ),
+        JWT_EXPIRATION: Joi.string().default('1h'),
+        SERVICE_API_KEY: Joi.string().required(),
       }),
     }),
     MongooseModule.forRootAsync({

@@ -199,21 +199,24 @@ export class RoomsService {
       throw new ForbiddenException('The draw has already been completed');
     }
 
-    const alreadyMember = room.participants.some(
-      (participant) => participant.userId.toString() === userId,
-    );
-    if (!alreadyMember) {
-      room.participants.push({
-        userId: new Types.ObjectId(userId),
-        role: 'member',
-      });
-      await room.save();
+    const userObjectId = new Types.ObjectId(userId);
+
+    // Atomic check-and-push: the filter only matches if userId isn't already
+    // a participant, so two concurrent joins can't both push and duplicate.
+    const joinResult = await this.roomModel
+      .findOneAndUpdate(
+        { _id: id, 'participants.userId': { $ne: userObjectId } },
+        { $push: { participants: { userId: userObjectId, role: 'member' } } },
+      )
+      .exec();
+    const didJoin = !!joinResult;
+    if (didJoin) {
       await this.invalidateRoom(id);
     }
 
     const response = await this.toRoomResponse(room._id, userId);
 
-    if (!alreadyMember) {
+    if (didJoin) {
       const joiner = response.participants.find(
         (participant) => participant.id === userId,
       );
@@ -228,9 +231,16 @@ export class RoomsService {
   }
 
   async joinByCode(inviteCode: string, userId: string): Promise<Room> {
-    const roomId = await this.redisService.get(inviteKey(inviteCode));
+    let roomId = await this.redisService.get(inviteKey(inviteCode));
     if (!roomId) {
-      throw new BadRequestException('Invalid or expired invite code');
+      // Redis is a cache, not the source of truth — fall back to Mongo so a
+      // TTL expiry or Redis restart doesn't invalidate a still-valid code.
+      const room = await this.roomModel.findOne({ inviteCode }).exec();
+      if (!room) {
+        throw new BadRequestException('Invalid or expired invite code');
+      }
+      roomId = room._id.toString();
+      await this.indexInviteCode(inviteCode, roomId);
     }
 
     return this.join(roomId, inviteCode, userId);
@@ -274,10 +284,12 @@ export class RoomsService {
       }),
     );
 
-    // Single atomic write: everything flips together or not at all.
+    // Atomic check-and-write: the filter re-checks status === 'pending' at
+    // write time, so two in-flight draws can't both pass the earlier read
+    // and clobber each other — only the first write matches and succeeds.
     const updated = await this.roomModel
-      .findByIdAndUpdate(
-        id,
+      .findOneAndUpdate(
+        { _id: id, status: 'pending' },
         {
           status: 'drawn',
           drawDate: new Date(),
@@ -289,7 +301,7 @@ export class RoomsService {
       .exec();
 
     if (!updated) {
-      throw new NotFoundException('Room not found');
+      throw new BadRequestException('Draw has already been performed');
     }
 
     await this.invalidateRoom(id);
@@ -409,6 +421,11 @@ export class RoomsService {
     const room = await this.roomModel.findById(id).exec();
     if (!room) {
       throw new NotFoundException('Room not found');
+    }
+    if (room.status === 'drawn') {
+      throw new BadRequestException(
+        'Members cannot be removed after the draw has been performed',
+      );
     }
 
     const target = room.participants.find(

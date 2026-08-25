@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
+import userEvent from '@testing-library/user-event';
 import { Route, Routes } from 'react-router-dom';
 import { renderWithProviders, screen } from '@/test/render';
 import { server } from '@/test/mocks/server';
@@ -118,5 +119,55 @@ describe('room permission gating (UI)', () => {
     expect(
       screen.queryByRole('button', { name: /^new$/i }),
     ).not.toBeInTheDocument();
+  });
+
+  it('clicking a disabled/guarded owner-only control does not fire a request (MSW sees no call)', async () => {
+    const kicked = vi.fn();
+    const deleted = vi.fn();
+    const regenerated = vi.fn();
+    const drawn = vi.fn();
+
+    server.use(
+      http.delete('/api/rooms/123/members/:memberId', () => {
+        kicked();
+        return new HttpResponse(null, { status: 204 });
+      }),
+      http.delete('/api/rooms/123', () => {
+        deleted();
+        return new HttpResponse(null, { status: 204 });
+      }),
+      http.post('/api/rooms/123/invite-code/regenerate', () => {
+        regenerated();
+        return HttpResponse.json(makeRoom(MEMBER_PERMISSIONS));
+      }),
+      http.post('/api/rooms/123/draw', () => {
+        drawn();
+        return HttpResponse.json(makeRoom(MEMBER_PERMISSIONS));
+      }),
+    );
+
+    useRoomHandler(MEMBER_PERMISSIONS);
+    renderRoom();
+
+    await screen.findByRole('heading', { name: 'Office Party' });
+
+    // Click anything matching an owner-only control that happens to be in the
+    // DOM (today: nothing — they're hidden). If a future regression makes one
+    // present-but-guarded instead of removed, this test starts clicking it.
+    const guardedButtons = [
+      screen.queryByRole('button', { name: /draw names/i }),
+      screen.queryByRole('button', { name: /delete room/i }),
+      screen.queryByRole('button', { name: /^new$/i }),
+      ...screen.queryAllByRole('button', { name: /kick/i }),
+    ].filter((button): button is HTMLElement => button !== null);
+
+    for (const button of guardedButtons) {
+      await userEvent.click(button);
+    }
+
+    expect(kicked).not.toHaveBeenCalled();
+    expect(deleted).not.toHaveBeenCalled();
+    expect(regenerated).not.toHaveBeenCalled();
+    expect(drawn).not.toHaveBeenCalled();
   });
 });

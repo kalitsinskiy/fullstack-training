@@ -24,19 +24,66 @@ export interface EventTransport {
   close(): Promise<void>;
 }
 
+const RECONNECT_BASE_DELAY_MS = 1_000;
+const RECONNECT_MAX_DELAY_MS = 30_000;
+
 export class AmqpEventTransport implements EventTransport {
+  private connection!: ChannelModel;
+  private channel!: Channel;
+  private closing = false;
+  private reconnectAttempt = 0;
+
   private constructor(
-    private readonly connection: ChannelModel,
-    private readonly channel: Channel,
+    private readonly url: string,
+    private readonly logger?: Logger,
   ) {}
 
-  static async create(url: string): Promise<AmqpEventTransport> {
-    const connection = await connect(url);
+  static async create(
+    url: string,
+    logger?: Logger,
+  ): Promise<AmqpEventTransport> {
+    const transport = new AmqpEventTransport(url, logger);
+    await transport.connect();
+    return transport;
+  }
+
+  private async connect(): Promise<void> {
+    const connection = await connect(this.url);
     const channel = await connection.createChannel();
     await channel.assertExchange(SANTA_EVENTS_EXCHANGE, 'topic', {
       durable: true,
     });
-    return new AmqpEventTransport(connection, channel);
+
+    connection.on('error', (error: Error) => {
+      this.logger?.error(`RabbitMQ connection error: ${error.message}`);
+    });
+    connection.on('close', () => {
+      if (this.closing) return;
+      this.logger?.warn('RabbitMQ connection closed — reconnecting');
+      this.scheduleReconnect();
+    });
+    channel.on('error', (error: Error) => {
+      this.logger?.error(`RabbitMQ channel error: ${error.message}`);
+    });
+
+    this.connection = connection;
+    this.channel = channel;
+    this.reconnectAttempt = 0;
+  }
+
+  private scheduleReconnect(): void {
+    this.reconnectAttempt += 1;
+    const delay = Math.min(
+      RECONNECT_MAX_DELAY_MS,
+      RECONNECT_BASE_DELAY_MS * 2 ** (this.reconnectAttempt - 1),
+    );
+    setTimeout(() => {
+      if (this.closing) return;
+      this.connect().catch((error: Error) => {
+        this.logger?.error(`RabbitMQ reconnect failed: ${error.message}`);
+        this.scheduleReconnect();
+      });
+    }, delay);
   }
 
   publish(event: PublishedEvent): Promise<void> {
@@ -55,6 +102,7 @@ export class AmqpEventTransport implements EventTransport {
   }
 
   async close(): Promise<void> {
+    this.closing = true;
     await this.channel.close();
     await this.connection.close();
   }
@@ -88,7 +136,7 @@ export async function createEventTransport(
     return new RecordingEventTransport();
   }
 
-  const transport = await AmqpEventTransport.create(url);
+  const transport = await AmqpEventTransport.create(url, logger);
   logger.log(`Connected to RabbitMQ (${url.replace(/\/\/.*@/, '//***@')})`);
   return transport;
 }

@@ -93,13 +93,17 @@ services:
     name: santa-app
     runtime: static
     rootDir: santa-app
-    buildCommand: npm ci && npm run build
+    # Render static builds run with NODE_ENV=production, so a bare `npm ci`
+    # skips devDependencies — and vite/typescript live there.
+    buildCommand: npm ci --include=dev && npm run build
     staticPublishPath: ./dist
     autoDeploy: false
     envVars:
       - key: VITE_API_URL # the deployed santa-api URL
         sync: false
       - key: VITE_WS_URL # the deployed santa-notifications URL
+        sync: false
+      - key: VITE_NOTIFICATIONS_URL # the deployed santa-notifications URL
         sync: false
     routes:
       # SPA fallback: every unknown path serves index.html so client-side

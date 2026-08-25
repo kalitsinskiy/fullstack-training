@@ -1,5 +1,6 @@
 import Fastify, { FastifyError } from 'fastify';
 import cors from '@fastify/cors';
+import rateLimit from '@fastify/rate-limit';
 import ajvFormats from 'ajv-formats';
 
 import configPlugin from './plugins/config';
@@ -55,6 +56,10 @@ export function buildApp(options: BuildAppOptions = {}) {
   });
   app.register(configPlugin);
   app.register(authPlugin);
+  // global: false — routes opt in individually via fastify.rateLimit(...) in
+  // their own preHandler chain (see messages.ts), so it runs after auth and
+  // can key by the authenticated user instead of by IP.
+  app.register(rateLimit, { global: false });
   app.register(santaApiPlugin, { santaApi: options.santaApi });
   app.register(presencePlugin);
   app.register(socketPlugin);

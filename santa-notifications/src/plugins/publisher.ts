@@ -1,7 +1,7 @@
 import fp from 'fastify-plugin';
 import { FastifyInstance } from 'fastify';
 import { connect, type Channel, type ChannelModel } from 'amqplib';
-import { SANTA_EVENTS_EXCHANGE } from '../events/topology';
+import { SANTA_EVENTS_EXCHANGE, assertNotificationsTopology } from '../events/topology';
 
 export type PublishEvent = (routingKey: string, payload: unknown) => void;
 
@@ -26,7 +26,7 @@ async function publisherPlugin(fastify: FastifyInstance): Promise<void> {
   try {
     connection = await connect(fastify.config.rabbitmqUrl);
     channel = await connection.createChannel();
-    await channel.assertExchange(SANTA_EVENTS_EXCHANGE, 'topic', { durable: true });
+    await assertNotificationsTopology(channel);
   } catch (error) {
     fastify.decorate('publishEvent', noop);
     fastify.log.error({ err: error }, 'Could not connect to RabbitMQ — not publishing events');

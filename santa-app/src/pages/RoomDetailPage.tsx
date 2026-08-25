@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import {
   CalendarDays,
   Gift,
@@ -42,6 +42,16 @@ import {
 import type { Permission, RoomDetail } from '@/types/api';
 
 const MIN_PARTICIPANTS = 3;
+
+/**
+ * `exchangeDate` is stored/sent as a date-only value (a UTC midnight ISO
+ * instant). Parsing the full instant and formatting in the viewer's local
+ * zone renders a day early for anyone west of UTC — parse just the
+ * date-only part instead, so the calendar day never shifts.
+ */
+function parseExchangeDate(iso: string): Date {
+  return parseISO(iso.slice(0, 10));
+}
 
 type Can = (permission: Permission) => boolean;
 
@@ -213,7 +223,7 @@ function InviteSettingsCard({ room, can }: { room: RoomDetail; can: Can }) {
             <p className="text-sm font-medium text-foreground">Gift exchange</p>
             <p className="flex items-center gap-2 text-primary">
               <CalendarDays className="size-4" />
-              {format(new Date(room.exchangeDate), 'EEEE, d MMM yyyy')}
+              {format(parseExchangeDate(room.exchangeDate), 'EEEE, d MMM yyyy')}
             </p>
           </div>
         )}
@@ -418,7 +428,7 @@ function ChangeDateDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<Date | undefined>(
-    current ? new Date(current) : undefined,
+    current ? parseExchangeDate(current) : undefined,
   );
   const changeDate = useChangeExchangeDate(roomId);
 
