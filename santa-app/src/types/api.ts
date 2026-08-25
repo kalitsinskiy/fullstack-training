@@ -1,0 +1,113 @@
+/**
+ * Shared API types — mirror santa-api/docs/api-contract.md.
+ * Keep these in sync with the backend contract.
+ */
+
+export interface User {
+  id: string;
+  email: string;
+  displayName: string;
+  role: 'user' | 'admin';
+}
+
+export interface AuthResponse {
+  accessToken: string;
+  // register also returns the user fields; login returns only the token
+  id?: string;
+  email?: string;
+  displayName?: string;
+}
+
+export type RoomStatus = 'pending' | 'drawn';
+
+/** A participant's role within a single room. */
+export type RoomRole = 'owner' | 'member';
+
+/** Room capabilities. Gate UI on these permissions, never on the role. */
+export type Permission =
+  | 'room:view'
+  | 'room:draw'
+  | 'room:invite'
+  | 'room:kick'
+  | 'room:edit'
+  | 'room:delete'
+  | 'wishlist:set';
+
+export interface RoomSummary {
+  id: string;
+  name: string;
+  status: RoomStatus;
+  participantCount: number;
+}
+
+export interface Paginated<T> {
+  data: T[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
+export type RoomMember = Pick<User, 'id' | 'displayName'> & { role: RoomRole };
+
+export interface RoomDetail {
+  id: string;
+  name: string;
+  inviteCode: string;
+  creatorId: string;
+  status: RoomStatus;
+  participants: RoomMember[];
+  participantCount: number;
+  drawDate?: string;
+  exchangeDate?: string;
+  budget?: number;
+  currency?: string;
+  viewerPermissions?: Permission[];
+}
+
+export interface Wishlist {
+  userId: string;
+  roomId: string;
+  items: string[];
+}
+
+export interface Assignment {
+  receiver: Pick<User, 'id' | 'displayName'> & { wishlist: string[] };
+}
+
+export interface Notification {
+  id: string;
+  userId: string | null;
+  roomId: string | null;
+  type: string;
+  message: string;
+  payload?: unknown;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface NotificationList {
+  data: Notification[];
+  unreadCount: number;
+}
+
+export type MessageThread = 'giftee' | 'santa';
+
+export interface ChatMessage {
+  id: string;
+  roomId: string;
+  text: string;
+  createdAt: string;
+  direction: 'in' | 'out';
+}
+
+export interface IncomingChatMessage extends ChatMessage {
+  thread: MessageThread;
+}
+
+export interface MessageThreads {
+  giftee: { id: string; name: string; messages: ChatMessage[] } | null;
+  santa: { messages: ChatMessage[] } | null;
+}
