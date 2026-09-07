@@ -54,12 +54,7 @@
 
   // ESLint
   "eslint.enable": true,
-  "eslint.validate": [
-    "javascript",
-    "javascriptreact",
-    "typescript",
-    "typescriptreact"
-  ],
+  "eslint.validate": ["javascript", "javascriptreact", "typescript", "typescriptreact"],
   "eslint.workingDirectories": [
     {
       "mode": "auto"
@@ -78,7 +73,7 @@
 
   // Terminal
   "terminal.integrated.defaultProfile.osx": "zsh",
-  "terminal.integrated.fontSize": 14,
+  "terminal.integrated.fontSize": 12,
   "terminal.integrated.scrollback": 10000,
 
   // Prettier (if extension installed)

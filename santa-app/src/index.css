@@ -1,0 +1,111 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  Secret Santa design tokens.
+  Colors are HSL channels (no hsl() wrapper) so Tailwind can compose
+  them with opacity modifiers, e.g. bg-primary/90.
+  Full reference: design/design-system.md
+*/
+@layer base {
+  :root {
+    /* Surfaces — warm cream instead of pure white */
+    --background: 48 100% 96%; /* #FFFBEB cream */
+    --foreground: 22 78% 27%; /* #78350F cocoa */
+
+    --card: 0 0% 100%;
+    --card-foreground: 22 78% 27%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 22 78% 27%;
+
+    /* Brand */
+    --primary: 17 88% 40%; /* #C2410C santa-red */
+    --primary-foreground: 48 100% 97%;
+
+    --secondary: 142 72% 29%; /* #15803D pine-green */
+    --secondary-foreground: 48 100% 97%;
+
+    --accent: 41 96% 40%; /* #CA8A04 gold */
+    --accent-foreground: 22 78% 20%;
+
+    /* Soft tints — badge backgrounds, status pills (used across the mockups) */
+    --primary-soft: 24 64% 91%; /* #F7E6DB peach — hat badge, soft fills */
+    --green-soft: 136 33% 89%; /* #DBEDE0 mint — "drawn" status pill */
+    --frost: 198 30% 74%; /* #A9C5D1 — decorative snowflakes only */
+
+    /* Feedback */
+    --destructive: 0 72% 45%;
+    --destructive-foreground: 48 100% 97%;
+
+    /* Neutrals — warm stone */
+    --muted: 40 30% 92%;
+    --muted-foreground: 25 20% 45%;
+
+    --border: 40 25% 86%;
+    --input: 40 25% 86%;
+    --ring: 17 88% 40%;
+
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 22 30% 10%;
+    --foreground: 48 60% 94%;
+    --card: 22 24% 14%;
+    --card-foreground: 48 60% 94%;
+    --popover: 22 24% 14%;
+    --popover-foreground: 48 60% 94%;
+    --primary: 17 88% 52%;
+    --primary-foreground: 22 30% 10%;
+    --secondary: 142 60% 45%;
+    --secondary-foreground: 22 30% 10%;
+    --accent: 41 90% 55%;
+    --accent-foreground: 22 30% 10%;
+    --primary-soft: 17 40% 24%;
+    --green-soft: 142 30% 22%;
+    --frost: 198 25% 45%;
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 48 60% 94%;
+    --muted: 22 18% 20%;
+    --muted-foreground: 40 15% 65%;
+    --border: 22 18% 24%;
+    --input: 22 18% 24%;
+    --ring: 17 88% 52%;
+  }
+
+  .santa-calendar {
+    --rdp-accent-color: hsl(var(--primary));
+    --rdp-accent-background-color: hsl(var(--primary-soft));
+    --rdp-today-color: hsl(var(--primary));
+    font-family: inherit;
+    margin: 0;
+  }
+
+  .santa-calendar .rdp-day button {
+    border-radius: 0.25rem;
+  }
+
+  .santa-calendar .rdp-today button {
+    border-color: hsl(var(--primary-soft));
+  }
+
+  .santa-calendar .rdp-selected button {
+    border-color: hsl(var(--primary));
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply font-display;
+  }
+}

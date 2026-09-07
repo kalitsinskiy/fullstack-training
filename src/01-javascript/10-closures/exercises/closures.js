@@ -9,12 +9,15 @@ console.log('=== Exercise 1: Basic closure ===');
 // The returned function should log "Hello, [name]!"
 function makeGreeter(name) {
   // Your code here
+  return function () {
+    console.log(`Hello, ${name}!`);
+  };
 }
-// const greetAlice = makeGreeter('Alice');
-// const greetBob = makeGreeter('Bob');
-// greetAlice(); // "Hello, Alice!"
-// greetBob();   // "Hello, Bob!"
 
+const greetAlice = makeGreeter('Alice');
+const greetBob = makeGreeter('Bob');
+greetAlice(); // "Hello, Alice!"
+greetBob(); // "Hello, Bob!"
 
 console.log('\n=== Exercise 2: Counter with closure ===');
 // TODO: Create a makeCounter() function that returns an object with:
@@ -22,14 +25,27 @@ console.log('\n=== Exercise 2: Counter with closure ===');
 // The count should be private (not accessible directly)
 function makeCounter(initialValue = 0) {
   // Your code here
-}
-// const counter = makeCounter(10);
-// counter.increment();
-// counter.increment();
-// counter.decrement();
-// console.log(counter.getValue()); // 11
-// console.log(counter.count);      // undefined (private!)
+  let count = initialValue;
 
+  return {
+    increment() {
+      return count++;
+    },
+    decrement() {
+      return count--;
+    },
+    getValue() {
+      return count;
+    },
+  };
+}
+
+const counter = makeCounter(10);
+counter.increment();
+counter.increment();
+counter.decrement();
+console.log(counter.getValue()); // 11
+console.log(counter.count); // undefined (private!)
 
 console.log('\n=== Exercise 3: Loop closure problem ===');
 // TODO: Fix this code so it logs 0, 1, 2, 3, 4 (one per second)
@@ -40,8 +56,25 @@ for (var i = 0; i < 5; i++) {
   // setTimeout(() => console.log(i), i * 100);
 }
 // Fix option 1: Change var to let
-// Fix option 2: Use IIFE to capture i
+for (let i = 0; i < 5; i++) {
+  setTimeout(() => console.log(i), i * 100);
+}
 
+// Fix option 2: Use IIFE to capture i
+const funcsIIFE = [];
+
+for (var i = 0; i < 5; i++) {
+  funcsIIFE.push(
+    (function (j) {
+      return function () {
+        return j;
+      };
+    })(i)
+  );
+}
+
+console.log('funcsIIFE:', funcsIIFE);
+funcsIIFE.forEach((f) => console.log(f()));
 
 console.log('\n=== Exercise 4: Function factory ===');
 // TODO: Create a createValidator(min, max) factory
@@ -49,13 +82,16 @@ console.log('\n=== Exercise 4: Function factory ===');
 // The returned function should return true/false
 function createValidator(min, max) {
   // Your code here
+  return function (arg) {
+    return arg >= min && arg <= max;
+  };
 }
-// const isValidAge = createValidator(0, 120);
-// const isValidScore = createValidator(0, 100);
-// console.log(isValidAge(25));    // true
-// console.log(isValidAge(-1));    // false
-// console.log(isValidScore(101)); // false
 
+const isValidAge = createValidator(0, 120);
+const isValidScore = createValidator(0, 100);
+console.log(isValidAge(25)); // true
+console.log(isValidAge(-1)); // false
+console.log(isValidScore(101)); // false
 
 console.log('\n=== Exercise 5: Memoization ===');
 // TODO: Implement a simple memoize function
@@ -63,51 +99,76 @@ console.log('\n=== Exercise 5: Memoization ===');
 // Key hint: use a Map or plain object to store results
 function memoize(fn) {
   // Your code here
+  const cached = new Map();
+
+  return function (arg) {
+    const key = JSON.stringify(arg);
+
+    if (cached.has(key)) {
+      return `${cached.get(key)} (cached)`;
+    }
+
+    const result = fn(arg);
+    cached.set(key, result);
+
+    return `${result} (computed)`;
+  };
 }
 
 // Test:
-// let callCount = 0;
-// const expensiveFn = memoize((n) => {
-//   callCount++;
-//   return n * n;
-// });
-// console.log(expensiveFn(5));  // 25 (computed)
-// console.log(expensiveFn(5));  // 25 (cached)
-// console.log(expensiveFn(10)); // 100 (computed)
-// console.log('Total calls:', callCount); // 2 (not 3!)
-
+let callCount = 0;
+const expensiveFn = memoize((n) => {
+  callCount++;
+  return n * n;
+});
+console.log(expensiveFn(5)); // 25 (computed)
+console.log(expensiveFn(5)); // 25 (cached)
+console.log(expensiveFn(10)); // 100 (computed)
+console.log('Total calls:', callCount); // 2 (not 3!)
 
 console.log('\n=== Exercise 6: Partial application ===');
 // TODO: Implement partial(fn, ...args) that pre-fills some arguments
 function partial(fn, ...presetArgs) {
   // Your code here
+  return function (...nextArgs) {
+    return fn(...presetArgs, ...nextArgs);
+  };
 }
 
-// function multiply(a, b, c) {
-//   return a * b * c;
-// }
-// const double = partial(multiply, 2, 1);
-// const triple = partial(multiply, 3, 1);
-// console.log(double(5));  // 10
-// console.log(triple(5));  // 15
-
+function multiply(a, b, c) {
+  return a * b * c;
+}
+const double = partial(multiply, 2, 1);
+const triple = partial(multiply, 3, 1);
+console.log(double(5)); // 10
+console.log(triple(5)); // 15
 
 console.log('\n=== Exercise 7: Once function ===');
 // TODO: Create a once(fn) function that ensures fn is only called once
 // Subsequent calls should return the result of the first call
 function once(fn) {
   // Your code here
+  let wasCalled = false;
+  let result;
+
+  return function (...args) {
+    if (!wasCalled) {
+      wasCalled = true;
+      result = fn(...args);
+    }
+
+    return result;
+  };
 }
 
-// const initialize = once(() => {
-//   console.log('Initializing...');
-//   return { ready: true };
-// });
-// const r1 = initialize(); // logs "Initializing..."
-// const r2 = initialize(); // no log
-// const r3 = initialize(); // no log
-// console.log(r1 === r2); // true (same object)
-
+const initialize = once(() => {
+  console.log('Initializing...');
+  return { ready: true };
+});
+const r1 = initialize(); // logs "Initializing..."
+const r2 = initialize(); // no log
+const r3 = initialize(); // no log
+console.log(r1 === r2); // true (same object)
 
 console.log('\n=== Exercise 8: Private state module ===');
 // TODO: Create a bankAccount module using closure
@@ -115,14 +176,31 @@ console.log('\n=== Exercise 8: Private state module ===');
 // Balance should not be directly accessible
 function createBankAccount(initialBalance = 0) {
   // Your code here
-}
-// const account = createBankAccount(100);
-// account.deposit(50);
-// account.withdraw(30);
-// console.log(account.getBalance()); // 120
-// console.log(account.balance);      // undefined (private)
-// account.withdraw(200);             // Should log: "Insufficient funds"
+  let balance = initialBalance;
 
+  return {
+    deposit(amount) {
+      balance += amount;
+    },
+    withdraw(amount) {
+      if (balance < amount) {
+        console.log('Insufficient funds');
+      } else {
+        balance -= amount;
+      }
+    },
+    getBalance() {
+      return balance;
+    },
+  };
+}
+
+const account = createBankAccount(100);
+account.deposit(50);
+account.withdraw(30);
+console.log(account.getBalance()); // 120
+console.log(account.balance); // undefined (private)
+account.withdraw(200); // Should log: "Insufficient funds"
 
 console.log('\n=== 🎯 Challenge: Debounce ===');
 // TODO: Implement debounce(fn, delay)
@@ -131,17 +209,26 @@ console.log('\n=== 🎯 Challenge: Debounce ===');
 // Useful for search inputs, window resize, etc.
 function debounce(fn, delay) {
   // Your code here
+  let timeoutId;
+
+  return function (...args) {
+    clearTimeout(timeoutId);
+
+    timeoutId = setTimeout(() => {
+      fn(...args);
+    }, delay);
+  };
 }
 
-// const search = debounce((query) => {
-//   console.log('Searching for:', query);
-// }, 300);
-// search('j');        // cancelled
-// search('ja');       // cancelled
-// search('jav');      // cancelled
-// search('java');     // cancelled
-// setTimeout(() => search('javascript'), 400); // Logged after 700ms total
-
+const search = debounce((query) => {
+  console.log('Searching for:', query);
+}, 300);
+search('j'); // cancelled
+search('ja'); // cancelled
+search('jav'); // cancelled
+search('java'); // cancelled. Actually it will be shown - bug.
+// The bottom line has its own timeout and it's enough time to show 'java'.
+setTimeout(() => search('javascript'), 400); // Logged after 700ms total
 
 console.log('\n=== 🎯 Challenge: Compose functions ===');
 // TODO: Implement compose(...fns) that creates a pipeline
@@ -149,21 +236,26 @@ console.log('\n=== 🎯 Challenge: Compose functions ===');
 // Functions are applied right to left
 function compose(...fns) {
   // Your code here
+  return function (x) {
+    return fns.reduceRight((acc, fn) => fn(acc), x);
+  };
 }
 
-// const add1 = x => x + 1;
-// const double = x => x * 2;
-// const square = x => x * x;
+const addFn = (x) => x + 1;
+const doubleFn = (x) => x * 2;
+const squareFn = (x) => x * x;
 
-// const transform = compose(add1, double, square);
-// console.log(transform(3)); // add1(double(square(3))) = add1(double(9)) = add1(18) = 19
+const transform = compose(addFn, doubleFn, squareFn);
+console.log(transform(3)); // addFn(doubleFn(squareFn(3))) = addFn(doubleFn(9)) = addFn(18) = 19
 
 // Also implement pipe (left to right):
 function pipe(...fns) {
   // Your code here
+  return function (x) {
+    return fns.reduce((acc, fn) => fn(acc), x);
+  };
 }
-// const transform2 = pipe(square, double, add1);
-// console.log(transform2(3)); // same result: 19
-
+const transform2 = pipe(squareFn, doubleFn, addFn);
+console.log(transform2(3)); // same result: 19
 
 console.log('\n✅ Exercises completed! Check your answers with a mentor.');

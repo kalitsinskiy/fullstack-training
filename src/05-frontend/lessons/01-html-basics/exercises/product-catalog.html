@@ -1,13 +1,13 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Secret Santa — Gift Catalog</title>
-</head>
-<body>
-
-  <!--
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Secret Santa — Gift Catalog</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <!--
     TODO: Build a product catalog page for gift ideas.
 
     Requirements:
@@ -20,15 +20,28 @@
             - "Catalog" (href="#")
             - "My Wishlist" (href="#")
             - "My Room" (href="#")
+    -->
 
-    2. MAIN CONTENT
+    <header class="header">
+      <h1>Secret Santa</h1>
+      <nav class="main-nav">
+        <ul>
+          <li><a href="">Home</a></li>
+          <li><a href="">Catalog</a></li>
+          <li><a href="">My Wishlist</a></li>
+          <li><a href="">My Room</a></li>
+        </ul>
+      </nav>
+    </header>
+
+    <!-- 2. MAIN CONTENT
        - Add a <main> element
        - Inside it, add an <h2> with text "Gift Ideas"
        - Add a <section> that will contain product cards
        - Create at least 4 product cards, each as an <article> element
        - Each <article> must contain:
          a) An <img> with:
-            - src="https://via.placeholder.com/300x200" (or any placeholder)
+            - src="https://www.holoweb.net/liam/pictures/2007-06-29-san-vivaldo/pages/img_4927/img_4927-300x200.jpg" (or any placeholder)
             - Descriptive alt text (e.g., "Wireless headphones")
             - width="300" and height="200"
          b) An <h3> with the product name
@@ -36,12 +49,97 @@
          d) A <p> with the price (e.g., "$24.99") — use <strong> for the price
          e) A <button> with text "Add to Wishlist"
          f) A data-product-id attribute on the <article> (e.g., data-product-id="1")
+    -->
+    <main>
+      <h2 class="page-title">Gift Ideas</h2>
+      <section class="product-cards">
+        <article class="product-cards__item card-item" data-product-id="1">
+          <img
+            src="https://www.holoweb.net/liam/pictures/2007-06-29-san-vivaldo/pages/img_4927/img_4927-300x200.jpg"
+            alt="Wireless headphones"
+            width="300"
+            height="200"
+          />
+          <h3 class="card-item__title">Wireless headphones</h3>
+          <p class="card-item__descr">Short description about item id1</p>
+          <p class="card-item__price"><strong>$24.99</strong></p>
+          <button class="btn">Add to Wishlist</button>
+        </article>
+        <article class="product-cards__item card-item" data-product-id="2">
+          <img
+            src="https://www.holoweb.net/liam/pictures/2007-06-29-san-vivaldo/pages/img_4927/img_4927-300x200.jpg"
+            alt="Cozy blanket"
+            width="300"
+            height="200"
+          />
+          <h3 class="card-item__title">Cozy blanket</h3>
+          <p class="card-item__descr">Short description about item id2</p>
+          <p class="card-item__price"><strong>$24.99</strong></p>
+          <button class="btn">Add to Wishlist</button>
+        </article>
+        <article class="product-cards__item card-item" data-product-id="3">
+          <img
+            src="https://www.holoweb.net/liam/pictures/2007-06-29-san-vivaldo/pages/img_4927/img_4927-300x200.jpg"
+            alt="Coffe mug set"
+            width="300"
+            height="200"
+          />
+          <h3 class="card-item__title">Coffe mug set</h3>
+          <p class="card-item__descr">Short description about item id3</p>
+          <p class="card-item__price"><strong>$19.99</strong></p>
+          <button class="btn">Add to Wishlist</button>
+        </article>
+        <article class="product-cards__item card-item" data-product-id="4">
+          <img
+            src="https://www.holoweb.net/liam/pictures/2007-06-29-san-vivaldo/pages/img_4927/img_4927-300x200.jpg"
+            alt="Board game"
+            width="300"
+            height="200"
+          />
+          <h3 class="card-item__title">Board game</h3>
+          <p class="card-item__descr">Short description about item id4</p>
+          <p class="card-item__price"><strong>$34.99</strong></p>
+          <button class="btn">Add to Wishlist</button>
+        </article>
+        <article class="product-cards__item card-item" data-product-id="5">
+          <img
+            src="https://www.holoweb.net/liam/pictures/2007-06-29-san-vivaldo/pages/img_4927/img_4927-300x200.jpg"
+            alt="Scented Candle Pack"
+            width="300"
+            height="200"
+          />
+          <h3 class="card-item__title">Scented Candle Pack</h3>
+          <p class="card-item__descr">Short description about item id5</p>
+          <p class="card-item__price"><strong>$14.99</strong></p>
+          <button class="btn">Add to Wishlist</button>
+        </article>
+        <article class="product-cards__item card-item" data-product-id="6">
+          <img
+            src="https://www.holoweb.net/liam/pictures/2007-06-29-san-vivaldo/pages/img_4927/img_4927-300x200.jpg"
+            alt="Gourmet Chocolate Box"
+            width="300"
+            height="200"
+          />
+          <h3 class="card-item__title">Gourmet Chocolate Box</h3>
+          <p class="card-item__descr">Short description about item id6</p>
+          <p class="card-item__price"><strong>$22.99</strong></p>
+          <button class="btn">Add to Wishlist</button>
+        </article>
+      </section>
+    </main>
 
-    3. FOOTER
+    <!-- 3. FOOTER
        - Add a <footer> element
        - Include a <p> with copyright text
+    -->
+    <footer class="footer">
+      <p class="copyright">
+        &copy; 2025 Secret Santa App &middot; <a href="#privacy">Privacy</a> &middot;
+        <a href="#terms">Terms</a>
+      </p>
+    </footer>
 
-    4. PRODUCT IDEAS (use these or come up with your own):
+    <!-- 4. PRODUCT IDEAS (use these or come up with your own):
        - Wireless Headphones — $29.99
        - Cozy Blanket — $24.99
        - Coffee Mug Set — $19.99
@@ -57,18 +155,16 @@
     - Look at examples/semantic-page.html for header/nav/main/footer structure
 
     Verify (when you finish, check each item):
-    [ ] Page has exactly ONE <h1> ("Secret Santa")
-    [ ] <nav> contains a <ul> with 4 <li><a> entries
-    [ ] <main> wraps the catalog content
-    [ ] At least 4 <article> elements, one per product
-    [ ] Each <article> has data-product-id="…" with a unique value
-    [ ] Every <img> has src, alt (descriptive), width, height
-    [ ] Each product has <h3> name, <p> description, <p> with <strong> for price
-    [ ] Each product has a <button> "Add to Wishlist"
-    [ ] <footer> has a <p> with copyright text
-    [ ] Open in a browser — page looks reasonable (no rendering errors)
-    [ ] Optional: paste source into https://validator.w3.org/ — should pass
-  -->
-
-</body>
+    [x] Page has exactly ONE <h1> ("Secret Santa")
+    [x] <nav> contains a <ul> with 4 <li><a> entries
+    [x] <main> wraps the catalog content
+    [x] At least 4 <article> elements, one per product
+    [x] Each <article> has data-product-id="…" with a unique value
+    [x] Every <img> has src, alt (descriptive), width, height
+    [x] Each product has <h3> name, <p> description, <p> with <strong> for price
+    [x] Each product has a <button> "Add to Wishlist"
+    [x] <footer> has a <p> with copyright text
+    [x] Open in a browser — page looks reasonable (no rendering errors)
+    [x] Optional: paste source into https://validator.w3.org/ — should pass
+  --></body>
 </html>

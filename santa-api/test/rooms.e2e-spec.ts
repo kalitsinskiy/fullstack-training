@@ -1,0 +1,969 @@
+import { getModelToken } from '@nestjs/mongoose';
+import { Model, Types } from 'mongoose';
+import request from 'supertest';
+import { NestFastifyApplication } from '@nestjs/platform-fastify';
+import { Room } from '../src/rooms/schemas/room.schema';
+import { RedisService } from '../src/redis/redis.service';
+import { Wishlist } from '../src/wishlist/schemas/wishlist.schema';
+import { roomFixture } from './factories';
+import { useTestApp } from './helpers/e2e-app';
+import { makeSeeders } from './helpers/seed';
+
+/**
+ * COMPONENT TEST (HTTP slice) for Rooms. Boots the real AppModule on in-memory
+ * Mongo via the shared `useTestApp()` harness; seeds via `makeSeeders`.
+ */
+describe('Rooms (HTTP)', () => {
+  const { getApp } = useTestApp();
+  let app: NestFastifyApplication;
+  beforeEach(() => {
+    app = getApp();
+  });
+  const { seedUser, seedDrawableRoom, seedOwnerAndMember } =
+    makeSeeders(getApp);
+
+  // ✅ WORKED EXAMPLE — green against the skeleton: the JWT guard rejects the
+  // request before RoomsService runs. Implement the service, then fill in below.
+  it('POST /api/rooms → 401 without a token', async () => {
+    await request(app.getHttpServer())
+      .post('/api/rooms')
+      .send({ name: 'Office Secret Santa' })
+      .expect(401);
+  });
+
+  // 👇 Implement RoomsService, then turn each of these into a real test.
+  it('POST /api/rooms → 201 returns a room for an authenticated user', async () => {
+    const { user, token } = await seedUser({ displayName: 'Alice' });
+
+    const res = await request(app.getHttpServer())
+      .post('/api/rooms')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Office Party' })
+      .expect(201);
+
+    expect(res.body).toMatchObject({
+      id: expect.any(String),
+      name: 'Office Party',
+      creatorId: user._id.toString(),
+      inviteCode: expect.any(String),
+      status: 'pending',
+      participantCount: 1,
+      participants: [
+        { id: user._id.toString(), displayName: 'Alice', role: 'owner' },
+      ],
+    });
+  });
+
+  it('POST /api/rooms → 409 when the SAME creator reuses a room name (stretch); a different user may reuse it', async () => {
+    const { token } = await seedUser();
+
+    await request(app.getHttpServer())
+      .post('/api/rooms')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Family Santa' })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post('/api/rooms')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Family Santa' })
+      .expect(409);
+
+    const other = await seedUser();
+    await request(app.getHttpServer())
+      .post('/api/rooms')
+      .set('Authorization', `Bearer ${other.token}`)
+      .send({ name: 'Family Santa' })
+      .expect(201);
+  });
+
+  it("GET /api/rooms?page=1&limit=2 → returns the caller's rooms, paginated", async () => {
+    const { token } = await seedUser();
+
+    for (const name of ['Room A', 'Room B', 'Room C']) {
+      await request(app.getHttpServer())
+        .post('/api/rooms')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ name })
+        .expect(201);
+    }
+
+    const other = await seedUser();
+    await request(app.getHttpServer())
+      .post('/api/rooms')
+      .set('Authorization', `Bearer ${other.token}`)
+      .send({ name: 'Not yours' })
+      .expect(201);
+
+    const res = await request(app.getHttpServer())
+      .get('/api/rooms?page=1&limit=2')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(res.body.data).toHaveLength(2);
+    expect(res.body.meta).toMatchObject({
+      total: 3,
+      page: 1,
+      limit: 2,
+      totalPages: 2,
+    });
+  });
+
+  it('GET /api/rooms/:id → 404 for a user who is not a member', async () => {
+    const owner = await seedUser();
+    const roomModel = app.get<Model<Room>>(getModelToken(Room.name));
+    const room = await roomModel.create(
+      roomFixture({
+        creatorId: owner.user._id,
+        participants: [{ userId: owner.user._id, role: 'owner' }],
+      }),
+    );
+    const roomId = room._id.toString();
+
+    await request(app.getHttpServer())
+      .get(`/api/rooms/${roomId}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .expect(200);
+
+    const stranger = await seedUser();
+    await request(app.getHttpServer())
+      .get(`/api/rooms/${roomId}`)
+      .set('Authorization', `Bearer ${stranger.token}`)
+      .expect(404);
+  });
+
+  it('POST /api/rooms/:id/join → adds the caller when the invite code matches', async () => {
+    const owner = await seedUser();
+    const roomModel = app.get<Model<Room>>(getModelToken(Room.name));
+    const room = await roomModel.create(
+      roomFixture({
+        creatorId: owner.user._id,
+        inviteCode: 'ABC123',
+        participants: [{ userId: owner.user._id, role: 'owner' }],
+      }),
+    );
+
+    const joiner = await seedUser({ displayName: 'Nick' });
+    const res = await request(app.getHttpServer())
+      .post(`/api/rooms/${room._id.toString()}/join`)
+      .set('Authorization', `Bearer ${joiner.token}`)
+      .send({ inviteCode: 'ABC123' })
+      .expect(201);
+
+    expect(res.body.participantCount).toBe(2);
+    expect(res.body.participants).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: joiner.user._id.toString(),
+          displayName: 'Nick',
+          role: 'member',
+        }),
+      ]),
+    );
+  });
+
+  it('POST /api/rooms/:id/join → 400 on a wrong invite code', async () => {
+    const owner = await seedUser();
+    const roomModel = app.get<Model<Room>>(getModelToken(Room.name));
+    const room = await roomModel.create(
+      roomFixture({
+        creatorId: owner.user._id,
+        inviteCode: 'ABC123',
+        participants: [{ userId: owner.user._id, role: 'owner' }],
+      }),
+    );
+    const roomId = room._id.toString();
+    const joiner = await seedUser();
+    const res = await request(app.getHttpServer())
+      .post(`/api/rooms/${roomId}/join`)
+      .set('Authorization', `Bearer ${joiner.token}`)
+      .send({ inviteCode: 'WRONG9' })
+      .expect(400);
+
+    expect(res.body).toMatchObject({ success: false, statusCode: 400 });
+
+    await request(app.getHttpServer())
+      .get(`/api/rooms/${roomId}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .expect(200)
+      .expect((res) => expect(res.body.participantCount).toBe(1));
+  });
+
+  it('POST /api/rooms/:id/join -> joining a room you are already in -> appropriate handling', async () => {
+    const { connect } = jest.requireMock('amqplib');
+    const channel = await (await connect.mock.results[0].value).createChannel();
+    const publish = channel.publish as jest.Mock;
+
+    const { member, room, roomModel } = await seedOwnerAndMember();
+
+    publish.mockClear();
+
+    const res = await request(app.getHttpServer())
+      .post(`/api/rooms/${room._id.toString()}/join`)
+      .set('Authorization', `Bearer ${member.token}`)
+      .send({ inviteCode: room.inviteCode })
+      .expect(201);
+
+    expect(res.body.participantCount).toBe(2);
+    expect(res.body.participants).toHaveLength(2);
+
+    const stored = await roomModel.findById(room._id).lean();
+    const ids = stored!.participants.map((p) => p.userId.toString());
+
+    expect(ids).toHaveLength(2);
+    expect(new Set(ids).size).toBe(ids.length);
+
+    expect(publish.mock.calls.map((c) => c[1])).not.toContain('user.joined');
+  });
+
+  it('POST /api/rooms/:id/draw → creator-only; assigns everyone a giftee (nobody themselves)', async () => {
+    const { owner, room, roomModel } = await seedDrawableRoom();
+
+    const res = await request(app.getHttpServer())
+      .post(`/api/rooms/${room._id.toString()}/draw`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ exchangeDate: '2026-12-24' })
+      .expect(200);
+
+    expect(res.body.status).toBe('drawn');
+    expect(res.body.exchangeDate).toBeDefined();
+
+    const stored = await roomModel.findById(room._id).lean();
+
+    expect(stored?.assignments).toHaveLength(3);
+
+    for (const a of stored!.assignments) {
+      expect(a.giverId.toString()).not.toBe(a.receiverId.toString());
+    }
+
+    const givers = new Set(
+      stored!.assignments.map((a) => a.giverId.toString()),
+    );
+    const receivers = new Set(
+      stored!.assignments.map((a) => a.receiverId.toString()),
+    );
+
+    expect(givers.size).toBe(3);
+    expect(receivers.size).toBe(3);
+  });
+
+  it('POST /api/rooms/:id/draw → 403 for a non-creator', async () => {
+    const { m1, room } = await seedDrawableRoom();
+
+    await request(app.getHttpServer())
+      .post(`/api/rooms/${room._id.toString()}/draw`)
+      .set('Authorization', `Bearer ${m1.token}`)
+      .send({ exchangeDate: '2026-12-24' })
+      .expect(403);
+  });
+
+  it('POST /api/rooms/:id/draw → 400 with fewer than 3 participants', async () => {
+    const owner = await seedUser();
+    const roomModel = app.get<Model<Room>>(getModelToken(Room.name));
+    const room = await roomModel.create(
+      roomFixture({
+        creatorId: owner.user._id,
+        participants: [{ userId: owner.user._id, role: 'owner' }],
+      }),
+    );
+
+    await request(app.getHttpServer())
+      .post(`/api/rooms/${room._id.toString()}/draw`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ exchangeDate: '2026-12-24' })
+      .expect(400);
+  });
+
+  it('POST /api/rooms/:id/draw → 400 when already drawn', async () => {
+    const { owner, room } = await seedDrawableRoom();
+    const url = `/api/rooms/${room._id.toString()}/draw`;
+    const auth = `Bearer ${owner.token}`;
+
+    await request(app.getHttpServer())
+      .post(url)
+      .set('Authorization', auth)
+      .send({ exchangeDate: '2026-12-24' })
+      .expect(200);
+    await request(app.getHttpServer())
+      .post(url)
+      .set('Authorization', auth)
+      .send({ exchangeDate: '2026-12-24' })
+      .expect(400);
+  });
+
+  it('POST /api/rooms/:id/draw -> two concurrent draws: exactly one wins, assignments stay coherent', async () => {
+    const { owner, room, roomModel } = await seedDrawableRoom();
+    const url = `/api/rooms/${room._id.toString()}/draw`;
+    const auth = `Bearer ${owner.token}`;
+
+    const fire = () =>
+      request(app.getHttpServer())
+        .post(url)
+        .set('Authorization', auth)
+        .send({ exchangeDate: '2026-12-24' });
+
+    const statuses = (await Promise.all([fire(), fire()])).map(
+      (res) => res.status,
+    );
+
+    expect(statuses.filter((s) => s === 200)).toHaveLength(1);
+    expect(statuses.filter((s) => s === 400 || s === 409)).toHaveLength(1);
+
+    // One draw's worth of assignments, not two interleaved.
+    const stored = await roomModel.findById(room._id).lean();
+
+    expect(stored?.status).toBe('drawn');
+    expect(stored?.assignments).toHaveLength(3);
+
+    const givers = stored!.assignments.map((a) => a.giverId.toString());
+
+    expect(new Set(givers).size).toBe(3);
+  });
+
+  it('POST /api/rooms/:id/draw -> 409 when a participant joins between the read and the write', async () => {
+    const { owner, room, roomModel } = await seedDrawableRoom();
+    const latecomer = await seedUser({ displayName: 'Zoe' });
+
+    const realFindById = roomModel.findById.bind(roomModel);
+    let reads = 0;
+    const spy = jest.spyOn(roomModel, 'findById').mockImplementation(((
+      ...args: Parameters<typeof realFindById>
+    ) => {
+      const query = realFindById(...args);
+      const realExec = query.exec.bind(query);
+
+      query.exec = async () => {
+        const doc = await realExec();
+
+        if (++reads < 2) return doc;
+
+        spy.mockRestore();
+
+        await roomModel.updateOne(
+          { _id: room._id },
+          {
+            $push: {
+              participants: { userId: latecomer.user._id, role: 'member' },
+            },
+          },
+        );
+
+        return doc;
+      };
+
+      return query;
+    }) as never);
+
+    await request(app.getHttpServer())
+      .post(`/api/rooms/${room._id.toString()}/draw`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ exchangeDate: '2026-12-24' })
+      .expect(409);
+
+    const stored = await roomModel.findById(room._id).lean();
+
+    expect(stored?.status).toBe('pending');
+    expect(stored?.assignments).toHaveLength(0);
+
+    jest.restoreAllMocks();
+  });
+
+  it('GET /api/rooms/:id/assignment → returns the giftee + wishlist after the draw', async () => {
+    const { owner, m1, m2, room } = await seedDrawableRoom();
+    const wishlistModel = app.get<Model<Wishlist>>(
+      getModelToken(Wishlist.name),
+    );
+
+    await wishlistModel.create({
+      roomId: room._id,
+      userId: m1.user._id,
+      items: ['Wool socks'],
+    });
+    await wishlistModel.create({
+      roomId: room._id,
+      userId: m2.user._id,
+      items: ['A book'],
+    });
+
+    await request(app.getHttpServer())
+      .post(`/api/rooms/${room._id.toString()}/draw`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ exchangeDate: '2026-12-24' })
+      .expect(200);
+
+    const res = await request(app.getHttpServer())
+      .get(`/api/rooms/${room._id.toString()}/assignment`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .expect(200);
+
+    const memberIds = [m1.user._id.toString(), m2.user._id.toString()];
+
+    expect(memberIds).toContain(res.body.receiver.id);
+    expect(res.body.receiver.id).not.toBe(owner.user._id.toString());
+    expect(Array.isArray(res.body.receiver.wishlist)).toBe(true);
+    expect(res.body.receiver.wishlist.length).toBe(1);
+  });
+
+  // 👇 Lesson 04 — Authorization: roles & permissions.
+  // Gate by PERMISSION, never by role. A missing permission → 403; a non-member → 404.
+  it('room response includes viewerPermissions for the caller', async () => {
+    const { owner, member, room } = await seedOwnerAndMember();
+    const id = room._id.toString();
+
+    const ownerRes = await request(app.getHttpServer())
+      .get(`/api/rooms/${id}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .expect(200);
+
+    expect(ownerRes.body.viewerPermissions).toEqual(
+      expect.arrayContaining([
+        'room:draw',
+        'room:edit',
+        'room:delete',
+        'room:kick',
+        'room:invite',
+      ]),
+    );
+
+    const memberRes = await request(app.getHttpServer())
+      .get(`/api/rooms/${id}`)
+      .set('Authorization', `Bearer ${member.token}`)
+      .expect(200);
+
+    expect([...memberRes.body.viewerPermissions].sort()).toEqual([
+      'room:view',
+      'wishlist:set',
+    ]);
+  });
+
+  it('owner can run the draw (POST /api/rooms/:id/draw → 200)', async () => {
+    const { owner, room } = await seedDrawableRoom();
+
+    await request(app.getHttpServer())
+      .post(`/api/rooms/${room._id.toString()}/draw`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ exchangeDate: '2026-12-24' })
+      .expect(200);
+  });
+
+  it('member running the draw is rejected (POST /api/rooms/:id/draw → 403)', async () => {
+    const { member, room } = await seedOwnerAndMember();
+
+    await request(app.getHttpServer())
+      .post(`/api/rooms/${room._id.toString()}/draw`)
+      .set('Authorization', `Bearer ${member.token}`)
+      .send({ exchangeDate: '2026-12-24' })
+      .expect(403);
+  });
+
+  it('owner can edit the room (PATCH /api/rooms/:id → 200)', async () => {
+    const { owner, room } = await seedOwnerAndMember();
+    const res = await request(app.getHttpServer())
+      .patch(`/api/rooms/${room._id.toString()}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ name: 'Renamed room' })
+      .expect(200);
+
+    expect(res.body.name).toBe('Renamed room');
+  });
+
+  it('member editing the room is rejected (PATCH /api/rooms/:id → 403)', async () => {
+    const { member, room } = await seedOwnerAndMember();
+
+    await request(app.getHttpServer())
+      .patch(`/api/rooms/${room._id.toString()}`)
+      .set('Authorization', `Bearer ${member.token}`)
+      .send({ name: 'Renamed room' })
+      .expect(403);
+  });
+
+  it('owner can delete the room (DELETE /api/rooms/:id → 204)', async () => {
+    const { owner, room } = await seedOwnerAndMember();
+    const id = room._id.toString();
+
+    await request(app.getHttpServer())
+      .delete(`/api/rooms/${id}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .expect(204);
+
+    await request(app.getHttpServer())
+      .get(`/api/rooms/${id}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .expect(404);
+  });
+
+  it('member deleting the room is rejected (DELETE /api/rooms/:id → 403)', async () => {
+    const { member, room } = await seedOwnerAndMember();
+
+    await request(app.getHttpServer())
+      .delete(`/api/rooms/${room._id.toString()}`)
+      .set('Authorization', `Bearer ${member.token}`)
+      .expect(403);
+  });
+
+  it('owner can kick a member (DELETE /api/rooms/:id/members/:userId → 204)', async () => {
+    const { owner, member, room, roomModel } = await seedOwnerAndMember();
+
+    await request(app.getHttpServer())
+      .delete(
+        `/api/rooms/${room._id.toString()}/members/${member.user._id.toString()}`,
+      )
+      .set('Authorization', `Bearer  ${owner.token}`)
+      .expect(204);
+
+    const stored = await roomModel.findById(room._id).lean();
+
+    expect(stored?.participants).toHaveLength(1);
+  });
+
+  it('member cannot kick anyone (DELETE /api/rooms/:id/members/:userId → 403)', async () => {
+    const { owner, member, room } = await seedOwnerAndMember();
+
+    await request(app.getHttpServer())
+      .delete(
+        `/api/rooms/${room._id.toString()}/members/${owner.user._id.toString()}`,
+      )
+      .set('Authorization', `Bearer ${member.token}`)
+      .expect(403);
+
+    await request(app.getHttpServer())
+      .delete(
+        `/api/rooms/${room._id.toString()}/members/${member.user._id.toString()}`,
+      )
+      .set('Authorization', `Bearer ${member.token}`)
+      .expect(403);
+  });
+
+  it('kicking a member after the draw is rejected (DELETE /api/rooms/:id/members/:userId -> 400)', async () => {
+    const { owner, m1, room, roomModel } = await seedDrawableRoom();
+
+    await request(app.getHttpServer())
+      .post(`/api/rooms/${room._id.toString()}/draw`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ exchangeDate: '2026-12-24' })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .delete(
+        `/api/rooms/${room._id.toString()}/members/${m1.user._id.toString()}`,
+      )
+      .set('Authorization', `Bearer ${owner.token}`)
+      .expect(400);
+
+    const stored = await roomModel.findById(room._id).lean();
+
+    expect(stored?.participants).toHaveLength(3);
+    expect(stored?.assignments).toHaveLength(3);
+
+    const memberIds = new Set(
+      stored!.participants.map((p) => p.userId.toString()),
+    );
+
+    for (const a of stored!.assignments) {
+      expect(memberIds.has(a.giverId.toString())).toBe(true);
+      expect(memberIds.has(a.receiverId.toString())).toBe(true);
+    }
+  });
+
+  it('kicking the owner is rejected (DELETE /api/rooms/:id/members/:ownerId → 400)', async () => {
+    const { owner, room } = await seedOwnerAndMember();
+
+    await request(app.getHttpServer())
+      .delete(
+        `/api/rooms/${room._id.toString()}/members/${owner.user._id.toString()}`,
+      )
+      .set('Authorization', `Bearer ${owner.token}`)
+      .expect(400);
+  });
+
+  it('owner can regenerate the invite code (POST /api/rooms/:id/invite-code/regenerate → 200)', async () => {
+    const { owner, room } = await seedOwnerAndMember();
+    const before = room.inviteCode;
+    const res = await request(app.getHttpServer())
+      .post(`/api/rooms/${room._id.toString()}/invite-code/regenerate`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .expect(200);
+
+    expect(res.body.inviteCode).not.toBe(before);
+    expect(res.body.inviteCode).toMatch(/^[A-Z0-9]{6}$/);
+  });
+
+  it('member cannot regenerate the invite code (→ 403)', async () => {
+    const { member, room } = await seedOwnerAndMember();
+
+    await request(app.getHttpServer())
+      .post(`/api/rooms/${room._id.toString()}/invite-code/regenerate`)
+      .set('Authorization', `Bearer ${member.token}`)
+      .expect(403);
+  });
+
+  it('a non-member gets 404 on any guarded room route', async () => {
+    const { room } = await seedOwnerAndMember();
+    const stranger = await seedUser();
+
+    await request(app.getHttpServer())
+      .get(`/api/rooms/${room._id.toString()}`)
+      .set('Authorization', `Bearer ${stranger.token}`)
+      .expect(404);
+  });
+
+  it('a member can still GET /api/rooms/:id and PUT the wishlist', async () => {
+    const { member, room } = await seedOwnerAndMember();
+    const id = room._id.toString();
+
+    await request(app.getHttpServer())
+      .get(`/api/rooms/${id}`)
+      .set('Authorization', `Bearer ${member.token}`)
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .put(`/api/rooms/${id}/wishlist`)
+      .set('Authorization', `Bearer ${member.token}`)
+      .send({ items: ['Wool socks'] })
+      .expect(200);
+  });
+
+  it('chahes a room read - a later GET is from Redis, not the DB', async () => {
+    const { owner, room, roomModel } = await seedOwnerAndMember();
+    const id = room._id.toString();
+
+    await request(app.getHttpServer())
+      .get(`/api/rooms/${id}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .expect(200);
+
+    await roomModel.updateOne(
+      { _id: room._id },
+      { name: 'Changed deirectly in DB' },
+    );
+
+    const secondRes = await request(app.getHttpServer())
+      .get(`/api/rooms/${id}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .expect(200);
+
+    expect(secondRes.body.name).toBe(room.name);
+  });
+
+  it('invalidates the cahce when the room is updated via API', async () => {
+    const { owner, room } = await seedOwnerAndMember();
+    const id = room._id.toString();
+
+    await request(app.getHttpServer())
+      .get(`/api/rooms/${id}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .patch(`/api/rooms/${id}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ name: 'Changed via API' })
+      .expect(200);
+
+    const secondRes = await request(app.getHttpServer())
+      .get(`/api/rooms/${id}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .expect(200);
+
+    expect(secondRes.body.name).toBe('Changed via API');
+  });
+
+  it('serves shared cahed data but adds viewerPermissions per caller', async () => {
+    const { owner, member, room } = await seedOwnerAndMember();
+    const id = room._id.toString();
+
+    const ownerRes = await request(app.getHttpServer())
+      .get(`/api/rooms/${id}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .expect(200);
+
+    const memberRes = await request(app.getHttpServer())
+      .get(`/api/rooms/${id}`)
+      .set('Authorization', `Bearer ${member.token}`)
+      .expect(200);
+
+    expect(ownerRes.body.viewerPermissions).toContain('room:delete');
+    expect([...memberRes.body.viewerPermissions].sort()).toEqual([
+      'room:view',
+      'wishlist:set',
+    ]);
+  });
+
+  it('POST /api/rooms/join -> 201 joins using only the invite code (resolved via Redis)', async () => {
+    const owner = await seedUser();
+    const other = await seedUser({ displayName: 'John Doe' });
+
+    const created = await request(app.getHttpServer())
+      .post('/api/rooms')
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ name: 'Redis test room' })
+      .expect(201);
+
+    const code = created.body.inviteCode;
+
+    const res = await request(app.getHttpServer())
+      .post('/api/rooms/join')
+      .set('Authorization', `Bearer ${other.token}`)
+      .send({ inviteCode: code })
+      .expect(201);
+
+    expect(res.body.id).toBe(created.body.id);
+    expect(
+      res.body.participants.some(
+        (p: { id: string }) => p.id === other.user._id.toString(),
+      ),
+    ).toBe(true);
+  });
+
+  it('POST /api/rooms/join -> 201 falls back to Mongo when the cached code is gone (TTL expiry / Redis restart)', async () => {
+    const owner = await seedUser();
+    const other = await seedUser({ displayName: 'John Doe' });
+
+    const created = await request(app.getHttpServer())
+      .post('/api/rooms')
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ name: 'Expired cache room' })
+      .expect(201);
+
+    const code = created.body.inviteCode as string;
+
+    await app.get(RedisService).del(`invite:${code}`);
+
+    const res = await request(app.getHttpServer())
+      .post('/api/rooms/join')
+      .set('Authorization', `Bearer ${other.token}`)
+      .send({ inviteCode: code })
+      .expect(201);
+
+    expect(res.body.id).toBe(created.body.id);
+  });
+
+  it('GET /api/rooms/:id -> 200 when Redis is unreachable (cache degrades, no 500)', async () => {
+    const { owner, room } = await seedOwnerAndMember();
+    const redis = app.get(RedisService);
+    const down = new Error('Connection is closed.');
+
+    jest.spyOn(redis, 'get').mockRejectedValue(down);
+    jest.spyOn(redis, 'set').mockRejectedValue(down);
+
+    const res = await request(app.getHttpServer())
+      .get(`/api/rooms/${room._id.toString()}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .expect(200);
+
+    expect(res.body.id).toBe(room._id.toString());
+    expect(res.body.participants).toHaveLength(2);
+
+    jest.restoreAllMocks();
+  });
+
+  it('mutations still succeed when cache invalidation fails', async () => {
+    const { owner, room } = await seedOwnerAndMember();
+    const redis = app.get(RedisService);
+
+    jest
+      .spyOn(redis, 'del')
+      .mockRejectedValue(new Error('Connection is closed.'));
+
+    await request(app.getHttpServer())
+      .patch(`/api/rooms/${room._id.toString()}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ name: 'Renamed while Redis is down' })
+      .expect(200);
+
+    jest.restoreAllMocks();
+  });
+
+  it('POST /api/rooms/join -> 201 falls back to Mongo when Redis is unreachable', async () => {
+    const owner = await seedUser();
+    const other = await seedUser({ displayName: 'John Doe' });
+
+    const created = await request(app.getHttpServer())
+      .post('/api/rooms')
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ name: 'Dead Redis room' })
+      .expect(201);
+
+    const redis = app.get(RedisService);
+    jest
+      .spyOn(redis, 'get')
+      .mockRejectedValue(new Error('Connection is closed.'));
+
+    const res = await request(app.getHttpServer())
+      .post('/api/rooms/join')
+      .set('Authorization', `Bearer ${other.token}`)
+      .send({ inviteCode: created.body.inviteCode })
+      .expect(201);
+
+    expect(res.body.id).toBe(created.body.id);
+
+    jest.restoreAllMocks();
+  });
+
+  it('POST /api/room/join -> 400 for an unknown or expired code', async () => {
+    const { token } = await seedUser();
+
+    await request(app.getHttpServer())
+      .post('/api/rooms/join')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ inviteCode: 'ZZZZZZ' })
+      .expect(400);
+  });
+
+  it('regeneratino the code invalidates the old one for joining', async () => {
+    const owner = await seedUser();
+    const other = await seedUser();
+    const created = await request(app.getHttpServer())
+      .post('/api/rooms')
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ name: 'Test Regen Invite Code' })
+      .expect(201);
+
+    const oldCode = created.body.inviteCode;
+    const roomId = created.body.id;
+
+    const regen = await request(app.getHttpServer())
+      .post(`/api/rooms/${roomId}/invite-code/regenerate`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .expect(200);
+
+    const newCode = regen.body.inviteCode;
+    expect(newCode).not.toBe(oldCode);
+
+    await request(app.getHttpServer())
+      .post('/api/rooms/join')
+      .set('Authorization', `Bearer ${other.token}`)
+      .send({ inviteCode: oldCode })
+      .expect(400);
+
+    await request(app.getHttpServer())
+      .post('/api/rooms/join')
+      .set('Authorization', `Bearer ${other.token}`)
+      .send({ inviteCode: newCode })
+      .expect(201);
+  });
+
+  it('publishes room.created after a room is created', async () => {
+    const { connect } = jest.requireMock('amqplib');
+    const channel = await (await connect.mock.results[0].value).createChannel();
+    const amqpPublish = channel.publish as jest.Mock;
+
+    amqpPublish.mockClear();
+
+    const { token } = await seedUser();
+
+    await request(app.getHttpServer())
+      .post('/api/rooms')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Evented Room' })
+      .expect(201);
+
+    expect(amqpPublish.mock.calls.map((c) => c[1])).toContain('room.created');
+  });
+
+  it('publishes draw.completed when the draw runs', async () => {
+    const { connect } = jest.requireMock('amqplib');
+    const channel = await (await connect.mock.results[0].value).createChannel();
+    const amqpPublish = channel.publish as jest.Mock;
+
+    amqpPublish.mockClear();
+
+    const { owner, room } = await seedDrawableRoom();
+
+    await request(app.getHttpServer())
+      .post(`/api/rooms/${room._id.toString()}/draw`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ exchangeDate: '2026-12-24' })
+      .expect(200);
+
+    expect(amqpPublish.mock.calls.map((c) => c[1])).toContain('draw.completed');
+  });
+
+  it('returns participants populated with displayName', async () => {
+    const { owner, room } = await seedDrawableRoom();
+
+    const res = await request(app.getHttpServer())
+      .post(`/api/rooms/${room.id}/draw`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ exchangeDate: '2026-12-24' })
+      .expect(200);
+
+    expect(res.body.participants).toHaveLength(3);
+
+    for (const p of res.body.participants) {
+      expect(p).toEqual({
+        id: expect.any(String),
+        displayName: expect.any(String),
+        role: expect.stringMatching(/^(owner|member)$/),
+      });
+    }
+  });
+
+  it('PATCH /api/rooms/:id publishes room.date_changed when exchangeDate changes', async () => {
+    const { connect } = jest.requireMock('amqplib');
+    const channel = await (await connect.mock.results[0].value).createChannel();
+    const publish = channel.publish as jest.Mock;
+    const { owner, room } = await seedOwnerAndMember();
+
+    publish.mockClear();
+    await request(app.getHttpServer())
+      .patch(`/api/rooms/${room._id.toString()}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ exchangeDate: '2026-12-26' })
+      .expect(200);
+
+    expect(publish.mock.calls.map((c) => c[1])).toContain('room.date_changed');
+
+    publish.mockClear();
+    await request(app.getHttpServer())
+      .patch(`/api/rooms/${room._id.toString()}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ name: 'Renamed' })
+      .expect(200);
+    expect(publish.mock.calls.map((c) => c[1])).not.toContain(
+      'room.date_changed',
+    );
+  });
+
+  describe('malformed id handling', () => {
+    const bad = 'not-an-object-id';
+
+    it.each([
+      ['GET', (id: string) => `/api/rooms/${id}`],
+      ['GET', (id: string) => `/api/rooms/${id}/assignment`],
+      ['PATCH', (id: string) => `/api/rooms/${id}`],
+      ['DELETE', (id: string) => `/api/rooms/${id}`],
+      ['POST', (id: string) => `/api/rooms/${id}/draw`],
+      ['POST', (id: string) => `/api/rooms/${id}/join`],
+      ['POST', (id: string) => `/api/rooms/${id}/invite-code/regenerate`],
+    ])('%s %s returns 400, not 404 or 500', async (method, path) => {
+      const { owner } = await seedOwnerAndMember();
+
+      const res = await request(app.getHttpServer())
+        [method.toLowerCase() as 'get'](path(bad))
+        .set('Authorization', `Bearer ${owner.token}`)
+        .send({});
+
+      expect(res.status).toBe(400);
+    });
+
+    it('DELETE /api/rooms/:id/members/:userId rejects a malformed member id', async () => {
+      const { owner, room } = await seedOwnerAndMember();
+
+      await request(app.getHttpServer())
+        .delete(`/api/rooms/${room._id.toString()}/members/${bad}`)
+        .set('Authorization', `Bearer ${owner.token}`)
+        .expect(400);
+    });
+
+    it('still returns 404 for a well-formed but unknown room id', async () => {
+      const { owner } = await seedOwnerAndMember();
+      const unknown = new Types.ObjectId().toString();
+
+      await request(app.getHttpServer())
+        .get(`/api/rooms/${unknown}`)
+        .set('Authorization', `Bearer ${owner.token}`)
+        .expect(404);
+    });
+  });
+});

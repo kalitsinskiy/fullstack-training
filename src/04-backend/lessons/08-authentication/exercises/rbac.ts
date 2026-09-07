@@ -43,9 +43,17 @@ const regularUser: User = { id: '3', email: 'user@example.com', role: 'user' };
 // - If req.user is undefined/null, return { status: 401, body: { error: 'Authentication required' } }
 // - Otherwise, call next() and return its result
 
-function requireAuth(_req: Request, _next: NextFunction): Response {
-  // TODO: Rename parameters (remove _ prefix) and implement this middleware
-  throw new Error('Not implemented');
+function requireAuth(req: Request, next: NextFunction): Response {
+  if (!req.user) {
+    return {
+      status: 401,
+      body: {
+        error: 'Authentication required',
+      },
+    };
+  }
+
+  return next();
 }
 
 // ============================================
@@ -58,9 +66,28 @@ function requireAuth(_req: Request, _next: NextFunction): Response {
 //   - If yes, call next() and return its result
 //   - If no, return { status: 403, body: { error: 'Forbidden: insufficient permissions' } }
 
-function requireRoles(..._allowedRoles: string[]): Middleware {
-  // TODO: Rename _allowedRoles back to allowedRoles and implement this factory function
-  throw new Error('Not implemented');
+function requireRoles(...allowedRoles: string[]): Middleware {
+  return (req, next) => {
+    if (!req.user) {
+      return {
+        status: 401,
+        body: {
+          error: 'Authentication required',
+        },
+      };
+    }
+
+    if (!allowedRoles.includes(req.user.role)) {
+      return {
+        status: 403,
+        body: {
+          error: 'Forbidden: insufficient permissions',
+        },
+      };
+    }
+
+    return next();
+  };
 }
 
 // ============================================
@@ -81,14 +108,52 @@ function requireRoles(..._allowedRoles: string[]): Middleware {
 type Permission = string;
 
 const rolePermissions: Record<string, Permission[]> = {
-  // TODO: Define permissions for each role
+  admin: [
+    'rooms:create',
+    'rooms:read',
+    'rooms:update',
+    'rooms:delete',
+    'users:read',
+    'users:manage',
+    'wishlists:read',
+    'wishlists:write',
+  ],
+  editor: [
+    'rooms:create',
+    'rooms:read',
+    'rooms:update',
+    'users:read',
+    'wishlists:read',
+    'wishlists:write',
+  ],
+  user: ['rooms:read', 'users:read', 'wishlists:read', 'wishlists:write'],
 };
-// Used in TODO implementations below
-void rolePermissions;
 
-function requirePermissions(..._permissions: Permission[]): Middleware {
-  // TODO: Rename _permissions back to permissions and implement this factory function
-  throw new Error('Not implemented');
+function requirePermissions(...permissions: Permission[]): Middleware {
+  return (req, next) => {
+    if (!req.user) {
+      return {
+        status: 401,
+        body: {
+          error: 'Authentication required',
+        },
+      };
+    }
+
+    const userPermissions = rolePermissions[req.user.role] ?? [];
+    const hasAll = permissions.every((p) => userPermissions.includes(p));
+
+    if (!hasAll) {
+      return {
+        status: 403,
+        body: {
+          error: 'Forbidden: insufficient permissions',
+        },
+      };
+    }
+
+    return next();
+  };
 }
 
 // ============================================
@@ -101,9 +166,34 @@ function requirePermissions(..._permissions: Permission[]): Middleware {
 // - Allows access if user.id === ownerId (the user owns the resource)
 // - Returns 403 otherwise
 
-function isOwnerOrAdmin(_getOwnerId: (req: Request) => string): Middleware {
-  // TODO: Rename _getOwnerId back to getOwnerId and implement this factory function
-  throw new Error('Not implemented');
+function isOwnerOrAdmin(getOwnerId: (req: Request) => string): Middleware {
+  return (req, next) => {
+    if (!req.user) {
+      return {
+        status: 401,
+        body: {
+          error: 'Authentication required',
+        },
+      };
+    }
+
+    if (req.user.role === 'admin') {
+      return next();
+    }
+
+    const ownerId = getOwnerId(req);
+
+    if (req.user.id === ownerId) {
+      return next();
+    }
+
+    return {
+      status: 403,
+      body: {
+        error: 'Forbidden: insufficient permissions',
+      },
+    };
+  };
 }
 
 // --- Test helpers ---
@@ -124,7 +214,9 @@ function check(label: string, expectedStatus: number, fn: () => Response): void 
   try {
     const result = fn();
     const ok = result?.status === expectedStatus;
-    console.log(`${label}: ${ok ? 'PASS' : `FAIL (got ${result?.status}, expected ${expectedStatus})`}`);
+    console.log(
+      `${label}: ${ok ? 'PASS' : `FAIL (got ${result?.status}, expected ${expectedStatus})`}`
+    );
   } catch (err: any) {
     if (err?.message === 'Not implemented') {
       console.log(`${label}: TODO (not implemented yet)`);
@@ -151,8 +243,12 @@ function main(): void {
   check('User access admin route', 403, () => adminOnly(simulateRequest(regularUser, '/admin')));
 
   const editorOrAdmin = (req: Request) => requireRoles('admin', 'editor')(req, handler);
-  check('Editor access editor route', 200, () => editorOrAdmin(simulateRequest(editorUser, '/edit')));
-  check('User access editor route', 403, () => editorOrAdmin(simulateRequest(regularUser, '/edit')));
+  check('Editor access editor route', 200, () =>
+    editorOrAdmin(simulateRequest(editorUser, '/edit'))
+  );
+  check('User access editor route', 403, () =>
+    editorOrAdmin(simulateRequest(regularUser, '/edit'))
+  );
 
   // Test requirePermissions
   console.log('\n--- requirePermissions ---');
@@ -160,8 +256,11 @@ function main(): void {
   check('Admin delete room', 200, () => canDeleteRooms(simulateRequest(adminUser, '/rooms/1')));
   check('Editor delete room', 403, () => canDeleteRooms(simulateRequest(editorUser, '/rooms/1')));
 
-  const canReadAndWrite = (req: Request) => requirePermissions('wishlists:read', 'wishlists:write')(req, handler);
-  check('User read+write wishlists', 200, () => canReadAndWrite(simulateRequest(regularUser, '/wishlists')));
+  const canReadAndWrite = (req: Request) =>
+    requirePermissions('wishlists:read', 'wishlists:write')(req, handler);
+  check('User read+write wishlists', 200, () =>
+    canReadAndWrite(simulateRequest(regularUser, '/wishlists'))
+  );
 
   const canManageUsers = (req: Request) => requirePermissions('users:manage')(req, handler);
   check('Editor manage users', 403, () => canManageUsers(simulateRequest(editorUser, '/users')));
@@ -170,9 +269,13 @@ function main(): void {
   console.log('\n--- isOwnerOrAdmin ---');
   // Simulate: resource at /users/:id where the resource belongs to user '3'
   const ownerCheck = (req: Request) => isOwnerOrAdmin(() => '3')(req, handler);
-  check('Owner access own resource', 200, () => ownerCheck(simulateRequest(regularUser, '/users/3')));
+  check('Owner access own resource', 200, () =>
+    ownerCheck(simulateRequest(regularUser, '/users/3'))
+  );
   check('Admin access any resource', 200, () => ownerCheck(simulateRequest(adminUser, '/users/3')));
-  check('Other user access resource', 403, () => ownerCheck(simulateRequest(editorUser, '/users/3')));
+  check('Other user access resource', 403, () =>
+    ownerCheck(simulateRequest(editorUser, '/users/3'))
+  );
 
   console.log('\nDone.');
 }

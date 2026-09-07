@@ -22,8 +22,7 @@ interface Note {
   createdAt: string;
 }
 
-const notes: Note[] = []; // eslint-disable-line @typescript-eslint/no-unused-vars
-let nextId = 1; // eslint-disable-line @typescript-eslint/no-unused-vars, prefer-const
+const notes: Note[] = [];
 
 // TODO: Implement a helper that reads the request body and parses it as JSON.
 //
@@ -38,6 +37,21 @@ let nextId = 1; // eslint-disable-line @typescript-eslint/no-unused-vars, prefer
 //     req.on('error', (err) => reject(err));
 //   });
 // }
+function parseBody(req: http.IncomingMessage): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    req.on('data', (chunk: Buffer) => chunks.push(chunk));
+    req.on('end', () => {
+      try {
+        const completeData = Buffer.concat(chunks).toString();
+        resolve(completeData ? JSON.parse(completeData) : {});
+      } catch (err) {
+        reject(new Error('Invalid JSON format'));
+      }
+    });
+    req.on('error', reject);
+  });
+}
 
 // TODO: Implement a helper that parses a URL and extracts the pathname and query params.
 //
@@ -47,6 +61,17 @@ let nextId = 1; // eslint-disable-line @typescript-eslint/no-unused-vars, prefer
 //   parsed.searchParams.get('search')  → 'hello' (from '/notes?search=hello')
 //
 // function parseUrl(rawUrl: string): { pathname: string; searchParams: URLSearchParams } { ... }
+function parseUrl(rawUrl: string = '/') {
+  const parsed = new URL(rawUrl, 'http://localhost');
+  return {
+    pathname: parsed.pathname,
+    searchParams: parsed.searchParams,
+  };
+}
+
+function isNoteBody(obj: any): obj is { text: string } {
+  return typeof obj === 'object' && obj !== null && typeof obj.text === 'string';
+}
 
 // TODO: Create an HTTP server with http.createServer() that handles:
 //
@@ -91,3 +116,76 @@ let nextId = 1; // eslint-disable-line @typescript-eslint/no-unused-vars, prefer
 //   curl http://localhost:3000/notes
 
 // Your code here:
+const server = http.createServer(async (req: http.IncomingMessage, res: http.ServerResponse) => {
+  const { method, url: rawUrl } = req;
+  const { pathname, searchParams } = parseUrl(rawUrl);
+
+  res.setHeader('Content-Type', 'application/json');
+  console.log(`${method} ${rawUrl}`);
+
+  if (method === 'GET' && pathname === '/health') {
+    res.writeHead(200);
+    return res.end(JSON.stringify({ status: 'ok', timestamp: new Date().toISOString() }));
+  }
+
+  if (method === 'GET' && pathname === '/notes') {
+    const search = searchParams.get('search')?.toLowerCase();
+
+    const filteredNotes = search
+      ? notes.filter((n) => n.text.toLowerCase().includes(search))
+      : notes;
+
+    res.writeHead(200);
+    return res.end(JSON.stringify(filteredNotes));
+  }
+
+  // 3. POST /notes
+  if (method === 'POST' && pathname === '/notes') {
+    try {
+      const body = await parseBody(req);
+
+      if (!isNoteBody(body) || body.text.trim() === '') {
+        res.writeHead(400);
+        return res.end(JSON.stringify({ error: 'text is required and must be a string' }));
+      }
+
+      const newNote: Note = {
+        id: Date.now(),
+        text: body.text.trim(),
+        createdAt: new Date().toISOString(),
+      };
+
+      notes.push(newNote);
+      res.writeHead(201);
+      return res.end(JSON.stringify(newNote));
+    } catch (error) {
+      res.writeHead(400);
+      return res.end(JSON.stringify({ error: 'Invalid JSON' }));
+    }
+  }
+
+  // 4. DELETE /notes/:id
+  if (method === 'DELETE' && pathname.startsWith('/notes/')) {
+    const segments = pathname.split('/');
+    const id = Number(segments[2]);
+
+    const noteIndex = notes.findIndex((n) => n.id === id);
+
+    if (isNaN(id) || noteIndex === -1) {
+      res.writeHead(404);
+      return res.end(JSON.stringify({ error: 'Note not found' }));
+    }
+
+    notes.splice(noteIndex, 1);
+    res.writeHead(200);
+    return res.end(JSON.stringify({ deleted: true }));
+  }
+
+  // 5. Fallback
+  res.writeHead(404);
+  return res.end(JSON.stringify({ error: 'Not Found' }));
+});
+
+server.listen(PORT, () => {
+  console.log(`🚀 Server running at http://localhost:${PORT}`);
+});

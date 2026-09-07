@@ -10,9 +10,12 @@
 // Default: import Calculator from '...';
 
 // Your code here:
+import Calculator, { add, subtract } from './math.mjs';
 
 // TODO: Use import.meta.url to derive __filename and __dirname equivalents.
 // Hint: use fileURLToPath from 'node:url' and dirname from 'node:path'.
+import { fileURLToPath } from 'node:url';
+import { dirname } from 'node:path';
 
 // --- Tests (do not modify) ---
 import assert from 'node:assert';
@@ -32,6 +35,9 @@ try {
 }
 
 // Verify __filename and __dirname are defined
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 assert.ok(__filename.endsWith('app.mjs'), '__filename should end with app.mjs');
 assert.ok(__dirname.length > 0, '__dirname should be a non-empty string');
 

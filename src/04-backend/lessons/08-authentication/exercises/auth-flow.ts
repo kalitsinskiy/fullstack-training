@@ -24,18 +24,11 @@ interface User {
 }
 
 const users = new Map<string, User>();
-const nextId = 1;
+let nextId = 1;
 
 const JWT_SECRET = 'exercise-secret-key';
 const JWT_EXPIRES_IN = '1h';
 const SALT_ROUNDS = 10;
-
-// These variables are used in TODO implementations below
-void users;
-void nextId;
-void JWT_SECRET;
-void JWT_EXPIRES_IN;
-void SALT_ROUNDS;
 
 // ============================================
 // TODO 1: Implement the register function
@@ -61,9 +54,44 @@ interface AuthResult {
   accessToken: string;
 }
 
-async function register(_input: RegisterInput): Promise<AuthResult> {
-  // TODO: Rename _input back to input and implement this function
-  throw new Error('Not implemented');
+async function register(input: RegisterInput): Promise<AuthResult> {
+  const email = input.email.toLowerCase();
+
+  if (users.has(email)) {
+    throw new Error('Email already registered');
+  }
+
+  const passwordHash = await bcrypt.hash(input.password, SALT_ROUNDS);
+
+  const user: User = {
+    id: String(nextId++),
+    email,
+    passwordHash,
+    displayName: input.displayName,
+    role: 'user',
+  };
+
+  users.set(email, user);
+
+  const accessToken = jwt.sign(
+    {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+    },
+    JWT_SECRET,
+    { expiresIn: JWT_EXPIRES_IN }
+  );
+
+  return {
+    user: {
+      id: user.id,
+      email: user.email,
+      displayName: user.displayName,
+      role: user.role,
+    },
+    accessToken,
+  };
 }
 
 // ============================================
@@ -83,9 +111,39 @@ interface LoginInput {
   password: string;
 }
 
-async function login(_input: LoginInput): Promise<AuthResult> {
-  // TODO: Rename _input back to input and implement this function
-  throw new Error('Not implemented');
+async function login(input: LoginInput): Promise<AuthResult> {
+  const email = input.email.toLowerCase();
+  const user = users.get(email);
+
+  if (!user) {
+    throw new Error('Invalid credentials');
+  }
+
+  const passwordMatches = await bcrypt.compare(input.password, user.passwordHash);
+
+  if (!passwordMatches) {
+    throw new Error('Incalid credentials');
+  }
+
+  const accessToken = jwt.sign(
+    {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+    },
+    JWT_SECRET,
+    { expiresIn: JWT_EXPIRES_IN }
+  );
+
+  return {
+    user: {
+      id: user.id,
+      email: user.email,
+      displayName: user.displayName,
+      role: user.role,
+    },
+    accessToken,
+  };
 }
 
 // ============================================
@@ -103,9 +161,17 @@ interface TokenPayload {
   role: string;
 }
 
-function verifyToken(_token: string): TokenPayload {
-  // TODO: Rename _token back to token and implement this function
-  throw new Error('Not implemented');
+function verifyToken(token: string): TokenPayload {
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as jwt.JwtPayload;
+    return {
+      id: decoded.sub as string,
+      email: decoded.email as string,
+      role: decoded.role as string,
+    };
+  } catch {
+    throw new Error('Invalid or expired token');
+  }
 }
 
 // ============================================
@@ -120,12 +186,26 @@ function verifyToken(_token: string): TokenPayload {
 //   Throw appropriate errors if user not found or old password is wrong.
 
 async function changePassword(
-  _email: string,
-  _oldPassword: string,
-  _newPassword: string
+  email: string,
+  oldPassword: string,
+  newPassword: string
 ): Promise<boolean> {
-  // TODO: Rename parameters (remove _ prefix) and implement this function
-  throw new Error('Not implemented');
+  const normalizedEmail = email.toLocaleLowerCase();
+  const user = users.get(normalizedEmail);
+
+  if (!user) {
+    throw new Error('Invalid credentials');
+  }
+
+  const oldMatches = await bcrypt.compare(oldPassword, user.passwordHash);
+
+  if (!oldMatches) {
+    throw new Error('Invalid credentials');
+  }
+
+  user.passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+
+  return true;
 }
 
 // --- Test your implementations ---

@@ -36,7 +36,11 @@ function parseBody(req: http.IncomingMessage): Promise<any> {
     req.on('data', (chunk) => chunks.push(chunk));
     req.on('end', () => {
       const raw = Buffer.concat(chunks).toString();
-      try { resolve(raw ? JSON.parse(raw) : {}); } catch { reject(new Error('Invalid JSON')); }
+      try {
+        resolve(raw ? JSON.parse(raw) : {});
+      } catch {
+        reject(new Error('Invalid JSON'));
+      }
     });
     req.on('error', reject);
   });
@@ -50,6 +54,11 @@ function parseUrl(rawUrl: string) {
 function sendJson(res: http.ServerResponse, status: number, data: unknown) {
   res.writeHead(status, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify(data));
+}
+
+function extractId(url: string): number | null {
+  const match = url.match(/^\/api\/users\/(\d+)$/);
+  return match ? parseInt(match[1]!, 10) : null;
 }
 
 // TODO: Create an HTTP server that implements a User REST API:
@@ -106,3 +115,170 @@ function sendJson(res: http.ServerResponse, status: number, data: unknown) {
 //   curl http://localhost:3000/api/users
 
 // Your code here:
+const server = http.createServer(async (req, res) => {
+  const { method, url = '/' } = req;
+  const { pathname, searchParams } = parseUrl(url);
+  console.log(`${method} ${pathname}`);
+
+  try {
+    // GET /api/users — list all users
+    // GET /api/users?role=... — list all users with specific role
+    if (method === 'GET' && pathname === '/api/users') {
+      const roleFilter = searchParams.get('role');
+
+      if (roleFilter) {
+        const filteredUsers = users.filter(
+          (user) => user.role.toLowerCase() === roleFilter.toLowerCase()
+        );
+
+        sendJson(res, 200, filteredUsers);
+        return;
+      }
+
+      sendJson(res, 200, users);
+      return;
+    }
+
+    // GET /api/users/:id - list user with specific id
+    if (method === 'GET' && pathname?.startsWith('/api/users')) {
+      const id = extractId(pathname);
+      const user = users.find((user) => user.id === id);
+
+      if (!user) {
+        sendJson(res, 404, { error: 'User Not Found' });
+        return;
+      }
+
+      sendJson(res, 200, user);
+      return;
+    }
+
+    // POST /api/users - Create a new User
+    if (method === 'POST' && pathname === '/api/users') {
+      const body = (await parseBody(req)) as {
+        name?: string;
+        email?: string;
+        role?: string;
+      };
+
+      if (!body.email || !body.name || !body.role) {
+        sendJson(res, 400, { error: 'Invalid request' });
+        return;
+      }
+
+      if (users.some((user) => user.email === body.email)) {
+        sendJson(res, 409, { error: 'Email is already in use' });
+        return;
+      }
+
+      const user: User = {
+        id: nextId++,
+        name: body.name,
+        email: body.email,
+        role: body.role ?? 'user',
+        createdAt: new Date().toISOString(),
+      };
+
+      users.push(user);
+
+      res.writeHead(201, {
+        'Content-Type': 'application/json',
+        Location: `/api/users/${user.id}`,
+      });
+
+      res.end(JSON.stringify(user));
+      return;
+    }
+
+    // PUT /api/users/:id  (full replacement)
+    if (method === 'PUT' && pathname.startsWith('/api/users')) {
+      const id = extractId(pathname);
+      const index = users.findIndex((user) => user.id === id);
+
+      if (index === -1) {
+        sendJson(res, 404, { error: 'User not found' });
+        return;
+      }
+
+      const body = (await parseBody(req)) as {
+        name?: string;
+        email?: string;
+        role?: string;
+      };
+
+      if (!body.email || !body.name || !body.role) {
+        sendJson(res, 400, { error: 'Invalid request' });
+        return;
+      }
+
+      if (users.some((user) => user.email === body.email)) {
+        sendJson(res, 409, { error: 'Email is already in use' });
+        return;
+      }
+
+      users[index] = {
+        id: users[index]!.id,
+        createdAt: users[index]!.createdAt,
+        name: body.name,
+        email: body.email,
+        role: body.role ?? 'user',
+      };
+
+      sendJson(res, 200, users[index]);
+      return;
+    }
+
+    // PATCH /api/users/:id  (partial update)
+    if (method === 'PATCH' && pathname.startsWith('/api/users')) {
+      const id = extractId(url!);
+      const index = users.findIndex((user) => user.id === id);
+
+      if (index === -1) {
+        sendJson(res, 404, { error: 'User Not Found' });
+        return;
+      }
+
+      const body = (await parseBody(req)) as { name?: string; email?: string; role?: string };
+
+      if (body.email !== undefined) {
+        if (users.some((user) => user.email === body.email)) {
+          sendJson(res, 409, 'Email is already in use');
+          return;
+        }
+
+        users[index]!.email = body.email;
+      }
+
+      if (body.name !== undefined) users[index]!.name = body.name;
+      if (body.role !== undefined) users[index]!.role = body.role;
+
+      sendJson(res, 200, users[index]);
+      return;
+    }
+
+    // DELETE /api/users/:id
+    if (method === 'DELETE' && pathname?.startsWith('/api/users/')) {
+      const id = extractId(pathname!);
+      const index = users.findIndex((user) => user.id === id);
+
+      if (index === -1) {
+        sendJson(res, 404, { error: 'User not found' });
+        return;
+      }
+
+      users.splice(index, 1);
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+
+    sendJson(res, 404, { error: 'Not Found' });
+  } catch (error) {
+    console.log('Error:', error);
+    sendJson(res, 500, { error: 'Internal Server Error' });
+  }
+});
+
+server.listen(PORT, () => {
+  console.log(`🚀 Server running at http://localhost:${PORT}`);
+});

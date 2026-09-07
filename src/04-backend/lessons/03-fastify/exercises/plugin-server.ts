@@ -7,7 +7,7 @@ export {};
 // Build a Bookmarks API using Fastify's plugin system.
 // This exercise practices: plugins, fp(), decorators, hooks, encapsulation, JSON Schema.
 
-import Fastify, { FastifyInstance } from 'fastify';
+import Fastify, { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import fp from 'fastify-plugin';
 
 // --- Data model ---
@@ -136,3 +136,173 @@ interface Bookmark {
 //   curl -v http://localhost:3000/health 2>&1 | grep x-response-time
 
 // Your code here:
+interface DbStore {
+  bookmarks: Bookmark[];
+  nextId: number;
+}
+
+interface AppConfig {
+  port: number;
+  env: string;
+  appName: string;
+}
+
+declare module 'fastify' {
+  interface FastifyInstance {
+    appDb: DbStore;
+    appConfig: AppConfig;
+  }
+
+  interface FastifyRequest {
+    startTime: number;
+  }
+}
+
+async function dbPlugin(fastify: FastifyInstance, _opts: FastifyPluginOptions) {
+  const appDb: DbStore = { bookmarks: [], nextId: 1 };
+
+  fastify.decorate('appDb', appDb);
+  fastify.log.info({ appDb }, 'Store plugin loaded');
+}
+
+const dbluginWrapped = fp(dbPlugin, { name: 'store-plugin' });
+
+async function configPlugin(fastify: FastifyInstance, _opts: FastifyPluginOptions) {
+  const appConfig: AppConfig = {
+    port: 3000,
+    env: process.env.NODE_ENV ?? 'development',
+    appName: 'fastify-excercise',
+  };
+
+  fastify.decorate('appConfig', appConfig);
+  fastify.log.info({ appConfig }, 'Config plugin loaded');
+}
+
+const configPluginWrapped = fp(configPlugin, { name: 'config' });
+
+async function timingPlugin(fastify: FastifyInstance) {
+  fastify.decorateRequest('startTime', 0);
+
+  fastify.addHook('onRequest', async (request) => {
+    request.startTime = Date.now();
+  });
+
+  fastify.addHook('onSend', async (request, reply) => {
+    reply.header('X-Response-Time', String(Date.now() - request.startTime) + 'ms');
+  });
+}
+
+const timingPluginWrapped = fp(timingPlugin, { name: 'timing' });
+
+async function statsPlugin(fastify: FastifyInstance) {
+  let count = 0;
+  fastify.addHook('onRequest', async () => {
+    count++;
+  });
+
+  fastify.get('/stats', async () => ({ requestCount: count }));
+}
+
+async function bookmarkRoutes(fastify: FastifyInstance, _opts: FastifyPluginOptions) {
+  const appDb = fastify.appDb;
+
+  fastify.get('/', async () => {
+    return { bookmarks: appDb.bookmarks };
+  });
+
+  fastify.get<{ Params: { id: string } }>('/:id', async (request, reply) => {
+    const id = parseInt(request.params.id, 10);
+    const bookmark = appDb.bookmarks.find((b) => b.id === id);
+
+    if (!bookmark) {
+      reply.status(404);
+      return { error: 'Bookmark not found' };
+    }
+
+    return bookmark;
+  });
+
+  fastify.post<{ Body: { url: string; title: string; tags: string[] } }>(
+    '/',
+    {
+      schema: {
+        body: {
+          type: 'object',
+          required: ['title', 'url', 'tags'],
+          properties: {
+            title: { type: 'string', minLength: 1 },
+            url: { type: 'string', format: 'uri' },
+            tags: { type: 'array', items: { type: 'string' } },
+          },
+          additionalProperties: false,
+        },
+        response: {
+          201: {
+            type: 'object',
+            properties: {
+              id: { type: 'number' },
+              title: { type: 'string' },
+              url: { type: 'string' },
+              tags: { type: 'array', items: { type: 'string' } },
+              createdAt: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const { title, url, tags } = request.body;
+      const bookmark: Bookmark = {
+        id: appDb.nextId++,
+        title,
+        url,
+        tags,
+        createdAt: new Date().toISOString(),
+      };
+
+      appDb.bookmarks.push(bookmark);
+      reply.status(201);
+
+      return bookmark;
+    }
+  );
+
+  fastify.delete<{ Params: { id: string } }>('/:id', async (request, reply) => {
+    const id = parseInt(request.params.id, 10);
+    const bookmark = appDb.bookmarks.find((b) => b.id === id);
+
+    if (!bookmark) {
+      reply.status(404);
+      return { error: 'Bookmark not found' };
+    }
+
+    const index = appDb.bookmarks.indexOf(bookmark);
+
+    appDb.bookmarks.splice(index, 1);
+
+    return reply.status(204).send();
+  });
+}
+
+const app = Fastify({ logger: true });
+
+app.register(configPluginWrapped);
+app.register(dbluginWrapped);
+app.register(timingPluginWrapped);
+app.register(statsPlugin);
+app.register(bookmarkRoutes, { prefix: '/api/bookmarks' });
+app.register(async (instance) => {
+  instance.get('/health', async () => ({
+    status: 'ok',
+    env: instance.appConfig.env,
+    uptime: process.uptime(),
+    bookmarks: instance.appDb.bookmarks.length,
+  }));
+});
+
+app.listen({ port: 3000 }, (err) => {
+  if (err) {
+    app.log.error(err);
+    process.exit(1);
+  }
+});

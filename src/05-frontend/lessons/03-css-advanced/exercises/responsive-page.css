@@ -7,29 +7,140 @@
      - Apply box-sizing: border-box to all elements
      - Remove default margin/padding
      - Set font-family, line-height, color, background on body
+*/
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
 
+body {
+  font-family: system-ui, sans-serif;
+  font-size: 16px;
+}
+
+/*
   2. CSS VARIABLES
      - Define at least these variables on :root:
        --color-primary, --color-primary-dark, --color-text,
        --color-bg, --color-surface, --spacing-sm, --spacing-md,
        --spacing-lg, --radius
      - Use var() everywhere instead of hardcoded values
-
+*/
+:root {
+  --color-primary: #7dcb7a;
+  --color-primary-dark: #5d935b;
+  --color-text: #333;
+  --color-bg: #f3f3f3;
+  --color-surface: #fff;
+  --spacing-sm: 1rem;
+  --spacing-md: 1.5rem;
+  --spacing-md: 2rem;
+  --radius: 0.5rem;
+}
+/*
   3. HEADER (.header)
      - Sticky at the top (position: sticky)
      - Background: var(--color-primary)
      - Mobile: stack title and nav vertically, center-aligned
      - Tablet+: flex row with space-between
+*/
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: sticky;
+  background-color: var(--color-primary);
+  padding: var(--spacing-sm);
+  color: var(--color-surface);
+}
 
+@media (min-width: 768px) {
+  .header {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+}
+
+/*
   4. NAV LINKS (.header-nav a)
      - Style as pill-shaped links with hover transition
      - Smooth color/background transition on hover (use transition)
+*/
+.header-nav {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  grid-area: var(--spacing-sm);
+}
 
+.header-nav a {
+  display: block;
+  height: 30px;
+  line-height: 30px;
+  border-radius: 15px;
+  padding: 0 var(--spacing-sm);
+  background: rgba(255, 255, 255, 0);
+  text-decoration: none;
+  color: var(--color-surface);
+  transition: all 0.3s ease;
+}
+
+.header-nav a:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+  color: var(--color-text);
+}
+
+@media (min-width: 768px) {
+  .header-nav {
+    flex-direction: row;
+  }
+}
+/*
   5. HERO SECTION (.hero)
      - Centered text with larger font size
      - Add vertical padding
      - Use a transition or animation to fade in the hero text when the page loads
        (hint: create a @keyframes fadeIn animation)
+*/
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 500px;
+  text-align: center;
+  font-size: 1.5rem;
+  padding: var(--spacing-md);
+}
+
+.hero p {
+  margin-top: var(--spacing-md);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hero h2,
+.hero p {
+  animation: fadeIn 0.6s ease-out both;
+  animation-delay: 0.2s;
+}
+
+.hero p {
+  animation-delay: 0.6s;
+}
+/*
 
   6. FEATURE CARDS (.features)
      Pick ONE of two approaches and add a CSS comment saying which and why:
@@ -52,10 +163,51 @@
        - Rounded corners, padding, subtle box-shadow
        - Hover effect: lift up slightly (transform: translateY) with transition
        - Add a colored top border or a ::before pseudo-element as a decorative accent
+*/
+.features {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--spacing-md) calc(var(--spacing-md) * 2);
+  padding: 0 var(--spacing-md);
+}
 
+.feature-card {
+  background-color: var(--color-surface);
+  border-radius: var(--radius);
+  padding: var(--spacing-sm);
+  box-shadow: 1px 2px 2px rgba(0, 0, 0, 0.4);
+  transition: all 0.3s ease;
+  overflow: hidden;
+  position: relative;
+}
+
+.feature-card:hover {
+  transform: translateY(-3px);
+}
+
+.feature-card::before {
+  content: '';
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 10px;
+  background-color: var(--color-primary-dark);
+}
+/*
   7. FOOTER (.footer)
      - Dark background, light text, centered, padding
-
+*/
+.footer {
+  background-color: var(--color-primary-dark);
+  color: var(--color-surface);
+  text-align: center;
+  margin-top: calc(var(--spacing-md) * 3);
+  padding: var(--spacing-md);
+}
+/*
   8. TRANSITIONS & ANIMATIONS
      - Cards should have a smooth hover effect (transition)
      - Nav links should have a smooth hover color change (transition)

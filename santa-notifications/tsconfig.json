@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "nodenext", //"commonjs"
+    "strict": true,
+    "esModuleInterop": true,
+    //"ignoreDeprecations": "6.0",
+    "outDir": "./dist",
+    "moduleResolution": "nodenext", //"node"
+    "skipLibCheck": true,
+    "types": ["jest", "node"]
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}

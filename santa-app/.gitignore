@@ -1,0 +1,23 @@
+node_modules
+dist
+dist-ssr
+coverage
+*.local
+.env
+
+# editor
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+
+# logs
+logs
+*.log
+npm-debug.log*
+
+# testing
+/playwright-report
+/test-results
+/blob-report
+/playwright/.cache

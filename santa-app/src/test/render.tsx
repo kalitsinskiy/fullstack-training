@@ -1,0 +1,40 @@
+import { type ReactElement, type ReactNode } from 'react';
+import { render, type RenderOptions } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { createQueryClient } from '@/lib/queryClient';
+import { AuthProvider } from '@/features/auth/AuthContext';
+import { SocketProvider } from '@/features/socket/SocketProvider';
+
+interface Options extends Omit<RenderOptions, 'wrapper'> {
+  /** Initial router entry, e.g. '/rooms/123'. Defaults to '/'. */
+  route?: string;
+}
+
+/**
+ * Render a component inside the same providers the real app uses — Query client,
+ * Auth context and a router. Use this for every component/page test instead of
+ * RTL's bare `render`, so hooks like `useAuth` / `useQuery` / `useNavigate` work.
+ */
+export function renderWithProviders(ui: ReactElement, options: Options = {}) {
+  const { route = '/', ...rtlOptions } = options;
+  const queryClient = createQueryClient({ retry: false });
+
+  function Wrapper({ children }: { children: ReactNode }) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <SocketProvider>
+            <MemoryRouter initialEntries={[route]}>{children}</MemoryRouter>
+          </SocketProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    );
+  }
+
+  return render(ui, { wrapper: Wrapper, ...rtlOptions });
+}
+
+// Re-export everything from RTL so tests import from one place.
+// eslint-disable-next-line react-refresh/only-export-components
+export * from '@testing-library/react';

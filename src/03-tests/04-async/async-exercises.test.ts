@@ -9,13 +9,21 @@ import { fetchUser, fetchUsers, retryOperation, debounce, scheduleTask } from '.
 describe('Exercise 1: async/await', () => {
   test('fetchUser returns correct data', async () => {
     // TODO: await fetchUser('abc')
+    const user = await fetchUser('abc');
+
     // TODO: verify the result has id: 'abc', name: 'User abc', email: 'abc@example.com'
+    expect(user).toMatchObject({ id: 'abc', name: 'User abc', email: 'abc@example.com' });
   });
 
   test('fetchUsers returns 2 users', async () => {
     // TODO: await fetchUsers()
+    const users = await fetchUsers();
+
     // TODO: verify length is 2
+    expect(users).toHaveLength(2);
+
     // TODO: verify the second user's name is 'Bob'
+    expect(users[1].name).toBe('Bob');
   });
 });
 
@@ -23,15 +31,22 @@ describe('Exercise 1: async/await', () => {
 describe('Exercise 2: Rejections', () => {
   test('fetchUser with empty id throws', async () => {
     // TODO: use rejects.toThrow to verify it throws 'ID is required'
+    await expect(fetchUser('')).rejects.toThrow('ID is required');
   });
 
   test('fetchUser with not-found id throws', async () => {
     // TODO: use rejects.toThrow to verify 'User not found'
+    await expect(fetchUser('not-found')).rejects.toThrow('User not found');
   });
 
   test('fetchUser resolves correctly with resolves matcher', async () => {
     // TODO: use .resolves.toMatchObject to verify user with id '99'
-    //       without awaiting directly
+    //       without awaiting
+    await expect(fetchUser('99')).resolves.toMatchObject({
+      id: '99',
+      name: 'User 99',
+      email: '99@example.com',
+    });
   });
 });
 
@@ -51,9 +66,13 @@ describe('Exercise 3: Fake timers', () => {
 
     // TODO: advance time by 1999ms
     // TODO: verify mockFn was NOT called
+    jest.advanceTimersByTime(1999);
+    expect(mockFn).not.toHaveBeenCalled();
 
     // TODO: advance time by 1 more ms (total: 2000ms)
     // TODO: verify mockFn was called exactly once
+    jest.advanceTimersByTime(1);
+    expect(mockFn).toHaveBeenCalledTimes(1);
   });
 
   test('debounce fires only once after rapid calls', () => {
@@ -61,8 +80,19 @@ describe('Exercise 3: Fake timers', () => {
     const debounced = debounce(mockFn, 500);
 
     // TODO: call debounced() 5 times rapidly
+    debounced();
+    debounced();
+    debounced();
+    debounced();
+    debounced();
+
     // TODO: advance time by 499ms — verify NOT called
+    jest.advanceTimersByTime(499);
+    expect(mockFn).not.toHaveBeenCalled();
+
     // TODO: advance time by 1ms more — verify called exactly once
+    jest.advanceTimersByTime(1);
+    expect(mockFn).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -70,14 +100,30 @@ describe('Exercise 3: Fake timers', () => {
 describe('Exercise 4: Mock async dependencies', () => {
   test('retryOperation retries on failure', async () => {
     // TODO: create a mockFn that rejects twice, then resolves with 'ok'
+    const mockFn = jest
+      .fn()
+      .mockRejectedValueOnce(new Error('fail'))
+      .mockRejectedValueOnce(new Error('fail'))
+      .mockResolvedValue('ok');
+
     // TODO: call retryOperation(mockFn, 3)
+    const result = await retryOperation(mockFn, 3);
+
     // TODO: verify result is 'ok'
+    expect(result).toBe('ok');
+
     // TODO: verify mockFn was called 3 times
+    await expect(mockFn).toHaveBeenCalledTimes(3);
   });
 
   test('retryOperation gives up after max attempts', async () => {
     // TODO: create a mockFn that always rejects with Error('permanently broken')
+    const mockFn = jest.fn().mockRejectedValue(new Error('permanently broken'));
+
     // TODO: verify retryOperation(mockFn, 2) rejects with 'permanently broken'
+    await expect(retryOperation(mockFn, 2)).rejects.toThrow('permanently broken');
+
     // TODO: verify mockFn was called exactly 2 times
+    expect(mockFn).toHaveBeenCalledTimes(2);
   });
 });

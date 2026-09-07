@@ -12,7 +12,12 @@ interface Notification {
   createdAt: string;
 }
 
-const notificationTypeValues = ['room_invite', 'assignment', 'wishlist_update', 'system'] as const;
+const notificationTypeValues = [
+  'room.created',
+  'user.joined',
+  'draw.completed',
+  'wishlist.updated',
+] as const;
 
 const idParamsSchema = {
   type: 'object',
