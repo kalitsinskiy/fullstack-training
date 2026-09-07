@@ -1,5 +1,7 @@
+import type { NotificationType } from '../models/notification';
+
 export function buildNotificationMessage(
-  routingKey: string,
+  routingKey: NotificationType,
   data: Record<string, unknown>,
   roomName: string
 ): string {
@@ -24,7 +26,9 @@ export function buildNotificationMessage(
       return `The gift exchange for "${roomName}" has a new date`;
 
     default: {
-      return `New event: ${routingKey}`;
+      routingKey satisfies never;
+
+      return `New event: ${String(routingKey)}`;
     }
   }
 }

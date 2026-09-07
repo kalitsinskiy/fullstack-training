@@ -11,7 +11,7 @@ import { configureApp } from './configure-app';
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    new FastifyAdapter({ trustProxy: true }),
+    new FastifyAdapter({ trustProxy: process.env.TRUST_PROXY === 'true' }),
     { bufferLogs: true },
   );
   app.useLogger(app.get(Logger));

@@ -1,15 +1,21 @@
 const publishMock = jest.fn();
 const assertExchangeMock = jest.fn().mockResolvedValue(undefined);
+const channelOnMock = jest.fn();
+const channelCloseMock = jest.fn().mockResolvedValue(undefined);
+const connectionOnMock = jest.fn();
+const connectionCloseMock = jest.fn().mockResolvedValue(undefined);
+
 const createChannelMock = jest.fn().mockResolvedValue({
   publish: publishMock,
   assertExchange: assertExchangeMock,
-  close: jest.fn(),
+  close: channelCloseMock,
+  on: channelOnMock,
 });
 
 const connectMock = jest.fn().mockResolvedValue({
   createChannel: createChannelMock,
-  on: jest.fn(),
-  close: jest.fn(),
+  on: connectionOnMock,
+  close: connectionCloseMock,
 });
 
 jest.mock('amqplib', () => ({ connect: connectMock }));
@@ -24,8 +30,18 @@ function make(): EventPublisherService {
   return new EventPublisherService(config);
 }
 
+function handlerFor(mock: jest.Mock, event: string): () => void {
+  const calls = mock.mock.calls as [string, () => void][];
+  const call = calls.find(([name]) => name === event);
+
+  if (!call) throw new Error(`no "${event}" handler registered`);
+
+  return call[1];
+}
+
 describe('EventPublisherService', () => {
   beforeEach(() => jest.clearAllMocks());
+  afterEach(() => jest.useRealTimers());
 
   it('asserts the topic exchange on init', async () => {
     const svc = make();
@@ -66,6 +82,7 @@ describe('EventPublisherService', () => {
 
   it('no-ops (does not throw) when the broker was unavailable at startup', async () => {
     connectMock.mockRejectedValueOnce(new Error('ECONNREFUSED'));
+    jest.useFakeTimers();
 
     const svc = make();
 
@@ -73,5 +90,76 @@ describe('EventPublisherService', () => {
 
     expect(() => svc.publish('room.created', {})).not.toThrow();
     expect(publishMock).not.toHaveBeenCalled();
+
+    await svc.onModuleDestroy();
+  });
+
+  it('retries with backoff when the broker is down at startup, and publishes once it heals', async () => {
+    connectMock
+      .mockRejectedValueOnce(new Error('ECONNREFUSED'))
+      .mockRejectedValueOnce(new Error('ECONNREFUSED'));
+    jest.useFakeTimers();
+
+    const svc = make();
+    await svc.onModuleInit();
+
+    await jest.advanceTimersByTimeAsync(1000);
+    expect(connectMock).toHaveBeenCalledTimes(2);
+
+    await jest.advanceTimersByTimeAsync(1000);
+    expect(connectMock).toHaveBeenCalledTimes(2);
+
+    await jest.advanceTimersByTimeAsync(1000);
+    expect(connectMock).toHaveBeenCalledTimes(3);
+
+    svc.publish('room.created', { roomId: 'r1' });
+    expect(publishMock).toHaveBeenCalledTimes(1);
+
+    await svc.onModuleDestroy();
+  });
+
+  it('reconnects after the connection closes mid-flight', async () => {
+    jest.useFakeTimers();
+
+    const svc = make();
+    await svc.onModuleInit();
+
+    handlerFor(connectionOnMock, 'close')();
+
+    svc.publish('room.created', {});
+    expect(publishMock).not.toHaveBeenCalled();
+
+    await jest.advanceTimersByTimeAsync(1000);
+
+    expect(connectMock).toHaveBeenCalledTimes(2);
+
+    svc.publish('room.created', {});
+    expect(publishMock).toHaveBeenCalledTimes(1);
+
+    await svc.onModuleDestroy();
+  });
+
+  it('recycles the connection when only the channel dies', async () => {
+    const svc = make();
+    await svc.onModuleInit();
+
+    handlerFor(channelOnMock, 'close')();
+
+    expect(connectionCloseMock).toHaveBeenCalledTimes(1);
+
+    await svc.onModuleDestroy();
+  });
+
+  it('stops retrying after the module is destroyed', async () => {
+    connectMock.mockRejectedValueOnce(new Error('ECONNREFUSED'));
+    jest.useFakeTimers();
+
+    const svc = make();
+    await svc.onModuleInit();
+    await svc.onModuleDestroy();
+
+    await jest.advanceTimersByTimeAsync(60_000);
+
+    expect(connectMock).toHaveBeenCalledTimes(1);
   });
 });

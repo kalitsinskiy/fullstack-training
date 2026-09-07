@@ -193,7 +193,7 @@ export default async function messageRoutes(fastify: FastifyInstance) {
         }
       }
 
-      return updated;
+      return { updated };
     }
   );
 

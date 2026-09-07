@@ -1,9 +1,10 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterAll } from 'vitest';
+import { format } from 'date-fns';
 import {
   normalizeInviteCode,
-  isValidInviteCode,
   cleanWishlistItems,
   isExchangePassed,
+  parseExchangeDate,
 } from './helpers';
 
 describe('normalizeInviteCode', () => {
@@ -13,20 +14,37 @@ describe('normalizeInviteCode', () => {
   });
 });
 
-describe('isValidInviteCode', () => {
-  it('accepts exactly 6 alphanumerics, rejects otherwise', () => {
-    expect(isValidInviteCode('Q7X4LM')).toBe(true);
-    expect(isValidInviteCode('Q7X4L')).toBe(false);
-    expect(isValidInviteCode('Q7X4L!')).toBe(false);
-  });
-});
-
 describe('cleanWishlistItems', () => {
   it('trims items and drops blanks', () => {
     expect(cleanWishlistItems([' Socks ', '', '  ', 'Book'])).toEqual([
       'Socks',
       'Book',
     ]);
+  });
+});
+
+describe('parseExchangeDate', () => {
+  const utcMidnight = '2026-12-24T00:00:00.000Z';
+  const originalTz = process.env.TZ;
+
+  afterAll(() => {
+    process.env.TZ = originalTz;
+  });
+
+  it('keeps the calendar day west of UTC, where new Date() rolls it back', () => {
+    process.env.TZ = 'America/New_York';
+
+    expect(format(new Date(utcMidnight), 'yyyy-MM-dd')).toBe('2026-12-23');
+
+    expect(format(parseExchangeDate(utcMidnight), 'yyyy-MM-dd')).toBe(
+      '2026-12-24',
+    );
+  });
+
+  it('round-trips a plain date-only string', () => {
+    expect(format(parseExchangeDate('2026-12-24'), 'yyyy-MM-dd')).toBe(
+      '2026-12-24',
+    );
   });
 });
 

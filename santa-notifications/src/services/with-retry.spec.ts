@@ -20,6 +20,15 @@ describe('withRetry', () => {
     expect(fn).toHaveBeenCalledTimes(3);
   });
 
+  it('gives up immediately when shouldRetry rejects the error', async () => {
+    const fn = jest.fn(() => Promise.reject(new Error('deterministic')));
+
+    await expect(withRetry(fn, { sleep: noSleep, shouldRetry: () => false })).rejects.toThrow(
+      'deterministic'
+    );
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
   it('throws the last error after exhausting maxRetries', async () => {
     const fn = jest.fn(() => Promise.reject(new Error('always')));
 

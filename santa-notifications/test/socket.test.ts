@@ -71,6 +71,29 @@ describe('Socket.IO sever', () => {
     connection.close();
   });
 
+  it('logs instead of leaving an unhandled rejection when the presence write fails', async () => {
+    const warn = jest.spyOn(app.log, 'warn');
+
+    jest.spyOn(app.redis, 'hincrby').mockRejectedValue(new Error('Connection is closed.'));
+
+    const connection = connect(tokenFor('u1'));
+
+    await new Promise<void>((res) => connection.on('connect', () => res()));
+
+    // The rejection settles a microtask after the handshake; a short tick is
+    // enough for the .catch to run.
+    await new Promise<void>((res) => setTimeout(res, 50));
+
+    expect(warn).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'u1' }),
+      'Failed to mark user online'
+    );
+
+    expect(connection.connected).toBe(true);
+
+    connection.close();
+  });
+
   it('lets a member join their room but rejects a non-member (IDOR guard)', async () => {
     const roomId = '6a687b3ec9ef189e9efd68b0';
     jest

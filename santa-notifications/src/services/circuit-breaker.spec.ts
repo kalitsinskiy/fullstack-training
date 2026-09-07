@@ -14,6 +14,17 @@ describe('CircuitBreaker', () => {
     await expect(cb.call(ok)).rejects.toThrow(/Circuit is OPEN/);
   });
 
+  it('propagates errors that isFailure excludes without counting them', async () => {
+    const cb = new CircuitBreaker(3, 1000, () => 0);
+    const notOurProblem = () => false;
+
+    for (let i = 0; i < 10; i += 1) {
+      await expect(cb.call(fail, notOurProblem)).rejects.toThrow('Ooops');
+    }
+
+    await expect(cb.call(ok)).resolves.toBe('ok');
+  });
+
   it('half-opens after resetMs and closes on a successful probe', async () => {
     let clock = 0;
     const cb = new CircuitBreaker(1, 1000, () => clock);

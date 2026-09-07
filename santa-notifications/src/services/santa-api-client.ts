@@ -18,6 +18,32 @@ export interface RoomRelations {
   santaId: string | null;
 }
 
+export class SantaApiError extends Error {
+  constructor(
+    readonly path: string,
+    readonly status: number
+  ) {
+    super(`santa-api ${path} -> ${status}`);
+    this.name = 'SantaApiError';
+  }
+
+  /**
+   * 4xx is the server telling us the request itself is wrong (a deleted room,
+   * a bad id, a rejected service key) — repeating it gets the same answer, and
+   * counting it as a santa-api outage would open the breaker for healthy calls.
+   * 408/429 are the exceptions: those do clear on their own.
+   */
+  get retryable(): boolean {
+    if (this.status === 408 || this.status === 429) return true;
+
+    return this.status >= 500;
+  }
+}
+
+export function isRetryableFailure(err: unknown): boolean {
+  return err instanceof SantaApiError ? err.retryable : true;
+}
+
 export class SantaApiClient {
   private readonly breaker = new CircuitBreaker(5, 30_000);
 
@@ -40,7 +66,10 @@ export class SantaApiClient {
   }
 
   private request<T>(path: string): Promise<T> {
-    return this.breaker.call(() => withRetry(() => this.fetchJson<T>(path)));
+    return this.breaker.call(
+      () => withRetry(() => this.fetchJson<T>(path), { shouldRetry: isRetryableFailure }),
+      isRetryableFailure
+    );
   }
 
   private async fetchJson<T>(path: string): Promise<T> {
@@ -54,7 +83,7 @@ export class SantaApiClient {
       });
 
       if (!res.ok) {
-        throw new Error(`santa-api ${path} -> ${res.status}`);
+        throw new SantaApiError(path, res.status);
       }
 
       return (await res.json()) as T;

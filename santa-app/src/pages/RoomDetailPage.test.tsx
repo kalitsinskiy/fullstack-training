@@ -93,6 +93,46 @@ describe('RoomDetailPage', () => {
     ).toBeDisabled();
   });
 
+  it('offers "Remove" per member while the room is pending, and hides it once drawn', async () => {
+    const room = (status: 'pending' | 'drawn') => ({
+      id: 'r1',
+      name: 'Office Party',
+      inviteCode: 'ABC123',
+      creatorId: 'u1',
+      status,
+      participantCount: 2,
+      participants: [
+        { id: 'u1', displayName: 'Alice', role: 'owner' },
+        { id: 'u2', displayName: 'Alex', role: 'member' },
+      ],
+      viewerPermissions: ['room:view', 'room:kick'],
+    });
+
+    server.use(
+      http.get('/api/rooms/:id', () => HttpResponse.json(room('pending'))),
+    );
+
+    const pending = setup();
+
+    expect(
+      await screen.findByRole('button', { name: /remove alex/i }),
+    ).toBeInTheDocument();
+
+    pending.unmount();
+
+    server.use(
+      http.get('/api/rooms/:id', () => HttpResponse.json(room('drawn'))),
+    );
+
+    setup();
+
+    await screen.findByText('Alex');
+
+    expect(
+      screen.queryByRole('button', { name: /remove alex/i }),
+    ).not.toBeInTheDocument();
+  });
+
   it('reveals the exchange date and your giftee once drawn', async () => {
     server.use(
       http.get('/api/rooms/:id', () =>
@@ -124,6 +164,41 @@ describe('RoomDetailPage', () => {
     expect(
       screen.queryByRole('button', { name: /draw names/i }),
     ).not.toBeInTheDocument(); // hidden when drawn
+  });
+
+  it('shows the exchange date the server meant, west of UTC', async () => {
+    const originalTz = process.env.TZ;
+    process.env.TZ = 'America/New_York';
+
+    server.use(
+      http.get('/api/rooms/:id', () =>
+        HttpResponse.json({
+          id: 'r1',
+          name: 'Office Party',
+          inviteCode: 'ABC123',
+          creatorId: 'u1',
+          status: 'drawn',
+          exchangeDate: '2026-12-24T00:00:00.000Z',
+          participantCount: 3,
+          participants: [{ id: 'u1', displayName: 'Alice', role: 'owner' }],
+        }),
+      ),
+      http.get('/api/rooms/:id/assignment', () =>
+        HttpResponse.json({
+          receiver: { id: 'u2', displayName: 'Bob', wishlist: [] },
+        }),
+      ),
+    );
+
+    try {
+      setup();
+
+      expect(await screen.findByText(/gift exchange on/i)).toHaveTextContent(
+        'Thu, 24 Dec 2026',
+      );
+    } finally {
+      process.env.TZ = originalTz;
+    }
   });
 
   it('locks the wishlist when the exchange date has passed', async () => {

@@ -13,6 +13,7 @@ jest.mock('amqplib', () => {
   const channel = {
     assertExchange: jest.fn().mockResolvedValue(undefined),
     publish,
+    on: jest.fn(),
     close: jest.fn().mockResolvedValue(undefined),
   };
 

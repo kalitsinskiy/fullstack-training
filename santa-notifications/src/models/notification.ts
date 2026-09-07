@@ -1,11 +1,14 @@
 import { HydratedDocument, Schema, Types, model } from 'mongoose';
 
-export type NotificationType =
-  | 'room.created'
-  | 'user.joined'
-  | 'draw.completed'
-  | 'wishlist.updated'
-  | 'room.date_changed';
+export const EVENT_TYPES = [
+  'room.created',
+  'user.joined',
+  'draw.completed',
+  'wishlist.updated',
+  'room.date_changed',
+] as const;
+
+export type NotificationType = (typeof EVENT_TYPES)[number];
 
 interface NotificationRecord {
   userId?: Types.ObjectId;
@@ -23,13 +26,7 @@ const notificationSchema = new Schema<NotificationRecord>({
   roomId: { type: Types.ObjectId, ref: 'Room' },
   type: {
     type: String,
-    enum: [
-      'room.created',
-      'user.joined',
-      'draw.completed',
-      'wishlist.updated',
-      'room.date_changed',
-    ],
+    enum: [...EVENT_TYPES],
     required: true,
   },
   payload: { type: Schema.Types.Mixed },

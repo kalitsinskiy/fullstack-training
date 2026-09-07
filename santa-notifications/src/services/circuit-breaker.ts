@@ -11,7 +11,15 @@ export class CircuitBreaker {
     private readonly now: () => number = Date.now
   ) {}
 
-  async call<T>(fn: () => Promise<T>): Promise<T> {
+  /**
+   * `isFailure` decides what counts against the breaker. Errors it rejects still
+   * propagate, they just don't move the circuit — a caller's own bad request is
+   * not evidence that the downstream service is unhealthy.
+   */
+  async call<T>(
+    fn: () => Promise<T>,
+    isFailure: (err: unknown) => boolean = () => true
+  ): Promise<T> {
     if (this.state === 'OPEN') {
       if (this.now() - this.openedAt < this.resetMs) {
         throw new Error('Circuit is OPEN — request blocked');
@@ -28,6 +36,8 @@ export class CircuitBreaker {
 
       return result;
     } catch (err) {
+      if (!isFailure(err)) throw err;
+
       this.failures += 1;
 
       if (this.state === 'HALF_OPEN' || this.failures >= this.threshold) {

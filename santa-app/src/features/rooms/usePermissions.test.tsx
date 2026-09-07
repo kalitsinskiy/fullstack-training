@@ -1,10 +1,11 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
+import userEvent from '@testing-library/user-event';
 import { server } from '@/test/mocks/server';
 import { usePermissions } from './usePermissions';
 import { http, HttpResponse } from 'msw';
 import { Route, Routes } from 'react-router-dom';
 import { RoomDetailPage } from '@/pages/RoomDetailPage';
-import { renderWithProviders, screen } from '@/test/render';
+import { renderWithProviders, screen, waitFor } from '@/test/render';
 import { tokenStore } from '@/lib/api';
 
 /**
@@ -28,7 +29,26 @@ const OWNER_PERMS = [
 ];
 const MEMBER_PERMS = ['room:view', 'wishlist:set'];
 
-function setupRoom(viewerPermissions: string[]) {
+function recordOwnerOnlyRequests(): string[] {
+  const calls: string[] = [];
+  const record = (label: string) => () => {
+    calls.push(label);
+
+    return new HttpResponse(null, { status: 204 });
+  };
+
+  server.use(
+    http.post('/api/rooms/:id/draw', record('draw')),
+    http.patch('/api/rooms/:id', record('edit')),
+    http.delete('/api/rooms/:id', record('delete')),
+    http.delete('/api/rooms/:id/members/:userId', record('kick')),
+    http.post('/api/rooms/:id/invite-code/regenerate', record('regenerate')),
+  );
+
+  return calls;
+}
+
+function setupRoom(viewerPermissions: string[], participantCount = 3) {
   server.use(
     http.get('/api/rooms/:id', () =>
       HttpResponse.json({
@@ -37,7 +57,7 @@ function setupRoom(viewerPermissions: string[]) {
         inviteCode: 'ABC123',
         creatorId: 'u1',
         status: 'pending',
-        participantCount: 3,
+        participantCount,
         participants: [
           {
             id: 'u1',
@@ -101,15 +121,8 @@ describe('room permission gating (UI)', () => {
     ).toBeInTheDocument();
   });
 
-  it('as member: owner-only controls are hidden or disabled', async () => {
-    const deleteSpy = vi.fn();
-
-    server.use(
-      http.delete('/api/rooms/:id', () => {
-        deleteSpy();
-        return new HttpResponse(null, { status: 204 });
-      }),
-    );
+  it('as member: owner-only controls are hidden, and none of their endpoints are called', async () => {
+    const calls = recordOwnerOnlyRequests();
 
     setupRoom(MEMBER_PERMS);
 
@@ -129,6 +142,26 @@ describe('room permission gating (UI)', () => {
     expect(
       screen.queryByRole('button', { name: /regenerate/i }),
     ).not.toBeInTheDocument();
-    expect(deleteSpy).not.toHaveBeenCalled();
+    expect(calls).toEqual([]);
+  });
+
+  it('clicking a guarded owner-only control fires no request', async () => {
+    const calls = recordOwnerOnlyRequests();
+    const user = userEvent.setup();
+
+    setupRoom(OWNER_PERMS, 2);
+
+    const draw = await screen.findByRole('button', { name: /draw names/i });
+
+    expect(draw).toBeDisabled();
+
+    await user.click(draw);
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(calls).toEqual([]);
+
+    await user.click(screen.getByRole('button', { name: /remove bob/i }));
+
+    await waitFor(() => expect(calls).toEqual(['kick']));
   });
 });

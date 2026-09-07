@@ -2,18 +2,13 @@ import fp from 'fastify-plugin';
 import type { FastifyInstance } from 'fastify';
 import amqp from 'amqplib';
 import { handleMessage } from '../events/consumer';
+import { EVENT_TYPES } from '../models/notification';
 
 const EXCHANGE = 'santa.events';
 const QUEUE = 'notifications.events';
 const DLX = 'santa.dlx';
 const DLQ = 'santa.dlq';
-const ROUTING_KEYS = [
-  'room.created',
-  'user.joined',
-  'draw.completed',
-  'wishlist.updated',
-  'room.date_changed',
-];
+const ROUTING_KEYS = EVENT_TYPES;
 
 type RabbitState = { connection?: amqp.ChannelModel; channel?: amqp.Channel };
 

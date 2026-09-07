@@ -3,6 +3,7 @@ import { Model, Types } from 'mongoose';
 import request from 'supertest';
 import { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Room } from '../src/rooms/schemas/room.schema';
+import { RedisService } from '../src/redis/redis.service';
 import { Wishlist } from '../src/wishlist/schemas/wishlist.schema';
 import { roomFixture } from './factories';
 import { useTestApp } from './helpers/e2e-app';
@@ -290,6 +291,83 @@ describe('Rooms (HTTP)', () => {
       .expect(400);
   });
 
+  it('POST /api/rooms/:id/draw -> two concurrent draws: exactly one wins, assignments stay coherent', async () => {
+    const { owner, room, roomModel } = await seedDrawableRoom();
+    const url = `/api/rooms/${room._id.toString()}/draw`;
+    const auth = `Bearer ${owner.token}`;
+
+    const fire = () =>
+      request(app.getHttpServer())
+        .post(url)
+        .set('Authorization', auth)
+        .send({ exchangeDate: '2026-12-24' });
+
+    const statuses = (await Promise.all([fire(), fire()])).map(
+      (res) => res.status,
+    );
+
+    expect(statuses.filter((s) => s === 200)).toHaveLength(1);
+    expect(statuses.filter((s) => s === 400 || s === 409)).toHaveLength(1);
+
+    // One draw's worth of assignments, not two interleaved.
+    const stored = await roomModel.findById(room._id).lean();
+
+    expect(stored?.status).toBe('drawn');
+    expect(stored?.assignments).toHaveLength(3);
+
+    const givers = stored!.assignments.map((a) => a.giverId.toString());
+
+    expect(new Set(givers).size).toBe(3);
+  });
+
+  it('POST /api/rooms/:id/draw -> 409 when a participant joins between the read and the write', async () => {
+    const { owner, room, roomModel } = await seedDrawableRoom();
+    const latecomer = await seedUser({ displayName: 'Zoe' });
+
+    const realFindById = roomModel.findById.bind(roomModel);
+    let reads = 0;
+    const spy = jest.spyOn(roomModel, 'findById').mockImplementation(((
+      ...args: Parameters<typeof realFindById>
+    ) => {
+      const query = realFindById(...args);
+      const realExec = query.exec.bind(query);
+
+      query.exec = async () => {
+        const doc = await realExec();
+
+        if (++reads < 2) return doc;
+
+        spy.mockRestore();
+
+        await roomModel.updateOne(
+          { _id: room._id },
+          {
+            $push: {
+              participants: { userId: latecomer.user._id, role: 'member' },
+            },
+          },
+        );
+
+        return doc;
+      };
+
+      return query;
+    }) as never);
+
+    await request(app.getHttpServer())
+      .post(`/api/rooms/${room._id.toString()}/draw`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ exchangeDate: '2026-12-24' })
+      .expect(409);
+
+    const stored = await roomModel.findById(room._id).lean();
+
+    expect(stored?.status).toBe('pending');
+    expect(stored?.assignments).toHaveLength(0);
+
+    jest.restoreAllMocks();
+  });
+
   it('GET /api/rooms/:id/assignment → returns the giftee + wishlist after the draw', async () => {
     const { owner, m1, m2, room } = await seedDrawableRoom();
     const wishlistModel = app.get<Model<Wishlist>>(
@@ -456,6 +534,37 @@ describe('Rooms (HTTP)', () => {
       .expect(403);
   });
 
+  it('kicking a member after the draw is rejected (DELETE /api/rooms/:id/members/:userId -> 400)', async () => {
+    const { owner, m1, room, roomModel } = await seedDrawableRoom();
+
+    await request(app.getHttpServer())
+      .post(`/api/rooms/${room._id.toString()}/draw`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ exchangeDate: '2026-12-24' })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .delete(
+        `/api/rooms/${room._id.toString()}/members/${m1.user._id.toString()}`,
+      )
+      .set('Authorization', `Bearer ${owner.token}`)
+      .expect(400);
+
+    const stored = await roomModel.findById(room._id).lean();
+
+    expect(stored?.participants).toHaveLength(3);
+    expect(stored?.assignments).toHaveLength(3);
+
+    const memberIds = new Set(
+      stored!.participants.map((p) => p.userId.toString()),
+    );
+
+    for (const a of stored!.assignments) {
+      expect(memberIds.has(a.giverId.toString())).toBe(true);
+      expect(memberIds.has(a.receiverId.toString())).toBe(true);
+    }
+  });
+
   it('kicking the owner is rejected (DELETE /api/rooms/:id/members/:ownerId → 400)', async () => {
     const { owner, room } = await seedOwnerAndMember();
 
@@ -604,6 +713,91 @@ describe('Rooms (HTTP)', () => {
         (p: { id: string }) => p.id === other.user._id.toString(),
       ),
     ).toBe(true);
+  });
+
+  it('POST /api/rooms/join -> 201 falls back to Mongo when the cached code is gone (TTL expiry / Redis restart)', async () => {
+    const owner = await seedUser();
+    const other = await seedUser({ displayName: 'John Doe' });
+
+    const created = await request(app.getHttpServer())
+      .post('/api/rooms')
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ name: 'Expired cache room' })
+      .expect(201);
+
+    const code = created.body.inviteCode as string;
+
+    await app.get(RedisService).del(`invite:${code}`);
+
+    const res = await request(app.getHttpServer())
+      .post('/api/rooms/join')
+      .set('Authorization', `Bearer ${other.token}`)
+      .send({ inviteCode: code })
+      .expect(201);
+
+    expect(res.body.id).toBe(created.body.id);
+  });
+
+  it('GET /api/rooms/:id -> 200 when Redis is unreachable (cache degrades, no 500)', async () => {
+    const { owner, room } = await seedOwnerAndMember();
+    const redis = app.get(RedisService);
+    const down = new Error('Connection is closed.');
+
+    jest.spyOn(redis, 'get').mockRejectedValue(down);
+    jest.spyOn(redis, 'set').mockRejectedValue(down);
+
+    const res = await request(app.getHttpServer())
+      .get(`/api/rooms/${room._id.toString()}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .expect(200);
+
+    expect(res.body.id).toBe(room._id.toString());
+    expect(res.body.participants).toHaveLength(2);
+
+    jest.restoreAllMocks();
+  });
+
+  it('mutations still succeed when cache invalidation fails', async () => {
+    const { owner, room } = await seedOwnerAndMember();
+    const redis = app.get(RedisService);
+
+    jest
+      .spyOn(redis, 'del')
+      .mockRejectedValue(new Error('Connection is closed.'));
+
+    await request(app.getHttpServer())
+      .patch(`/api/rooms/${room._id.toString()}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ name: 'Renamed while Redis is down' })
+      .expect(200);
+
+    jest.restoreAllMocks();
+  });
+
+  it('POST /api/rooms/join -> 201 falls back to Mongo when Redis is unreachable', async () => {
+    const owner = await seedUser();
+    const other = await seedUser({ displayName: 'John Doe' });
+
+    const created = await request(app.getHttpServer())
+      .post('/api/rooms')
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ name: 'Dead Redis room' })
+      .expect(201);
+
+    const redis = app.get(RedisService);
+    jest
+      .spyOn(redis, 'get')
+      .mockRejectedValue(new Error('Connection is closed.'));
+
+    const res = await request(app.getHttpServer())
+      .post('/api/rooms/join')
+      .set('Authorization', `Bearer ${other.token}`)
+      .send({ inviteCode: created.body.inviteCode })
+      .expect(201);
+
+    expect(res.body.id).toBe(created.body.id);
+
+    jest.restoreAllMocks();
   });
 
   it('POST /api/room/join -> 400 for an unknown or expired code', async () => {

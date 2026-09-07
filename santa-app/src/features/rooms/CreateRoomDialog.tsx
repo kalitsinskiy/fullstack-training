@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/ui/form-field';
-import { SelectField } from '@/components/ui/select-field';
+import { BudgetFields } from '@/features/rooms/BudgetFields';
 import {
   Dialog,
   DialogContent,
@@ -13,11 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  CURRENCIES,
-  createRoomSchema,
-  type CreateRoomFormInput,
-} from '@/schemas/rooms';
+import { createRoomSchema, type CreateRoomFormInput } from '@/schemas/rooms';
 import { useCreateRoom } from '@/features/rooms/hooks';
 
 interface Props {
@@ -85,23 +81,12 @@ export function CreateRoomDialog({ open, onOpenChange }: Props) {
             {...register('name')}
             error={errors.name?.message}
           />
-          <div className="grid grid-cols-2 gap-3">
-            <FormField
-              label="Budget (optional)"
-              type="number"
-              min={1}
-              placeholder="500"
-              {...register('budget')}
-              error={errors.budget?.message}
-            />
-            <SelectField
-              control={control}
-              name="currency"
-              label="Currency"
-              options={CURRENCIES.map((c) => ({ value: c, label: c }))}
-              error={errors.currency?.message}
-            />
-          </div>
+          <BudgetFields
+            register={register}
+            control={control}
+            errors={errors}
+            budgetPlaceholder="500"
+          />
           <DialogFooter>
             <Button
               type="button"

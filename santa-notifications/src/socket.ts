@@ -42,7 +42,9 @@ export function createSocketServer(app: FastifyInstance): Server {
     const userId = socket.data.userId as string;
 
     socket.join(`user:${userId}`);
-    void markOnline(app.redis, userId);
+    markOnline(app.redis, userId).catch((err: unknown) => {
+      app.log.warn({ err, userId }, 'Failed to mark user online');
+    });
 
     socket.on('join-room', async (roomId: string, ack?: (r: { ok: boolean }) => void) => {
       if (!Types.ObjectId.isValid(roomId)) {
@@ -65,11 +67,15 @@ export function createSocketServer(app: FastifyInstance): Server {
     });
 
     socket.on('leave-room', (roomId: string) => {
-      void socket.leave(`room:${roomId}`);
+      Promise.resolve(socket.leave(`room:${roomId}`)).catch((err: unknown) => {
+        app.log.warn({ err, userId, roomId }, 'Failed to leave room');
+      });
     });
 
     socket.on('disconnect', () => {
-      void markOffline(app.redis, userId);
+      markOffline(app.redis, userId).catch((err: unknown) => {
+        app.log.warn({ err, userId }, 'Failed to mark user offline');
+      });
     });
   });
 

@@ -16,18 +16,17 @@ export function resolveRecipients(
     case 'user.joined':
     case 'wishlist.updated':
       return room.memberIds.filter((id) => id !== actor);
-      break;
 
     case 'draw.completed':
+    case 'room.date_changed':
       return room.memberIds;
 
     case 'room.created':
       return [data.createdBy as string].filter(Boolean) as string[];
 
-    case 'room.date_changed':
-      return room.memberIds;
-
     default:
+      routingKey satisfies never;
+
       return [];
   }
 }
@@ -47,7 +46,13 @@ export function roomEventFor(
     case 'room.date_changed':
       return { event: 'room:date-changed', payload: { roomId } };
 
+    case 'room.created':
+    case 'wishlist.updated':
+      return null;
+
     default:
+      routingKey satisfies never;
+
       return null;
   }
 }

@@ -1,4 +1,5 @@
 import { buildNotificationMessage } from './messages';
+import type { NotificationType } from '../models/notification';
 
 describe('buildNotificationMessage', () => {
   it('room.created includes the room name', () => {
@@ -8,9 +9,9 @@ describe('buildNotificationMessage', () => {
   });
 
   it('user.joined includes the user name and room name', () => {
-    expect(
-      buildNotificationMessage('user.joined', { userName: 'Alice' }, 'Office Party')
-    ).toBe('Alice joined "Office Party"');
+    expect(buildNotificationMessage('user.joined', { userName: 'Alice' }, 'Office Party')).toBe(
+      'Alice joined "Office Party"'
+    );
   });
 
   it('draw.completed names the room', () => {
@@ -26,7 +27,9 @@ describe('buildNotificationMessage', () => {
   });
 
   it('falls back for an unknown routing key', () => {
-    expect(buildNotificationMessage('unknown.event', {}, 'Office Party')).toBe(
+    const unknownKey = 'unknown.event' as NotificationType;
+
+    expect(buildNotificationMessage(unknownKey, {}, 'Office Party')).toBe(
       'New event: unknown.event'
     );
   });

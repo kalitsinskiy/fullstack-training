@@ -1,7 +1,8 @@
 import { RoomDetail } from '@/types/api';
 import { useEditRoom } from './hooks';
+import { parseExchangeDate } from './helpers';
 import { useForm } from 'react-hook-form';
-import { EditRoomFormInput, editRoomSchema, CURRENCIES } from '@/schemas/rooms';
+import { EditRoomFormInput, editRoomSchema } from '@/schemas/rooms';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -14,8 +15,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { FormField } from '@/components/ui/form-field';
-import { SelectField } from '@/components/ui/select-field';
 import { DateField } from '@/components/ui/date-field';
+import { BudgetFields } from './BudgetFields';
 import { Button } from '@/components/ui/button';
 
 interface Props {
@@ -41,7 +42,9 @@ export function EditRoomDialog({ room, open, onOpenChange }: Props) {
       name: room.name,
       budget: room.budget,
       currency: room.currency ?? '$',
-      exchangeDate: room.exchangeDate ? new Date(room.exchangeDate) : undefined,
+      exchangeDate: room.exchangeDate
+        ? parseExchangeDate(room.exchangeDate)
+        : undefined,
     },
   });
 
@@ -84,22 +87,7 @@ export function EditRoomDialog({ room, open, onOpenChange }: Props) {
             {...register('name')}
             error={errors.name?.message}
           />
-          <div className="grid grid-cols-2 gap-3">
-            <FormField
-              label="Budget (optional)"
-              type="number"
-              min={1}
-              {...register('budget')}
-              error={errors.budget?.message}
-            />
-            <SelectField
-              control={control}
-              name="currency"
-              label="Currency"
-              options={CURRENCIES.map((c) => ({ value: c, label: c }))}
-              error={errors.currency?.message}
-            />
-          </div>
+          <BudgetFields register={register} control={control} errors={errors} />
 
           <DateField
             control={control}

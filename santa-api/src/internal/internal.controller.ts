@@ -1,5 +1,6 @@
 import { Controller, Get, Param, UseGuards } from '@nestjs/common';
 import { ApiExcludeController } from '@nestjs/swagger';
+import { SkipThrottle } from '@nestjs/throttler';
 import { ParseObjectIdPipe } from '../common/pipes/parse-object-id.pipe';
 import { ServiceKeyGuard } from './service-key.guard';
 import { UsersService } from '../users/users.service';
@@ -9,6 +10,7 @@ import type { RoomRelations } from '../rooms/room.types';
 @ApiExcludeController()
 @Controller('internal')
 @UseGuards(ServiceKeyGuard)
+@SkipThrottle()
 export class InternalController {
   constructor(
     private readonly userService: UsersService,

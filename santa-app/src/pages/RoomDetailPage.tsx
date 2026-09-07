@@ -33,7 +33,7 @@ import { DrawDialog } from '@/features/rooms/DrawDialog';
 import { usePermissions } from '@/features/rooms/usePermissions';
 import { toast } from 'sonner';
 import { EditRoomDialog } from '@/features/rooms/EditRoomDialog';
-import { isExchangePassed } from '@/features/rooms/helpers';
+import { isExchangePassed, parseExchangeDate } from '@/features/rooms/helpers';
 
 function initials(name: string) {
   return name
@@ -128,7 +128,7 @@ export function RoomDetailPage() {
   }
 
   function handleKick(userId: string) {
-    if (!can('room:kick')) return;
+    if (!can('room:kick') || isDraw) return;
 
     kick.mutate(userId, {
       onSuccess: () => toast.success('Member removed'),
@@ -230,7 +230,8 @@ export function RoomDetailPage() {
                   <Badge variant={p.role === 'owner' ? 'owner' : 'member'}>
                     {p.role}
                   </Badge>
-                  {can('room:kick') && p.role !== 'owner' && (
+
+                  {can('room:kick') && p.role !== 'owner' && !isDraw && (
                     <Button
                       size="icon"
                       variant="ghost"
@@ -256,7 +257,10 @@ export function RoomDetailPage() {
                 <p className="flex items-center gap-2 text-sm">
                   <CalendarDays className="size-4 text-primary" />
                   Gift exchange on{' '}
-                  {format(new Date(room.exchangeDate), 'EEE, d MMM yyyy')}
+                  {format(
+                    parseExchangeDate(room.exchangeDate),
+                    'EEE, d MMM yyyy',
+                  )}
                 </p>
               )}
               {assignment.data && (

@@ -2,6 +2,7 @@ import {
   Injectable,
   Logger,
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
@@ -83,18 +84,7 @@ export class RoomsService {
 
       await this.populateParticipants(created);
 
-      try {
-        await this.redis.set(
-          `invite:${created.inviteCode}`,
-          created._id.toString(),
-          this.INVITE_TTL,
-        );
-      } catch (err: unknown) {
-        this.logger.warn(
-          { err, roomId: created._id.toString() },
-          'Failed to cache invite code - join-by-code will fallback to Mongo',
-        );
-      }
+      await this.cacheInviteCode(created.inviteCode, created._id.toString());
 
       this.events.publish('room.created', {
         roomId: created._id.toString(),
@@ -179,13 +169,50 @@ export class RoomsService {
   }
 
   async joinByCode(inviteCode: string, userId: string): Promise<Room> {
-    const roomId = await this.redis.get(`invite:${inviteCode}`);
+    const roomId = await this.resolveInviteCode(inviteCode);
 
     if (!roomId) {
       throw new BadRequestException('Invalid or expired invite code');
     }
 
     return this.join(roomId, inviteCode, userId);
+  }
+
+  private async resolveInviteCode(inviteCode: string): Promise<string | null> {
+    const cacheKey = `invite:${inviteCode}`;
+
+    try {
+      const cached = await this.redis.get(cacheKey);
+
+      if (cached) return cached;
+    } catch (err: unknown) {
+      this.logger.warn({ err }, 'Invite cache lookup failed - reading Mongo');
+    }
+
+    const room = await this.roomModel
+      .findOne({ inviteCode })
+      .select('_id')
+      .lean()
+      .exec();
+
+    if (!room) return null;
+
+    const roomId = room._id.toString();
+
+    await this.cacheInviteCode(inviteCode, roomId);
+
+    return roomId;
+  }
+
+  private async cacheInviteCode(
+    inviteCode: string,
+    roomId: string,
+  ): Promise<void> {
+    try {
+      await this.redis.set(`invite:${inviteCode}`, roomId, this.INVITE_TTL);
+    } catch (err: unknown) {
+      this.logger.warn({ err, roomId }, 'Failed to cache invite code');
+    }
   }
 
   async draw(
@@ -217,8 +244,13 @@ export class RoomsService {
     }));
 
     const updated = await this.roomModel
-      .findByIdAndUpdate(
-        id,
+      .findOneAndUpdate(
+        {
+          _id: id,
+          status: 'pending',
+          participants: { $size: giverIds.length },
+          'participants.userId': { $all: giverIds },
+        },
         {
           status: 'drawn',
           drawDate: new Date(),
@@ -231,7 +263,7 @@ export class RoomsService {
       .exec();
 
     if (!updated) {
-      throw new NotFoundException('Room not found');
+      throw await this.explainLostDrawRace(id);
     }
 
     await this.invalidateRoom(id);
@@ -243,6 +275,24 @@ export class RoomsService {
     });
 
     return this.toRoomResponse(updated, requesterId);
+  }
+
+  private async explainLostDrawRace(id: string): Promise<Error> {
+    const current = await this.roomModel
+      .findById(id)
+      .select('status')
+      .lean()
+      .exec();
+
+    if (!current) return new NotFoundException('Room not found');
+
+    if (current.status === 'drawn') {
+      return new BadRequestException('The draw has already been performed');
+    }
+
+    return new ConflictException(
+      'The participants changed while the draw was running - please try again',
+    );
   }
 
   async getAssignment(id: string, userId: string): Promise<AssignmentView> {
@@ -344,10 +394,31 @@ export class RoomsService {
       throw new BadRequestException('The owner cannot be removed');
     }
 
-    room.participants = room.participants.filter(
-      (p) => p.userId.toString() !== targetUserId,
-    );
-    await room.save();
+    if (room.status === 'drawn') {
+      throw new BadRequestException(
+        'Members cannot be removed after the draw - delete the room instead',
+      );
+    }
+
+    const result = await this.roomModel
+      .updateOne(
+        { _id: id, status: 'pending' },
+        {
+          $pull: {
+            participants: { userId: new Types.ObjectId(targetUserId) },
+          },
+        },
+      )
+      .exec();
+
+    if (result.matchedCount === 0) {
+      throw (await this.roomModel.exists({ _id: id }))
+        ? new BadRequestException(
+            'Members cannot be removed after the draw - delete the room instead',
+          )
+        : new NotFoundException('Room not found');
+    }
+
     await this.invalidateRoom(id);
   }
 
@@ -358,8 +429,14 @@ export class RoomsService {
 
     room.inviteCode = await this.generateUniqueInviteCode();
     await room.save();
-    await this.redis.del(`invite:${oldCode}`);
-    await this.redis.set(`invite:${room.inviteCode}`, id, this.INVITE_TTL);
+
+    try {
+      await this.redis.del(`invite:${oldCode}`);
+    } catch (err: unknown) {
+      this.logger.warn({ err, roomId: id }, 'Failed to drop old invite code');
+    }
+
+    await this.cacheInviteCode(room.inviteCode, id);
     await this.invalidateRoom(id);
     await this.populateParticipants(room);
 
@@ -421,15 +498,20 @@ export class RoomsService {
 
   private async getSharedRoom(id: string): Promise<Room | null> {
     const cacheKey = `room:${id}`;
-    const cached = await this.redis.get(cacheKey);
 
-    if (cached) {
-      this.logger.debug(`Room cache HIT: ${cacheKey}`);
+    try {
+      const cached = await this.redis.get(cacheKey);
 
-      return JSON.parse(cached) as Room;
+      if (cached) {
+        this.logger.debug(`Room cache HIT: ${cacheKey}`);
+
+        return JSON.parse(cached) as Room;
+      }
+
+      this.logger.debug(`Room cache MISS: ${cacheKey}`);
+    } catch (err: unknown) {
+      this.logger.warn({ err, roomId: id }, 'Room cache read failed');
     }
-
-    this.logger.debug(`Room cache MISS: ${cacheKey}`);
 
     const doc = await this.roomModel
       .findById(id)
@@ -440,13 +522,25 @@ export class RoomsService {
 
     const shared = this.toRoomResponse(doc);
 
-    await this.redis.set(cacheKey, JSON.stringify(shared), this.ROOM_CACHE_TTL);
+    try {
+      await this.redis.set(
+        cacheKey,
+        JSON.stringify(shared),
+        this.ROOM_CACHE_TTL,
+      );
+    } catch (err: unknown) {
+      this.logger.warn({ err, roomId: id }, 'Room cache write failed');
+    }
 
     return shared;
   }
 
   private async invalidateRoom(id: string): Promise<void> {
-    await this.redis.del(`room:${id}`);
+    try {
+      await this.redis.del(`room:${id}`);
+    } catch (err: unknown) {
+      this.logger.warn({ err, roomId: id }, 'Room cache invalidation failed');
+    }
   }
 
   async getParticipantIds(
